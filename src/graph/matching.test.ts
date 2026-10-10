@@ -19,11 +19,13 @@ test('R18 variants/legal suffixes/exact/alias/partial/initial/trigram and rememb
   assert.equal(normalizeCompanyName('Private Eye Inc.'), 'private eye');
   const acme = ensureCompany(f.ctx, 'Ácme Corporation');
   assert.equal(ensureCompany(f.ctx, 'ACME Pvt Ltd'), acme);
+  assert.equal(ensureCompany(f.ctx, 'A.C.M.E. Corp.'), acme);
   assert.deepEqual(resolveCompany(f.ctx, 'acme'), { match: 'exact', companyId: acme, score: 1 });
   const globex = ensureCompany(f.ctx, 'Globex Logistics');
   assert.deepEqual(resolveCompany(f.agent, 'Globex'), { match: 'similar', companyId: globex, score: 0.9 });
   const ibm = ensureCompany(f.ctx, 'International Business Machines');
   assert.deepEqual(resolveCompany(f.ctx, 'IBM'), { match: 'similar', companyId: ibm, score: 0.8 });
+  assert.deepEqual(resolveCompany(f.ctx, 'I.B.M.'), { match: 'similar', companyId: ibm, score: 0.8 });
   const alphabet = ensureCompany(f.ctx, 'Alphabet');
   const fuzzy = resolveCompany(f.ctx, 'Alphabets');
   assert.equal(fuzzy.match, 'similar');

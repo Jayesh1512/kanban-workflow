@@ -9,7 +9,7 @@ export function normalizeCompanyName(name: string): string {
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
     .trim()
     .split(/\s+/)
     .filter(Boolean);
@@ -124,7 +124,7 @@ export function candidateCompanies(ctx: Ctx, i: { chatId: Id; text: string; card
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
     .split(/\s+/)
     .filter(Boolean);
   const runs = new Set<string>();
