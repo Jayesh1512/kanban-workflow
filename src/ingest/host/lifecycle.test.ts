@@ -126,7 +126,12 @@ test('stop uses the system disconnect boundary for a removed owner without accep
   await r.host.stopAll();
   assert.equal(logouts, 1);
   assert.deepEqual(
-    { ...r.h.db.get('SELECT state,session_sealed FROM channel_account WHERE id=?', id) },
+    {
+      ...r.h.db.get<{ state: string; session_sealed: Uint8Array | null }>(
+        'SELECT state,session_sealed FROM channel_account WHERE id=?',
+        id,
+      ),
+    },
     {
       state: 'removed',
       session_sealed: null,
