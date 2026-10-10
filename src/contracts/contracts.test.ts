@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { MovementResult } from './index.ts';
 import {
   CardSummarySchema,
   ChatRefSchema,
@@ -72,6 +73,49 @@ test('F0 connector/display text is not constrained by model-generated title boun
   assert.equal(WriteOptsSchema.safeParse({ reason: '' }).success, true);
   assert.equal(CardSummarySchema.shape.title.safeParse('x'.repeat(200)).success, true);
   assert.equal(ModelDecisionSchema.shape.title.safeParse('x'.repeat(81)).success, false);
+});
+
+test('F1 review regression: movement usage accepts token-only counts and null', () => {
+  const result: MovementResult = {
+    provider: 'jev',
+    execution: 'replay',
+    configuredModel: null,
+    providerRequestId: null,
+    schemaVersion: 1,
+    requestId: 'synthetic',
+    snapshotHash: 'a'.repeat(64),
+    kind: 'answered',
+    resolvedModel: null,
+    movement: { choice: 'review', confidence: 1, probabilities: { review: 1 } },
+    support: null,
+    supportTarget: null,
+    supportQuestionId: null,
+    usage: { inputTokens: 3, outputTokens: 2 },
+  };
+  assert.deepEqual(MovementResultSchema.parse(result), result);
+  for (const usage of [null, { inputTokens: 0, outputTokens: Number.MAX_SAFE_INTEGER }]) {
+    assert.deepEqual(MovementResultSchema.parse({ ...result, usage }), { ...result, usage });
+  }
+});
+
+test('F1 review regression: movement usage rejects invented nested provider metadata', () => {
+  const usageSchema = MovementResultSchema.options[0].shape.usage;
+  const usage = { inputTokens: 3, outputTokens: 2 };
+  const metadata = { provider: 'jev', execution: 'replay', configuredModel: null, providerRequestId: null };
+  for (const extra of [...Object.entries(metadata).map(([key, value]) => ({ [key]: value })), metadata]) {
+    assert.equal(usageSchema.safeParse({ ...usage, ...extra }).success, false);
+  }
+});
+
+test('F1 review regression: movement usage requires both safe nonnegative integer token counts', () => {
+  const usageSchema = MovementResultSchema.options[0].shape.usage;
+  for (const field of ['inputTokens', 'outputTokens']) {
+    for (const value of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, NaN, Infinity, -Infinity, '3', null, undefined]) {
+      assert.equal(usageSchema.safeParse({ inputTokens: 3, outputTokens: 2, [field]: value }).success, false);
+    }
+  }
+  assert.equal(usageSchema.safeParse({ inputTokens: 3 }).success, false);
+  assert.equal(usageSchema.safeParse({ outputTokens: 2 }).success, false);
 });
 
 test('F1 Responses metadata keeps strict required nullable structure while Zod owns application bounds', () => {

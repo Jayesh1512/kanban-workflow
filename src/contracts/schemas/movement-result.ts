@@ -13,10 +13,12 @@ export const MovementResultSchema = z.union([
     support: MovementChoiceSchema.nullable(),
     supportTarget: z.string().nullable(),
     supportQuestionId: z.string().nullable(),
-    usage: MovementResultBaseSchema.extend({
-      inputTokens: z.number().int().nonnegative().safe(),
-      outputTokens: z.number().int().nonnegative().safe(),
-    }).nullable(),
+    usage: z
+      .strictObject({
+        inputTokens: z.number().int().nonnegative().safe(),
+        outputTokens: z.number().int().nonnegative().safe(),
+      })
+      .nullable(),
   }),
   MovementResultBaseSchema.extend({
     schemaVersion: z.literal(1),
