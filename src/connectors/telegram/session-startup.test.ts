@@ -103,7 +103,10 @@ test('C1-F6 production MtcuteApi actual SDK listener pending loop-start save fai
     saves++;
     throw new Error('synthetic private save detail');
   };
-  await assert.rejects(onNew(message), safeFailure);
+  // SDK declares a void emitter listener, while the installed C1 listener returns its queued promise.
+  await assert.rejects(async () => {
+    await onNew(message);
+  }, safeFailure);
   assert.equal(saves, 1);
   assert.equal(destroy.mock.callCount(), 1);
   assert.equal(close.mock.callCount(), 1);
