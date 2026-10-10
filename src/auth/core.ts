@@ -8,8 +8,16 @@ function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 function human(ctx: Ctx): void {
-  if (ctx.actor.kind !== 'teammate' && ctx.actor.kind !== 'system')
-    throw new AppError('forbidden', 'Teammate required');
+  if (ctx.actor.kind === 'system') return;
+  requireTeammate(ctx);
+}
+export function requireTeammate(ctx: Ctx): Id {
+  if (
+    ctx.actor.kind !== 'teammate' ||
+    !ctx.db.get('SELECT id FROM teammate WHERE id=? AND removed_at IS NULL', ctx.actor.id)
+  )
+    throw new AppError('forbidden', 'Active teammate required');
+  return ctx.actor.id;
 }
 function validate<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
@@ -18,8 +26,12 @@ function validate<T>(schema: z.ZodType<T>, value: unknown): T {
 }
 export function addTeammate(ctx: Ctx, i: { username: string; displayName: string; password: string }): Id {
   human(ctx);
-  validate(
-    z.strictObject({ username: z.string().min(1), displayName: z.string().min(1), password: z.string().min(1) }),
+  i = validate(
+    z.strictObject({
+      username: z.string().trim().min(1).max(200),
+      displayName: z.string().trim().min(1).max(200),
+      password: z.string().min(1).max(4096),
+    }),
     i,
   );
   return ctx.db.tx(() => {
@@ -44,6 +56,13 @@ export function addTeammate(ctx: Ctx, i: { username: string; displayName: string
   });
 }
 export function signIn(db: Db, username: string, password: string, now: Date): { token: string; expiresAt: IsoTime } {
+  if (
+    typeof username !== 'string' ||
+    typeof password !== 'string' ||
+    password.length > 4096 ||
+    !Number.isFinite(now.getTime())
+  )
+    throw new AppError('unauthenticated', 'Invalid sign-in');
   const user = db.get<{ id: Id; password_hash: string }>(
     'SELECT id,password_hash FROM teammate WHERE username=? AND removed_at IS NULL',
     username,
@@ -67,6 +86,7 @@ export function signIn(db: Db, username: string, password: string, now: Date): {
   return { token, expiresAt };
 }
 export function teammateForSession(db: Db, token: string, now: Date): Id | null {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token) || !Number.isFinite(now.getTime())) return null;
   return (
     db.get<{ id: Id }>(
       'SELECT t.id FROM web_session s JOIN teammate t ON t.id=s.teammate_id WHERE s.token_hash=? AND s.expires_at>? AND t.removed_at IS NULL',
@@ -76,9 +96,8 @@ export function teammateForSession(db: Db, token: string, now: Date): Id | null 
   );
 }
 export function createCredential(ctx: Ctx, i: { name: string; scopeMessages: boolean }): { id: Id; token: string } {
-  if (ctx.actor.kind !== 'teammate') throw new AppError('forbidden', 'Teammate required');
-  validate(z.strictObject({ name: z.string().min(1), scopeMessages: z.boolean() }), i);
-  const owner = ctx.actor.id;
+  const owner = requireTeammate(ctx);
+  i = validate(z.strictObject({ name: z.string().trim().min(1).max(200), scopeMessages: z.boolean() }), i);
   return ctx.db.tx(() => {
     if (ctx.db.get('SELECT id FROM credential WHERE name=?', i.name))
       throw new AppError('conflict', 'Credential name exists');
@@ -102,9 +121,9 @@ export function createCredential(ctx: Ctx, i: { name: string; scopeMessages: boo
 }
 export function credentialForToken(db: Db, token: string): { id: Id; scopeMessages: boolean } | null {
   const match = /^kbn_([1-9]\d*)_([A-Za-z0-9_-]{43})$/.exec(token);
-  if (!match) return null;
+  if (!match || !Number.isSafeInteger(Number(match[1]))) return null;
   const row = db.get<{ id: Id; scope_messages: number }>(
-    'SELECT id,scope_messages FROM credential WHERE id=? AND token_hash=? AND revoked_at IS NULL',
+    'SELECT c.id,c.scope_messages FROM credential c JOIN teammate t ON t.id=c.created_by WHERE c.id=? AND c.token_hash=? AND c.revoked_at IS NULL AND t.removed_at IS NULL',
     Number(match[1]),
     hash(match[2] as string),
   );
@@ -119,7 +138,8 @@ function settingSchema(key: string): z.ZodType {
       return z.boolean();
     case 'role_categories':
       return z
-        .array(z.string().min(1))
+        .array(z.string().trim().min(1).max(200))
+        .max(100)
         .min(1)
         .refine((v) => new Set(v).size === v.length && v.includes('unknown'));
     default:
@@ -144,11 +164,14 @@ export function getSetting<T>(db: Db, key: string): T {
       'unknown',
     ],
   };
-  return validate(schema, row ? (JSON.parse(row.value) as unknown) : defaults[key]) as T;
+  try {
+    return validate(schema, row ? (JSON.parse(row.value) as unknown) : defaults[key]) as T;
+  } catch {
+    throw new AppError('invalid', 'Invalid stored setting');
+  }
 }
 export function setSetting(ctx: Ctx, key: string, value: unknown): void {
-  human(ctx);
-  if (ctx.actor.kind === 'system') throw new AppError('forbidden', 'Teammate required');
+  requireTeammate(ctx);
   const parsed = validate(settingSchema(key), value);
   ctx.db.tx(() => {
     const before = getSetting(ctx.db, key);
