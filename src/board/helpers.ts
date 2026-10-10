@@ -9,11 +9,25 @@ export function validate<T>(schema: z.ZodType<T>, value: unknown): T {
 }
 export function actor(ctx: Ctx): 'agent' | 'teammate' | 'credential' {
   if (ctx.actor.kind === 'system') throw new AppError('forbidden', 'Board actor required');
+  if (
+    ctx.actor.kind === 'teammate' &&
+    !ctx.db.get('SELECT id FROM teammate WHERE id=? AND removed_at IS NULL', ctx.actor.id)
+  )
+    throw new AppError('forbidden', 'Active teammate required');
+  if (
+    ctx.actor.kind === 'credential' &&
+    !ctx.db.get(
+      'SELECT c.id FROM credential c JOIN teammate t ON t.id=c.created_by WHERE c.id=? AND c.revoked_at IS NULL AND t.removed_at IS NULL',
+      ctx.actor.id,
+    )
+  )
+    throw new AppError('forbidden', 'Active credential required');
   return ctx.actor.kind;
 }
 export function setBy(ctx: Ctx, o?: WriteOpts): SetBy {
+  const kind = actor(ctx);
   if (o) validate(WriteOptsSchema, o);
-  const value = o?.setBy ?? (actor(ctx) === 'agent' ? 'agent' : 'human');
+  const value = o?.setBy ?? (kind === 'agent' ? 'agent' : 'human');
   if (ctx.actor.kind === 'agent' && value === 'human') throw new AppError('forbidden', 'Agent cannot set human values');
   return value;
 }

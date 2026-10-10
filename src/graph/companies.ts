@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Ctx, Id } from '../contracts/index.ts';
 import { AppError, IdSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
-import { human, validate } from './helpers.ts';
+import { by, human, validate } from './helpers.ts';
 import { normalizeCompanyName, resolveCompany } from './matching.ts';
 
 function normalized(name: string): string {
@@ -18,7 +18,7 @@ function company(ctx: Ctx, id: Id): { id: Id; name: string } {
   return c;
 }
 function ensure(ctx: Ctx, name: string): Id {
-  if (ctx.actor.kind === 'system') throw new AppError('forbidden', 'Company actor required');
+  by(ctx);
   const norm = normalized(name);
   return ctx.db.tx(() => {
     const match = resolveCompany(ctx, name);

@@ -164,7 +164,7 @@ export function cardReferencePanels(ctx: Ctx, cardId: Id): KnownCompanyPanel[] {
   if (!ctx.db.get('SELECT id FROM card WHERE id=?', cardId)) throw new AppError('not_found', 'Card not found');
   return ctx.db
     .all<ReferenceRow>(
-      'SELECT id,from_company_id,to_company_id,message_id FROM company_reference WHERE card_id=? AND removed=0 ORDER BY id',
+      'SELECT r.id,r.from_company_id,r.to_company_id,r.message_id FROM company_reference r JOIN card_message cm ON cm.message_id=r.message_id WHERE cm.card_id=? AND r.removed=0 ORDER BY r.id',
       cardId,
     )
     .map((ref) => panel(ctx, ref));
