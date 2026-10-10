@@ -64,11 +64,11 @@ export async function testApp(o?: {
     config.model.name = 'synthetic-injected-model';
     config.model.apiKey = 'synthetic-test-key';
   }
-  const db = openDb(':memory:');
   const oplog = () => {};
   const fixture = createFixtureConnector(
     options.recordingPath !== undefined ? { path: options.recordingPath } : { lines: options.lines ?? [] },
   );
+  const db = openDb(':memory:');
   const ids = new Map<string, number>();
   const cookies = new Map<string, string>();
   const system: Ctx = { db, actor: { kind: 'system' }, canReadText: true, now: clock.now };
@@ -159,16 +159,26 @@ export async function testApp(o?: {
               'Content-Type': 'application/json',
               Accept: 'application/json, text/event-stream',
               'MCP-Protocol-Version': '2026-07-28',
+              'Mcp-Method': 'tools/call',
+              'Mcp-Name': tool,
             },
             body: JSON.stringify({
               jsonrpc: '2.0',
               id: 1,
               method: 'tools/call',
-              params: { name: tool, arguments: args },
+              params: {
+                name: tool,
+                arguments: args,
+                _meta: {
+                  'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+                  'io.modelcontextprotocol/clientCapabilities': {},
+                  'io.modelcontextprotocol/clientInfo': { name: 'kanban-test', version: '0.0.0' },
+                },
+              },
             }),
           }),
         );
-        if (!response.ok) throw new Error(`MCP HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`MCP HTTP ${response.status}: ${await response.text()}`);
         const envelope: unknown = await response.json();
         if (
           !envelope ||

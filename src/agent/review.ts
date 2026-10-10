@@ -12,12 +12,6 @@ export function getReview(ctx: Ctx, id: Id): ReviewItemView {
   throw new AppError('invalid', 'not built: getReview');
 }
 
-export function acceptReview(ctx: Ctx, id: Id): void {
-  void ctx;
-  void id;
-  throw new AppError('invalid', 'not built: acceptReview');
-}
-
 export function changeReview(ctx: Ctx, id: Id, change: ReviewChange): void {
   void ctx;
   void id;
@@ -35,3 +29,5 @@ export function recheckPendingMentions(ctx: Ctx): number {
   void ctx;
   throw new AppError('invalid', 'not built: recheckPendingMentions');
 }
+
+export { acceptReview } from './spine.ts';

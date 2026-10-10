@@ -68,6 +68,16 @@ test('F0 Db.tx rollback joins nested calls and rejects async callbacks', () => {
     );
     assert.equal(db.all('SELECT * FROM setting').length, 0);
     assert.throws(() => db.tx(async () => 1), /synchronous/);
+    assert.throws(
+      () =>
+        db.tx(() =>
+          db.tx(async () => {
+            db.run("INSERT INTO setting VALUES ('escaped','true')");
+          }),
+        ),
+      /synchronous/,
+    );
+    assert.equal(db.all('SELECT * FROM setting').length, 0);
     db.tx(() => db.run("INSERT INTO setting VALUES ('three','3')"));
     assert.equal(db.all('SELECT * FROM setting').length, 1);
   } finally {

@@ -1,0 +1,21 @@
+body {
+  font-family: system-ui;
+  margin: 2rem;
+  color: #182423;
+  background: #f8faf9;
+}
+.lane {
+  margin: 1rem 0;
+}
+.stage {
+  padding: 1rem;
+  border: 1px solid #ccd5d1;
+}
+.card {
+  padding: 1rem;
+  background: white;
+}
+label {
+  display: block;
+  margin: 1rem 0;
+}

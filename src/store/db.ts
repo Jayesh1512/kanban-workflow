@@ -41,7 +41,12 @@ export function openDb(path: string): Db {
       return { changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) };
     },
     tx<T>(fn: () => T): T {
-      if (depth > 0) return fn();
+      if (fn.constructor.name === 'AsyncFunction') throw new Error('Db.tx requires a synchronous callback');
+      if (depth > 0) {
+        const result = fn();
+        if (result instanceof Promise) throw new Error('Db.tx requires a synchronous callback');
+        return result;
+      }
       sqlite.exec('BEGIN IMMEDIATE');
       depth++;
       try {

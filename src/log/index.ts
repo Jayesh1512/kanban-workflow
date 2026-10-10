@@ -58,7 +58,7 @@ export function history(
   for (const id of [q.subjectId, q.beforeId])
     if (id !== undefined && !IdSchema.safeParse(id).success) throw new AppError('invalid', 'Invalid log id');
   const limit = q.limit ?? 100;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) throw new AppError('invalid', 'Invalid log limit');
+  if (!Number.isSafeInteger(limit) || limit < 1) throw new AppError('invalid', 'Invalid log limit');
   return ctx.db
     .all<LogRow>(
       `SELECT a.*, CASE a.actor_kind WHEN 'teammate' THEN t.display_name WHEN 'credential' THEN c.name ELSE a.actor_kind END AS actor_name

@@ -1,13 +1,5 @@
-import type { BoardView, CardDetail, CardSummary, Ctx, Id, LaneView, WriteOpts } from '../contracts/index.ts';
+import type { CardDetail, CardSummary, Ctx, Id, LaneView, WriteOpts } from '../contracts/index.ts';
 import { AppError } from '../contracts/index.ts';
-export function createLane(
-  ctx: Ctx,
-  i: { name: string; sop: string; stages: { name: string; criteria: string }[] },
-): LaneView {
-  void ctx;
-  void i;
-  throw new AppError('invalid', 'not built: createLane');
-}
 
 export function updateLane(
   ctx: Ctx,
@@ -30,11 +22,6 @@ export function listLanes(ctx: Ctx, o?: { includeArchived?: boolean }): LaneView
   void ctx;
   void o;
   throw new AppError('invalid', 'not built: listLanes');
-}
-
-export function getBoard(ctx: Ctx): BoardView {
-  void ctx;
-  throw new AppError('invalid', 'not built: getBoard');
 }
 
 export function getCard(ctx: Ctx, cardId: Id): CardDetail {
@@ -67,26 +54,6 @@ export function candidateCards(ctx: Ctx, chatId: Id): { cardId: Id; link: 'this_
   throw new AppError('invalid', 'not built: candidateCards');
 }
 
-export function createCard(
-  ctx: Ctx,
-  i: {
-    laneId: Id;
-    title: string;
-    summary?: string;
-    stageId?: Id;
-    chatId?: Id;
-    messageId?: Id;
-    companyId?: Id | null;
-    fromHistory?: boolean;
-  },
-  o?: WriteOpts,
-): CardSummary {
-  void ctx;
-  void i;
-  void o;
-  throw new AppError('invalid', 'not built: createCard');
-}
-
 export function updateCard(
   ctx: Ctx,
   cardId: Id,
@@ -98,27 +65,6 @@ export function updateCard(
   void i;
   void o;
   throw new AppError('invalid', 'not built: updateCard');
-}
-
-export function moveCard(
-  ctx: Ctx,
-  cardId: Id,
-  i: { stageId: Id; criterion?: string; evidenceMessageIds?: Id[]; followsHumanOverride?: boolean },
-  o?: WriteOpts,
-): void {
-  void ctx;
-  void cardId;
-  void i;
-  void o;
-  throw new AppError('invalid', 'not built: moveCard');
-}
-
-export function attachMessage(ctx: Ctx, messageId: Id, cardId: Id | null, o?: WriteOpts): void {
-  void ctx;
-  void messageId;
-  void cardId;
-  void o;
-  throw new AppError('invalid', 'not built: attachMessage');
 }
 
 export function dismissCardOffer(ctx: Ctx, cardId: Id, chatId: Id): void {
@@ -141,3 +87,5 @@ export function unarchiveCard(ctx: Ctx, cardId: Id): void {
 }
 export type * from '../contracts/index.ts';
 export { forgetMessages } from './forget.ts';
+
+export { attachMessage, createCard, createLane, getBoard, moveCard } from './spine.ts';

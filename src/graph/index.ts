@@ -1,8 +1,6 @@
 import type {
   CompanyCandidate,
   CompanyMatch,
-  CompanyRef,
-  CompanyView,
   ContactSummary,
   ContactView,
   Ctx,
@@ -34,40 +32,10 @@ export function companyVersion(db: Db): number {
   throw new AppError('invalid', 'not built: companyVersion');
 }
 
-export function ensureCompany(ctx: Ctx, name: string): Id {
-  void ctx;
-  void name;
-  throw new AppError('invalid', 'not built: ensureCompany');
-}
-
-export function ensureIdentity(
-  ctx: Ctx,
-  p: { channel: string; userKey: string; displayName: string; handle: string | null },
-): { identityId: Id; contactId: Id | null; teammateId: Id | null } {
-  void ctx;
-  void p;
-  throw new AppError('invalid', 'not built: ensureIdentity');
-}
-
-export function bindSelfIdentity(
-  ctx: Ctx,
-  p: { channel: string; userKey: string; displayName: string; handle: string | null; teammateId: Id },
-): Id {
-  void ctx;
-  void p;
-  throw new AppError('invalid', 'not built: bindSelfIdentity');
-}
-
 export function getContact(ctx: Ctx, contactId: Id): ContactView {
   void ctx;
   void contactId;
   throw new AppError('invalid', 'not built: getContact');
-}
-
-export function getCompany(ctx: Ctx, companyId: Id): CompanyView {
-  void ctx;
-  void companyId;
-  throw new AppError('invalid', 'not built: getCompany');
 }
 
 export function searchContacts(
@@ -95,37 +63,11 @@ export function updateContact(ctx: Ctx, contactId: Id, i: { displayName: string 
   throw new AppError('invalid', 'not built: updateContact');
 }
 
-export function setContactCompany(
-  ctx: Ctx,
-  contactId: Id,
-  i: { company: CompanyRef; evidenceMessageIds: Id[] },
-  o?: WriteOpts,
-): void {
-  void ctx;
-  void contactId;
-  void i;
-  void o;
-  throw new AppError('invalid', 'not built: setContactCompany');
-}
-
 export function removeContactCompany(ctx: Ctx, contactId: Id, companyId: Id): void {
   void ctx;
   void contactId;
   void companyId;
   throw new AppError('invalid', 'not built: removeContactCompany');
-}
-
-export function setContactRole(
-  ctx: Ctx,
-  contactId: Id,
-  i: { category: string; dealsAbout: string; evidenceMessageIds: Id[] },
-  o?: WriteOpts,
-): void {
-  void ctx;
-  void contactId;
-  void i;
-  void o;
-  throw new AppError('invalid', 'not built: setContactRole');
 }
 
 export function recordReference(
@@ -173,3 +115,12 @@ export function cardReferencePanels(ctx: Ctx, cardId: Id): KnownCompanyPanel[] {
 }
 export type * from '../contracts/index.ts';
 export { forgetMessages } from './forget.ts';
+
+export {
+  bindSelfIdentity,
+  ensureCompany,
+  ensureIdentity,
+  getCompany,
+  setContactCompany,
+  setContactRole,
+} from './spine.ts';
