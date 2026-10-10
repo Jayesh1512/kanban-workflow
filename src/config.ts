@@ -37,6 +37,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   if (!['openai', 'scripted', 'disabled'].includes(provider)) invalid('MODEL_PROVIDER');
   const movement = env.MOVEMENT_PROVIDER ?? 'disabled';
   if (!['jev', 'replay', 'disabled'].includes(movement)) invalid('MOVEMENT_PROVIDER');
+  if (provider !== 'scripted' && env.MODEL_SCRIPT_PATH) invalid('MODEL_SCRIPT_PATH');
+  if (movement !== 'replay' && env.MOVEMENT_REPLAY_PATH) invalid('MOVEMENT_REPLAY_PATH');
   const connectors: AppConfig['connectors'] = {};
   for (const channel of (env.CONNECTORS ?? 'telegram').split(',').filter(Boolean)) {
     if (!/^[a-z][a-z0-9_]*$/.test(channel)) invalid('CONNECTORS');

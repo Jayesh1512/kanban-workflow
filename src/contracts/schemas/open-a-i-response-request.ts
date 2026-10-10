@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export const OpenAIResponseRequestSchema = z.strictObject({
-  model: z.string(),
+  model: z.string().min(1),
   input: z.array(z.strictObject({ role: z.union([z.literal('system'), z.literal('user')]), content: z.string() })),
   text: z.strictObject({
     format: z.strictObject({
@@ -10,6 +10,6 @@ export const OpenAIResponseRequestSchema = z.strictObject({
       schema: z.record(z.string(), z.unknown()),
     }),
   }),
-  max_output_tokens: z.number().finite(),
+  max_output_tokens: z.number().int().min(1).max(16384),
   store: z.literal(false),
 });
