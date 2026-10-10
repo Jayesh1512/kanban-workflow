@@ -329,6 +329,7 @@ test('Stop invalidates a still-pending restored start before any sink call', asy
   await api.advanceTo('end');
   assert.deepEqual(state.events, []);
   assert.ok(!api.calls.some((c) => c.op === 'startUpdates'));
+  assert.ok(!api.calls.some((c) => c.op === 'getMe')); // A stopped restoration cannot initiate a new read/connection.
 });
 
 test('Two accounts agree on direct/basic-group keys despite different common message box native IDs', async () => {

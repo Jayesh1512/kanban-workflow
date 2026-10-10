@@ -1,7 +1,7 @@
 import type { AppConfig, ConnectorFactory } from '../contracts/index.ts';
 import { AppError } from '../contracts/index.ts';
 import { createFixtureConnector } from './fixture/index.ts';
-import { createTelegramFactory } from './telegram/index.ts';
+import { createTelegramFactory, MtcuteApi } from './telegram/index.ts';
 
 export function buildConnectors(config: AppConfig): ConnectorFactory[] {
   return Object.entries(config.connectors).map(([channel, options]) => {
@@ -22,10 +22,7 @@ export function buildConnectors(config: AppConfig): ConnectorFactory[] {
         },
       };
     }
-    if (channel === 'telegram')
-      return createTelegramFactory(() => {
-        throw new AppError('invalid', 'not built: MtcuteApi');
-      });
+    if (channel === 'telegram') return createTelegramFactory((ctx) => new MtcuteApi(ctx));
     throw new AppError('invalid', 'Unknown connector');
   });
 }

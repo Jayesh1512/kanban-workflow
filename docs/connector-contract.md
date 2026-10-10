@@ -1,6 +1,6 @@
 # Connector contract
 
-Exact copy of final architecture section 3.3, including 3.3.1 and 3.3.2. This describes the frozen contract; C1 currently lacks MtcuteApi and its complete source audit. The real-account procedure is pending that audit.
+Exact copy of final architecture section 3.3, including 3.3.1 and 3.3.2. Fixture, RecordedApi, the neutral Telegram connector and MemoryStorage MtcuteApi are implemented. The complete pinned installed-source audit and connection procedure exist. C1 remains blocked on Integration-owned external SDK declarations in the required typecheck gate; no whole-Scope review readiness, real-account verification, host storage or final component equivalence is claimed.
 
 ### 3.3 Connector contract — `src/contracts/connector.ts`
 

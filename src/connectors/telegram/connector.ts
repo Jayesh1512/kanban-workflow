@@ -41,11 +41,14 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
   const delivery = createDelivery();
   const decode = createDecoder();
   const titles = new Map<string, string>();
-  async function ready() {
+  async function ready(valid = () => true) {
     if (session === null) throw new AppError('unauthenticated', 'Login required');
     if (self === null) {
       await api.importSession(session);
-      self = await api.getMe();
+      if (!valid()) throw new AppError('invalid', 'Connector stopped');
+      const restored = await api.getMe();
+      if (!valid()) throw new AppError('invalid', 'Connector stopped');
+      self = restored;
     }
     return self;
   }
@@ -134,10 +137,20 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
     async start(sink) {
       const generation = ++epoch;
       active = false;
-      await ready();
+      try {
+        await ready(() => generation === epoch);
+      } catch (error) {
+        if (generation !== epoch) return;
+        throw error;
+      }
       if (generation !== epoch) return;
       // The persisted opaque session is reimported on every start, including a restart of this instance.
-      await api.importSession(session as string);
+      try {
+        await api.importSession(session as string);
+      } catch (error) {
+        if (generation !== epoch) return;
+        throw error;
+      }
       if (generation !== epoch) return;
       delivery.start(sink);
       active = true;
@@ -158,11 +171,20 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
           onState(state) {
             if (!active || generation !== epoch) return;
             void delivery.emit({ type: 'status', state }).catch(() => {
+              if (active && generation === epoch) {
+                active = false;
+                epoch++;
+                delivery.stop();
+                void api
+                  .destroy()
+                  .catch(() => ctx.log('warn', 'connector.cleanup_failed', { accountId: ctx.accountId }));
+              }
               ctx.log('warn', 'connector.sink_failed', { accountId: ctx.accountId });
             });
           },
         });
       } catch (error) {
+        if (generation !== epoch) return;
         if (generation === epoch) {
           active = false;
           epoch++;
