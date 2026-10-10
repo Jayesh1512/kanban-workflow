@@ -7,10 +7,11 @@ import type { TelegramApi, TgDialog, TgMessage, TgPeer } from '../../contracts/i
 import { testContext } from '../test-support.ts';
 import { createTelegramFactory, telegramLoginNotice } from './connector.ts';
 import { RecordedApi } from './recorded-api.ts';
+import { readSession } from './session-state.ts';
 import { expected, login, pages, recording } from './test-session.ts';
 
-test('R4.1 boundary [F]: 220 typed synthetic messages preserve all fields live and history, both directions and chat boxes', async () => {
-  const source = recording();
+test('R4.1 boundary [F]: 1600 typed synthetic messages (200 per kind/direction) preserve all fields live and history, both directions and chat boxes', async () => {
+  const source = recording(1600);
   const state = testContext();
   const api = new RecordedApi({ session: source }, state.ctx.now);
   const connector = createTelegramFactory(() => api).create(state.ctx);
@@ -29,15 +30,22 @@ test('R4.1 boundary [F]: 220 typed synthetic messages preserve all fields live a
   await connector.start(state.sink);
   await api.advanceTo('end');
   const delivered = state.events.filter((event) => event.type === 'message');
-  assert.equal(delivered.length, 220);
+  assert.equal(delivered.length, 1600);
   assert.deepEqual(
     delivered.map((e) => e.message),
     source.messages.map(expected),
   );
   for (const entry of listing) {
     const live = delivered.filter((e) => e.chat.key === entry.chat.key);
-    assert.ok(live.some((e) => e.message.sender.userKey === '10'));
-    assert.ok(live.some((e) => e.message.sender.userKey === '20'));
+    for (const sender of ['10', '20']) {
+      assert.equal(
+        source.messages.filter(
+          (m) => `${m.peer.type}:${m.peer.id}` === entry.chat.nativeId && String(m.sender.id) === sender,
+        ).length,
+        200,
+      );
+      assert.equal(live.filter((e) => e.message.sender.userKey === sender).length, 200);
+    }
     const result = await pages(connector, { chat: entry.chat, after: null, since: null, limit: null, resume: null });
     const wanted = source.messages
       .filter((m) => `${m.peer.type}:${m.peer.id}` === entry.chat.nativeId)
@@ -279,8 +287,9 @@ test('R7 instance isolation, callback backpressure, sink failure disconnect, and
   await assert.rejects(secondApi.advanceTo('end'), /Synthetic sink rejection/);
   await secondApi.advanceTo('end');
   assert.deepEqual(received, ['connected', 'message', 'disconnected']);
-  assert.equal(secondState.saved.length, 1);
-  assert.equal(state.saved.length, 2);
+  assert.equal(secondState.saved.length, 2); // login and first saved key, before rejecting delivery
+  assert.equal(state.saved.length, 3); // login, first saved key, stop
+  assert.equal(readSession(secondState.saved.at(-1) as string).keys.size, 1);
 });
 
 test('RecordedApi path loading and registration-owner three-risk notice', () => {

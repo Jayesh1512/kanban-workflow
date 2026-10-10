@@ -19,8 +19,7 @@ export function chatRef(peer: TgPeer, selfId: number, title: string): ChatRef {
     title,
   };
 }
-export function createDecoder() {
-  const keys = new Map<string, string>();
+export function createDecoder(keys = new Map<string, string>()) {
   return (message: TgMessage): MessageRecord | null => {
     if (message.isService) return null;
     const id = nativeId(message.peer, message.id);
@@ -33,7 +32,7 @@ export function createDecoder() {
               .update(`${message.text}\n${message.mediaUniqueId}`)
               .digest('hex')
               .slice(0, 16)}`;
-      keys.set(id, key);
+      if (id.startsWith('u:')) keys.set(id, key);
     }
     return {
       key,

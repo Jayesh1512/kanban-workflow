@@ -1,7 +1,7 @@
 import type { tl } from '@mtcute/node';
 import { Long, Message, PeersIndex } from '@mtcute/node';
 
-export function sdkData() {
+export function sdkData(count = 220, fullMedia = false) {
   const users: tl.TypeUser[] = [
     { _: 'user', id: 10, firstName: 'Owner', username: 'owner', accessHash: Long.ONE, self: true },
     { _: 'user', id: 20, firstName: 'Outside', accessHash: Long.ONE },
@@ -41,7 +41,7 @@ export function sdkData() {
     { _: 'peerChannel', channelId: 40 },
     { _: 'peerChannel', channelId: 50 },
   ];
-  const messages: tl.RawMessage[] = Array.from({ length: 220 }, (_, n) => ({
+  const messages: tl.RawMessage[] = Array.from({ length: count }, (_, n) => ({
     _: 'message',
     id: n + 1,
     peerId: peers[n % 4] as tl.TypePeer,
@@ -50,8 +50,9 @@ export function sdkData() {
     date: 1800000000 + n,
     message: `Synthetic caption ${n}`,
     replyTo: n >= 4 ? { _: 'messageReplyHeader', replyToMsgId: n - 3 } : undefined,
-    media:
-      n % 11 === 0
+    media: fullMedia
+      ? sdkMedia()[n % 13]?.media
+      : n % 11 === 0
         ? {
             _: 'messageMediaContact',
             phoneNumber: 'synthetic',
@@ -67,7 +68,7 @@ export function sdkData() {
   const dialogs: tl.RawDialog[] = peers.map((peer, n) => ({
     _: 'dialog',
     peer,
-    topMessage: 217 + n,
+    topMessage: count - 3 + n,
     readInboxMaxId: 0,
     readOutboxMaxId: 0,
     unreadCount: 1,

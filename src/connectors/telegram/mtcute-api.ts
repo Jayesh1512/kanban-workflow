@@ -166,6 +166,7 @@ export class MtcuteApi implements TelegramApi {
     const client = this.getClient();
     const { sdk } = client;
     let failed = false;
+    let authLost = false;
     const enqueue = (run: () => Promise<void>): Promise<void> => {
       const pending = this.queue.then(async () => {
         if (generation !== this.generation || failed) return;
@@ -199,9 +200,23 @@ export class MtcuteApi implements TelegramApi {
       void enqueue(async () => h.onState(s === 'connected' ? 'connected' : 'disconnected')).catch(() => {});
     };
     const onError = (error: Error): void => {
-      void enqueue(async () =>
-        h.onState(tl.RpcError.is(error) && error.code === 401 ? 'auth_lost' : 'disconnected'),
-      ).catch(() => {});
+      if (generation !== this.generation || failed) return;
+      if (tl.RpcError.is(error) && error.code === 401 && error.text !== 'SESSION_PASSWORD_NEEDED') {
+        // Latch synchronously in the real RPC observer, before UpdatesManager swallows the error.
+        authLost = true;
+        failed = true;
+        this.detach?.();
+        client.closeNow();
+        void sdk.stopUpdatesLoop().catch(() => {});
+        const notification = this.queue.then(() => {
+          if (generation === this.generation) h.onState('auth_lost');
+        });
+        this.queue = notification.catch(() => {
+          this.ctx.log('warn', 'connector.state_failed', { accountId: this.ctx.accountId });
+        });
+        return;
+      }
+      void enqueue(async () => h.onState('disconnected')).catch(() => {});
     };
     sdk.onNewMessage.add(onNew);
     sdk.onEditMessage.add(onEdit);
@@ -219,14 +234,26 @@ export class MtcuteApi implements TelegramApi {
     try {
       await this.call((c) => c.sdk.connect());
       if (generation !== this.generation) return;
+      if (authLost) throw new AppError('unauthenticated', 'Telegram authorization lost');
       await this.call((c) => c.sdk.startUpdatesLoop());
       if (generation !== this.generation) {
         await sdk.stopUpdatesLoop();
         return;
       }
-      if (generation === this.generation) onState('connected');
+      if (authLost) {
+        // startLoop can restart its asynchronous loop AFTER the swallowed startup error.
+        await sdk.stopUpdatesLoop();
+        await this.queue;
+        throw new AppError('unauthenticated', 'Telegram authorization lost');
+      }
+      if (generation === this.generation && !failed) onState('connected');
     } catch (error) {
       if (generation === this.generation) this.detach?.();
+      if (authLost) {
+        await sdk.stopUpdatesLoop();
+        await this.queue;
+        throw new AppError('unauthenticated', 'Telegram authorization lost');
+      }
       throw error;
     }
   }
