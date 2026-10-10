@@ -21,6 +21,7 @@ export class MtcuteApi implements TelegramApi {
   private makeClient: () => MtcuteClient;
   private client: MtcuteClient | null = null;
   private session: string | null = null;
+  private sessionExportFailed = false;
   private generation = 0;
   private detach: (() => void) | null = null;
   private queue: Promise<void> = Promise.resolve();
@@ -61,8 +62,10 @@ export class MtcuteApi implements TelegramApi {
     await this.call((c) => c.sdk.importSession(session));
     if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
     this.session = session;
+    this.sessionExportFailed = false;
   }
   async exportSession(): Promise<string> {
+    if (this.sessionExportFailed) throw new AppError('invalid', 'Connector session persistence failed');
     if (!this.client && this.session !== null) return this.session;
     this.session = await this.call((c) => c.sdk.exportSession());
     return this.session;
@@ -260,6 +263,7 @@ export class MtcuteApi implements TelegramApi {
   async logOut(): Promise<void> {
     await this.call((c) => c.sdk.logOut());
     this.session = null;
+    this.sessionExportFailed = false;
   }
   async destroy(): Promise<void> {
     if (this.closing) return this.closing;
@@ -277,7 +281,9 @@ export class MtcuteApi implements TelegramApi {
         const snapshot = await client.sdk.exportSession();
         if (generation === this.generation) this.session = snapshot;
       } catch {
-        /* No authorized session exists during cancelled first login/start. */
+        // A cancelled unauthenticated construction has nothing to save. An imported/exported
+        // authorized session must expose failure to the connector's required stop save.
+        if (generation === this.generation && this.session !== null) this.sessionExportFailed = true;
       }
       await client.sdk.destroy();
     })();

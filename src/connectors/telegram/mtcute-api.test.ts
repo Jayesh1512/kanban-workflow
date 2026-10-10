@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MemoryStorageDriver, TelegramClient, tl, User } from '@mtcute/node';
-import { TgFloodWait } from '../../contracts/index.ts';
+import { AppError, TgFloodWait } from '../../contracts/index.ts';
 import { createTelegramFactory } from './connector.ts';
 import { MtcuteApi } from './mtcute-api.ts';
 import { createMtcuteClient } from './mtcute-client.ts';
@@ -68,4 +68,28 @@ test('Actual MtcuteApi login phone/code/password, flood translation and null log
   await connector.logout();
   assert.equal(state.saved.at(-1), null);
   assert.deepEqual(calls, ['auth.sendCode', 'auth.signIn', 'auth.checkPassword', 'auth.logOut']);
+});
+
+test('C1-F1 actual SDK export failure during cleanup cannot turn cached auth into successful stop', async (t) => {
+  const state = offlineContext();
+  const client = createMtcuteClient(state.ctx, blockedTransport);
+  const data = sdkData();
+  t.mock.method(client.sdk, 'importSession', async () => {});
+  t.mock.method(client.sdk, 'getMe', async () => new User(data.users[0] as tl.RawUser));
+  t.mock.method(client.sdk, 'connect', async () => {});
+  t.mock.method(client.sdk, 'startUpdatesLoop', async () => {});
+  t.mock.method(client.sdk, 'exportSession', async () => {
+    throw new Error('synthetic private SDK export failure');
+  });
+  const api = new MtcuteApi(state.ctx, () => client);
+  const connector = createTelegramFactory(() => api).create({ ...state.ctx, session: 'synthetic-opaque' });
+  await connector.start(state.sink);
+  await assert.rejects(
+    connector.stop(),
+    (e) => e instanceof AppError && e.message === 'Connector session persistence failed',
+  );
+  await assert.rejects(connector.listChats(), /Connector session persistence failed/);
+  assert.deepEqual(state.saved, []);
+  assert.ok(!JSON.stringify(state.logs).includes('synthetic private SDK export failure'));
+  assert.equal(client.sdk.onNewMessage.length, 0);
 });
