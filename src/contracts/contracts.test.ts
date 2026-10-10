@@ -140,3 +140,55 @@ test('F1 Responses metadata keeps strict required nullable structure while Zod o
   };
   visit(modelDecisionJsonSchema);
 });
+
+test('I1 R12.7 strict shared movement support binds only the selected target and review has no support', () => {
+  const base = {
+    provider: 'jev',
+    execution: 'replay',
+    configuredModel: null,
+    providerRequestId: null,
+    schemaVersion: 1,
+    requestId: 'synthetic',
+    snapshotHash: 'a'.repeat(64),
+    kind: 'answered',
+    resolvedModel: null,
+    usage: null,
+  };
+  const selected = {
+    ...base,
+    movement: { choice: 'finance', confidence: 0.4, probabilities: { finance: 0.6, shipping: 0.4 } },
+    support: { choice: 'm1', confidence: 0.9, probabilities: { m1: 1, review: 0 } },
+    supportTarget: 'finance',
+    supportQuestionId: 'support:finance',
+  };
+  assert.equal(MovementResultSchema.safeParse(selected).success, true);
+  for (const change of [
+    { supportTarget: 'shipping' },
+    { supportQuestionId: 'support:shipping' },
+    { supportQuestionId: 'support' },
+    { support: null },
+    { supportTarget: null },
+    { supportQuestionId: null },
+  ])
+    assert.equal(MovementResultSchema.safeParse({ ...selected, ...change }).success, false);
+  const review = {
+    ...base,
+    movement: { choice: 'review', confidence: 1, probabilities: { review: 1 } },
+    support: null,
+    supportTarget: null,
+    supportQuestionId: null,
+  };
+  assert.equal(MovementResultSchema.safeParse(review).success, true);
+  assert.equal(MovementResultSchema.safeParse({ ...review, support: selected.support }).success, false);
+  for (const probabilities of [
+    { finance: 0.3, shipping: 0.4 },
+    { finance: 0.4, shipping: 0.6 },
+    { shipping: 1 },
+    { finance: NaN },
+    { finance: 1, shipping: Infinity },
+  ])
+    assert.equal(
+      MovementResultSchema.safeParse({ ...selected, movement: { ...selected.movement, probabilities } }).success,
+      false,
+    );
+});
