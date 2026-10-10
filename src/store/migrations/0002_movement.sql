@@ -1,0 +1,1 @@
+CREATE TABLE movement_decision (decision_id INTEGER PRIMARY KEY REFERENCES decision(id) ON DELETE CASCADE, schema_version INTEGER NOT NULL CHECK(schema_version=1), status TEXT NOT NULL CHECK(status IN ('transition','stay','review','failed','stale')), snapshot TEXT NOT NULL, result TEXT NOT NULL) STRICT;
