@@ -34,34 +34,92 @@ function boundedOptions(timeoutMs: number, maxResponseBytes: number, maxTimeout:
     throw new AppError('invalid', 'Invalid provider limits');
 }
 
+function nullBody(status: number): boolean {
+  return status === 204 || status === 205 || status === 304;
+}
+
 const nativeFetch: ProviderFetch = (url, init) =>
   new Promise((resolve, reject) => {
     const req = httpsRequest(
       url,
       { method: 'POST', headers: Object.fromEntries(new Headers(init.headers)), signal: init.signal ?? undefined },
       (res) => {
-        const headers = new Headers();
-        for (const [name, value] of Object.entries(res.headers)) {
-          if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
-        }
-        const body = new ReadableStream<Uint8Array>({
-          start(controller) {
-            res.on('data', (chunk: Buffer) => {
-              controller.enqueue(chunk);
-              res.pause();
-            });
-            res.on('end', () => controller.close());
-            res.on('error', (error) => controller.error(error));
-          },
-          pull() {
-            res.resume();
-          },
-          cancel() {
+        let finished = false;
+        let released = false;
+        let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+        const release = () => {
+          if (released) return;
+          released = true;
+          // Always attempt both releases, including when a transport cleanup itself fails.
+          try {
             res.destroy();
+          } catch {}
+          try {
             req.destroy();
-          },
-        });
-        resolve(new Response(body, { status: res.statusCode ?? 502, headers }));
+          } catch {}
+        };
+        const fail = (error: unknown) => {
+          if (finished) return;
+          finished = true;
+          controller?.error(error);
+          release();
+          reject(error);
+        };
+        // These handlers also consume late errors after cancellation or a bodyless response.
+        res.on('error', fail);
+        req.on('error', fail);
+        try {
+          const headers = new Headers();
+          for (const [name, value] of Object.entries(res.headers)) {
+            if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
+          }
+          const status = res.statusCode ?? 502;
+          if (nullBody(status)) {
+            const response = new Response(null, { status, headers });
+            finished = true;
+            release();
+            resolve(response);
+            return;
+          }
+          const body = new ReadableStream<Uint8Array>({
+            start(value) {
+              controller = value;
+              res.on('data', (chunk: Buffer) => {
+                if (finished) return;
+                try {
+                  controller?.enqueue(chunk);
+                  res.pause();
+                } catch (error) {
+                  fail(error);
+                }
+              });
+              res.on('end', () => {
+                if (finished) return;
+                try {
+                  controller?.close();
+                  finished = true;
+                } catch (error) {
+                  fail(error);
+                }
+              });
+            },
+            pull() {
+              if (finished) return;
+              try {
+                res.resume();
+              } catch (error) {
+                fail(error);
+              }
+            },
+            cancel() {
+              finished = true;
+              release();
+            },
+          });
+          resolve(new Response(body, { status, headers }));
+        } catch (error) {
+          fail(error);
+        }
       },
     );
     req.on('error', reject);
@@ -118,7 +176,10 @@ async function boundedPost(url: string, init: RequestInit, bytes: number, send: 
       reader.releaseLock();
     }
   }
-  return new Response(Buffer.concat(chunks), { status: response.status, headers: response.headers });
+  return new Response(nullBody(response.status) ? null : Buffer.concat(chunks), {
+    status: response.status,
+    headers: response.headers,
+  });
 }
 
 /** Official SDK bridge only. General envelope parsing and judgment remain A1-owned. No inference at construction. */

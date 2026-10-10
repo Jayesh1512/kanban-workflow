@@ -1,6 +1,6 @@
 # Kanban — I1 shared infrastructure
 
-Node26+ / pnpm11.10.0, one local SQLite database, no build step. Start with [install](docs/install.md), [outbound boundaries](docs/outbound.md) and [installed parts/licences](docs/parts-and-licences.md). Disable dependency build scripts (`export npm_config_ignore_scripts=true`), then run the ordered gate: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm check`, `pnpm test`.
+Node26+ / pnpm11.10.0, one local SQLite database, no build step. Start with [install](docs/install.md), [outbound boundaries](docs/outbound.md) and [installed parts/licences](docs/parts-and-licences.md). Run the ordered gate: `pnpm install --frozen-lockfile --ignore-scripts`, `pnpm typecheck`, `pnpm check`, `pnpm test`. The explicit install flag disables dependency lifecycle scripts, including the unused better-sqlite3 native build.
 
 I1 completes auth/settings/sealing/revocation, shared schemas/store/log and explicit bounded provider ports. Hosted OpenAI general judgment and Jev cross-swimlane judgment/guards belong to later A1; no model ID or paid call is selected. Full connector/host/MCP/web/purge bodies and final E1-R/report remain at their named gates. Backup/measures remain exact not-built until I2/I3. No real accounts, secrets or inference runtime are required for tests.
 

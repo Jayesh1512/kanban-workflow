@@ -5,14 +5,13 @@ This is shared infrastructure plus the approved synthetic foundation spine. Full
 Use Node26+ and pnpm11.10.0. No inference server, model download, Ollama, GPU or paid call is required. From a fresh checkout:
 
 ```sh
-export npm_config_ignore_scripts=true
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --ignore-scripts
 pnpm typecheck
 pnpm check
 pnpm test
 ```
 
-The exported setting keeps dependency lifecycle scripts disabled, including mtcute's unused better-sqlite3 native build. Do not approve builds. The product uses node:sqlite and mtcute memory storage. Dependencies and notices: [parts and licences](parts-and-licences.md). Dependency acquisition uses registry.npmjs.org separately from offline product checks. Tests inject provider/connector boundaries and make no cloud calls.
+The explicit `--ignore-scripts` option keeps dependency lifecycle scripts disabled, including mtcute's unused better-sqlite3 native build, and is required for fresh installs with pnpm11.10.0. Do not approve builds. The product uses node:sqlite and mtcute memory storage. Dependencies and notices: [parts and licences](parts-and-licences.md). Dependency acquisition uses registry.npmjs.org separately from offline product checks. Tests inject provider/connector boundaries and make no cloud calls.
 
 Generate a32-byte key locally (`node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`), export KANBAN_SECRET_KEY on the server and retain it securely. Do not commit it. `.env.example` documents variables; it is not loaded automatically. Choose KANBAN_DATA_DIR for the local database. To run the current admitted local spine server without an unbuilt hosted factory, set MODEL_PROVIDER=disabled and CONNECTORS=fixture, and set FIXTURE_PATH to a local recording. Future A1 adds explicit blocked status when OpenAI key/model are absent; currently its hosted factory remains exact not-built. Create the first teammate locally with `node src/cli.ts teammate:add alice`; provide display name at the prompt and retain the once-shown random initial password. There is no open signup. Then `pnpm start`, reachable at http://localhost:8787 by default. Later W1 supplies full teammate/settings forms.
 
