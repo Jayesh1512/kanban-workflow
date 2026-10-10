@@ -220,6 +220,44 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       }
     });
   }
+  async function disconnect(ctx: Ctx, accountId: Id) {
+    if (ctx.db !== s.db || ctx.actor.kind !== 'system') s.owner(ctx, accountId, true);
+    const a = s.account(accountId);
+    let rt = s.live.get(a.id);
+    let restoreFailed = false;
+    if (!rt && a.session_sealed !== null) {
+      try {
+        rt = s.runtime(a);
+      } catch {
+        restoreFailed = true;
+      }
+    }
+    // Destroy access synchronously before awaiting logout. A late save can never resurrect it.
+    s.db.tx(() => {
+      s.db.run("UPDATE channel_account SET state='removed',session_sealed=NULL WHERE id=?", a.id);
+      record(ctx, { action: 'account.disconnect', subjectKind: 'account', subjectId: a.id });
+    });
+    if (rt) {
+      rt.epoch++;
+      rt.accepting = false;
+      rt.saving = false;
+      rt.cancelCatchup?.();
+    }
+    scheduler.cancel(a.id);
+    s.cached.delete(a.id);
+    replies.delete(a.id);
+    if (restoreFailed) throw new AppError('invalid', 'Account removed; remote logout restoration failed');
+    if (rt) {
+      try {
+        await cleanup(s, () => rt.connector.logout(), 50000);
+      } catch {
+        s.oplog('warn', 'host.logout_failed', { accountId: a.id });
+        throw new AppError('invalid', 'Account removed; remote logout failed');
+      } finally {
+        if (s.live.get(a.id) === rt) s.live.delete(a.id);
+      }
+    }
+  }
   return {
     login,
     async startAll() {
@@ -239,6 +277,10 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       stopping = (async () => {
         const results = await Promise.allSettled(
           [...s.live].map(async ([id, rt]) => {
+            // A removed owner cannot authorize the connector's final session save.
+            // Use the existing system-only removal boundary, retaining bounded logout failures.
+            if (s.db.get('SELECT id FROM teammate WHERE id=? AND removed_at IS NOT NULL', s.account(id).teammate_id))
+              return disconnect(s.system, id);
             rt.epoch++;
             rt.accepting = false;
             rt.cancelCatchup?.();
@@ -255,44 +297,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       return stopping;
       // Canceled history/retry tasks resolve without awaiting an uncooperative external iterator.
     },
-    async disconnect(ctx: Ctx, accountId: Id) {
-      if (ctx.db !== s.db || ctx.actor.kind !== 'system') s.owner(ctx, accountId, true);
-      const a = s.account(accountId);
-      let rt = s.live.get(a.id);
-      let restoreFailed = false;
-      if (!rt && a.session_sealed !== null) {
-        try {
-          rt = s.runtime(a);
-        } catch {
-          restoreFailed = true;
-        }
-      }
-      // Destroy access synchronously before awaiting logout. A late save can never resurrect it.
-      s.db.tx(() => {
-        s.db.run("UPDATE channel_account SET state='removed',session_sealed=NULL WHERE id=?", a.id);
-        record(ctx, { action: 'account.disconnect', subjectKind: 'account', subjectId: a.id });
-      });
-      if (rt) {
-        rt.epoch++;
-        rt.accepting = false;
-        rt.saving = false;
-        rt.cancelCatchup?.();
-      }
-      scheduler.cancel(a.id);
-      s.cached.delete(a.id);
-      replies.delete(a.id);
-      if (restoreFailed) throw new AppError('invalid', 'Account removed; remote logout restoration failed');
-      if (rt) {
-        try {
-          await cleanup(s, () => rt.connector.logout(), 50000);
-        } catch {
-          s.oplog('warn', 'host.logout_failed', { accountId: a.id });
-          throw new AppError('invalid', 'Account removed; remote logout failed');
-        } finally {
-          if (s.live.get(a.id) === rt) s.live.delete(a.id);
-        }
-      }
-    },
+    disconnect,
   };
 }
 export function accountMethods(

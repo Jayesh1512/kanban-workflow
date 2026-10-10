@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { open } from '../../auth/index.ts';
+import { open, removeTeammate } from '../../auth/index.ts';
 import type { Connector, EventSink } from '../../contracts/index.ts';
 import { connect, controlled, deferred, setup } from './test-support.ts';
 
@@ -97,4 +97,48 @@ test('reconnect catch-up at most once per five minutes; stop cancels pending rec
   await Promise.resolve();
   assert.equal(r.control.calls.length, calls);
   assert.equal(r.host.chatCounts(r.ctx()).connected, false);
+});
+
+test('stop uses the system disconnect boundary for a removed owner without accepting a revoked final save', async (t) => {
+  let logouts = 0;
+  const r = await controlled(setup(), {
+    decorate(c) {
+      return {
+        ...c,
+        async logout() {
+          logouts++;
+          await c.logout();
+        },
+      };
+    },
+  });
+  t.after(() => r.h.close());
+  await r.control.advanceTo('setup');
+  const id = await connect(r.host, r.ctx());
+  await r.host.startAll();
+  const owner = r.ctx().actor;
+  assert.equal(owner.kind, 'teammate');
+  assert.ok(r.h.db.get('SELECT session_sealed FROM channel_account WHERE id=?', id));
+  await removeTeammate(r.ctx('bob'), owner.kind === 'teammate' ? owner.id : 0, async () => {});
+  const stale = r.contexts.get(id);
+  assert.ok(stale);
+  assert.throws(() => stale.saveSession('revoked final save'), /no longer active/);
+  await r.host.stopAll();
+  assert.equal(logouts, 1);
+  assert.deepEqual(
+    { ...r.h.db.get('SELECT state,session_sealed FROM channel_account WHERE id=?', id) },
+    {
+      state: 'removed',
+      session_sealed: null,
+    },
+  );
+  const removed = r.h.db.get<{ id: number }>("SELECT id FROM action_log WHERE action='teammate.remove'");
+  const disconnected = r.h.db.get<{ id: number; actor_kind: string }>(
+    "SELECT id,actor_kind FROM action_log WHERE action='account.disconnect'",
+  );
+  assert.ok(removed && disconnected && disconnected.id > removed.id);
+  assert.equal(disconnected.actor_kind, 'system');
+  assert.throws(() => stale.saveSession(null), /no longer active/);
+  await r.host.stopAll();
+  assert.equal(logouts, 1);
 });
