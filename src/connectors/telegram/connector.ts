@@ -163,9 +163,11 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
           },
         });
       } catch (error) {
-        active = false;
-        epoch++;
-        delivery.stop();
+        if (generation === epoch) {
+          active = false;
+          epoch++;
+          delivery.stop();
+        }
         throw error;
       }
     },

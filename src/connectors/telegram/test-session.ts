@@ -14,7 +14,9 @@ export function recording(count = 220): RecordedSession {
     id: n + 1,
     peer: peers[n % peers.length] as TgPeer,
     sender:
-      n % 2 ? { id: 10, displayName: 'Owner', username: 'owner' } : { id: 20, displayName: 'Outside', username: null },
+      Math.floor(n / 4) % 2
+        ? { id: 10, displayName: 'Owner', username: 'owner' }
+        : { id: 20, displayName: 'Outside', username: null },
     date: 1800000000 + n,
     text: `Synthetic caption ${n}`,
     media:
