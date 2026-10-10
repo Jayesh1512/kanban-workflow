@@ -4,7 +4,7 @@ import type { RecordedMessage, ReplayDataset } from './types.ts';
 
 /** Eval-only projection of configured labels into a complete typed snapshot.
  * Numbers are local fixture identities, NEVER claimed to be product allocations.
- * E2 rebuilds raw envelopes with rawChoices(actualRequest, mode); no numeric ID
+ * E2 rebuilds raw envelopes with rawChoices(actualRequest, mode, rawEvidenceFor(caseKey)); no numeric ID
  * from this projection is sent to the live product by an E1 structural check.
  */
 export function structuralSnapshot(

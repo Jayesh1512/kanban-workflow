@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { MovementRequest } from '../src/contracts/index.ts';
 import { MOVEMENT_LIMITS, MovementRequestSchema } from '../src/contracts/index.ts';
-import { MOVEMENT_CASES } from './cases.ts';
+import { MOVEMENT_CASES, rawEvidenceFor } from './cases.ts';
 import { buildDataset } from './dataset.ts';
 import type { RawChoiceEnvelope } from './raw-choices.ts';
 import { mismatchedSupportFixture, rawChoices } from './raw-choices.ts';
@@ -44,7 +44,7 @@ test('E1 movement structural: complete N+2 target-bound raw Choice envelope, Shi
   const key = messageKey(69, 3);
   const request = structuralSnapshot(data, key);
   assert.equal(MovementRequestSchema.safeParse(request).success, true);
-  const envelope = rawChoices(request, 'finance');
+  const envelope = rawChoices(request, 'finance', rawEvidenceFor(request.message.key));
   checkFixture(request, envelope);
   const shipping = target(request, 'Shipping', 'Done');
   const finance = target(request, 'Finance', 'Paid');
@@ -81,7 +81,7 @@ test('E1 movement structural: raw fixtures rebuild from supplied IDs/versions, i
     id: `actual-option-${index}`,
     laneVersion: 7,
   }));
-  const envelope = rawChoices(request, 'finance');
+  const envelope = rawChoices(request, 'finance', rawEvidenceFor(request.message.key));
   checkFixture(request, envelope);
   const finance = target(request, 'Finance', 'Paid');
   assert.equal(envelope.answers.movement?.choice, finance.id);
@@ -92,17 +92,20 @@ test('E1 movement structural: raw fixtures rebuild from supplied IDs/versions, i
 test('E1 movement structural: stay/review/applicable support-review/unselected-review/confidence cases', () => {
   const request = structuralSnapshot(buildDataset(), messageKey(69, 5));
   for (const mode of ['stay', 'review', 'support-review', 'unselected-review', 'low'] as const)
-    checkFixture(request, rawChoices(request, mode));
-  const low = rawChoices(request, 'low');
+    checkFixture(request, rawChoices(request, mode, rawEvidenceFor(request.message.key)));
+  const low = rawChoices(request, 'low', rawEvidenceFor(request.message.key));
   assert.equal(low.answers.movement?.choice, 'stay');
   assert.equal(low.answers.movement?.probabilities.stay, 0.4);
   assert.equal(low.answers.movement?.confidence, 0.1);
   assert.notEqual(low.answers.movement?.confidence, low.answers.movement?.probabilities.stay);
-  assert.equal(rawChoices(request, 'support-review').answers['support:stay']?.choice, 'review');
-  const unselected = rawChoices(request, 'unselected-review');
+  assert.equal(
+    rawChoices(request, 'support-review', rawEvidenceFor(request.message.key)).answers['support:stay']?.choice,
+    'review',
+  );
+  const unselected = rawChoices(request, 'unselected-review', rawEvidenceFor(request.message.key));
   assert.notEqual(unselected.answers['support:stay']?.choice, 'review');
   assert.ok(request.options.every((option) => unselected.answers[`support:${option.id}`]?.choice === 'review'));
-  assert.equal(rawChoices(request, 'review').answers.movement?.choice, 'review');
+  assert.equal(rawChoices(request, 'review', rawEvidenceFor(request.message.key)).answers.movement?.choice, 'review');
 });
 
 test('E1 movement structural: deliberately invalid complete/partial envelopes identify their exact defect', () => {
@@ -114,12 +117,22 @@ test('E1 movement structural: deliberately invalid complete/partial envelopes id
     'generic-support',
     'extra-answer',
   ] as const) {
-    assert.throws(() => checkFixture(request, rawChoices(request, mode)), { name: 'AssertionError' }, mode);
+    assert.throws(
+      () => checkFixture(request, rawChoices(request, mode, rawEvidenceFor(request.message.key))),
+      { name: 'AssertionError' },
+      mode,
+    );
   }
   for (const mode of ['invalid-destination', 'invalid-distribution'] as const)
-    assert.deepEqual(Object.keys(rawChoices(request, mode).answers).sort(), expectedQuestions(request));
-  assert.ok('support' in rawChoices(request, 'generic-support').answers);
-  assert.equal(Object.keys(rawChoices(request, 'missing-answer').answers).length, request.options.length + 1);
+    assert.deepEqual(
+      Object.keys(rawChoices(request, mode, rawEvidenceFor(request.message.key)).answers).sort(),
+      expectedQuestions(request),
+    );
+  assert.ok('support' in rawChoices(request, 'generic-support', rawEvidenceFor(request.message.key)).answers);
+  assert.equal(
+    Object.keys(rawChoices(request, 'missing-answer', rawEvidenceFor(request.message.key)).answers).length,
+    request.options.length + 1,
+  );
 });
 
 test('E1 movement structural: every declared subject/destination/evidence resolves; no-destination has no invented answer', () => {
@@ -166,7 +179,7 @@ test('E1 movement structural: every declared subject/destination/evidence resolv
 
 test('E1 movement structural: complete example fits frozen question/message/byte bounds without truncation', () => {
   const request = structuralSnapshot(buildDataset(), messageKey(69, 3));
-  const envelope = rawChoices(request, 'finance');
+  const envelope = rawChoices(request, 'finance', rawEvidenceFor(request.message.key));
   assert.ok(request.options.length <= MOVEMENT_LIMITS.transitions);
   assert.ok(expectedQuestions(request).length <= MOVEMENT_LIMITS.questions);
   assert.ok(request.evidence.length <= MOVEMENT_LIMITS.evidenceMessages);
@@ -191,7 +204,7 @@ test('E1 movement structural: complete example fits frozen question/message/byte
 
 test('E1 movement structural: normalized Finance selection has deliberately mismatched Shipping target/question fixture', () => {
   const request = structuralSnapshot(buildDataset(), messageKey(69, 3));
-  const result = mismatchedSupportFixture(request);
+  const result = mismatchedSupportFixture(request, rawEvidenceFor(request.message.key));
   assert.equal(result.kind, 'answered');
   if (result.kind !== 'answered') throw new Error('Expected synthetic answered mismatch');
   assert.equal(result.movement.choice, target(request, 'Finance', 'Paid').id);

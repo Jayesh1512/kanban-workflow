@@ -39,9 +39,16 @@ version/request ID/token usage claim.
 A raw response is inherently bound to actual request IDs, versions and evidence bundles.
 E1 uses `structuralSnapshot()` to project configured setup and recording names into
 explicit **eval-only** typed fixture identities. These static numbers are not product
-allocations. E2 must rebuild raw cases with `rawChoices(actualRequest, case.mode)` before
-injection into the actual adapter; the helper accepts supplied IDs and complete option
-maps and is tested with different allocations. It is fixture construction, not a parser
+allocations. E2 must rebuild raw cases with
+`rawChoices(actualRequest, case.mode, rawEvidenceFor(caseKey))` before injection into the
+actual adapter. The eval-only selectors explicitly name the required logical evidence
+keys; the helper resolves each unique key to its unique supplied singleton bundle ID.
+The independent case keeps Shipping m-070-002 and Finance m-070-003 even when opening
+m-070-001 is also supplied or evidence/options/bundles are reordered with noncontiguous
+IDs. Other raw cases retain their own named evidence (including the chat071 negatives).
+Missing or ambiguous required keys/singletons throw; E2 must supply the case's permitted
+named evidence, with no positional fallback. The helper accepts supplied IDs and complete
+option maps. It is fixture construction, not a parser
 or guard. Do not run the static raw lines as though their IDs were resolved against a
 product database. A1/I1 own actual request construction, parsing and boundary validation.
 The final full replay may use declared name-based answers while isolated adapter cases
@@ -81,12 +88,20 @@ pseudo-events and not E1 passes:
 - Make a real human correction at `before-human-override`, then replay old evidence.
   Open-join inherited-move clearing, stale-SOP/permission/evidence/settlement and normalized
   Finance+Shipping support mismatch require actual injected request/result boundary tests.
-  `mismatchedSupportFixture(actualRequest)` builds that typed application-boundary
+  `mismatchedSupportFixture(actualRequest, rawEvidenceFor('m-070-004'))` builds that typed application-boundary
   mismatch; the `invalid_response` replay line labels its expected outcome only.
   Neither fixture proves the unbuilt guard validation. Duplicate JSON keys require raw HTTP-byte fixtures.
 - Withdraw chat 016 at `before-withdrawal`; the following repeated message must be dropped.
   Compare baseline labels before withdrawal and explicit remaining labels afterwards;
   scan SQLite/FTS/WAL for `E1R_WITHDRAW_ONLY_7QX`, including title/summary/company/log bytes.
+  Baseline u-contact-016 has the marker-company link and sales role learned in
+  chat016, and also participates in uncertain nonwork chat080. Chat080's company is null;
+  it adds no inclusion-derived company link. After withdrawing chat016 the identity/contact
+  survives through chat080; without human corrections its agent-only marker-company link
+  is removed and its unsupported agent role becomes unknown. In a separate human-field
+  retention branch, set a marker-free company/role/name by a real human before withdrawal
+  and assert those values/links survive. Do not human-retain the marker itself in a branch
+  that expects physical marker absence. These are explicit future E2 expectations.
   Stored edit/delete events occur at `stored-edit-delete`, with no version-2 decision
   script and no full R10 re-evaluation claim.
 

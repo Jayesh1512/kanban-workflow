@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { MovementChoice, MovementRequest, MovementResult } from '../src/contracts/index.ts';
-import type { RawMode } from './cases.ts';
+import type { RawEvidenceSelectors, RawMode } from './cases.ts';
 
 export interface RawChoiceEnvelope {
   model: null;
@@ -23,6 +23,21 @@ export function digest(value: unknown): string {
     .update(JSON.stringify(canonical(value)))
     .digest('hex');
 }
+function singletonForKey(request: MovementRequest, key: string): string {
+  const matches = request.evidence.filter((item) => item.key === key);
+  if (matches.length === 0) throw new Error(`Missing required evidence key: ${key}`);
+  if (matches.length !== 1) throw new Error(`Ambiguous required evidence key: ${key}`);
+  const evidence = matches.find((item) => item.key === key);
+  if (!evidence) throw new Error(`Missing required evidence key: ${key}`);
+  const bundles = request.evidenceOptions.filter(
+    (item) => item.messageIds.length === 1 && item.messageIds.includes(evidence.id),
+  );
+  if (bundles.length === 0) throw new Error(`Missing singleton evidence bundle: ${key}`);
+  if (bundles.length !== 1) throw new Error(`Ambiguous singleton evidence bundle: ${key}`);
+  const bundle = bundles.find((item) => item.messageIds.includes(evidence.id));
+  if (!bundle) throw new Error(`Missing singleton evidence bundle: ${key}`);
+  return bundle.id;
+}
 function choice(options: string[], selected: string, confidence = 0.99): MovementChoice & { type: 'choice' } {
   if (!options.includes(selected)) throw new Error('Fixture choice must belong to its question');
   return {
@@ -34,20 +49,23 @@ function choice(options: string[], selected: string, confidence = 0.99): Movemen
 }
 
 /** Build a full N+2 raw fixture from supplied snapshot IDs, never global/assumed DB IDs.
- * E2 passes its actual request here. Static generated raw lines use a documented
+ * E2 passes its actual request and explicit eval-only logical-key selectors here.
+ * Static generated raw lines use a documented
  * eval-only structural projection; those numbers must be rebound before runtime use.
  * This produces fixtures, not a provider parser, normalizer, guard or scorer.
  */
-export function rawChoices(request: MovementRequest, mode: RawMode): RawChoiceEnvelope {
+export function rawChoices(
+  request: MovementRequest,
+  mode: RawMode,
+  selectors: RawEvidenceSelectors,
+): RawChoiceEnvelope {
   if (request.options.length === 0) throw new Error('No-destination has no wire response');
   const movementOptions = [...request.options.map((o) => o.id).sort(), 'stay', 'review'];
   const supportOptions = [...request.evidenceOptions.map((o) => o.id).sort(), 'review'];
-  const first = request.evidence[0];
-  const second = request.evidence[1];
-  if (!first || !second) throw new Error('Independent-support fixture requires two evidence items');
-  const firstBundle = request.evidenceOptions.find((o) => o.messageIds.length === 1 && o.messageIds[0] === first.id);
-  const secondBundle = request.evidenceOptions.find((o) => o.messageIds.length === 1 && o.messageIds[0] === second.id);
-  if (!firstBundle || !secondBundle) throw new Error('Snapshot lacks singleton evidence bundles');
+  if (selectors.primaryMessageKey === selectors.financeMessageKey)
+    throw new Error('Independent-support fixture requires distinct logical evidence keys');
+  const primaryBundle = singletonForKey(request, selectors.primaryMessageKey);
+  const financeBundle = singletonForKey(request, selectors.financeMessageKey);
   const finance = request.options.find(
     (o) =>
       request.lanes.find((l) => l.id === o.toLaneId)?.name === 'Finance' &&
@@ -57,12 +75,12 @@ export function rawChoices(request: MovementRequest, mode: RawMode): RawChoiceEn
   const movement = mode === 'finance' ? (finance?.id ?? 'review') : mode === 'review' ? 'review' : 'stay';
   const answers: RawChoiceEnvelope['answers'] = {
     movement: choice(movementOptions, movement),
-    'support:stay': choice(supportOptions, firstBundle.id),
+    'support:stay': choice(supportOptions, primaryBundle),
   };
   for (const option of [...request.options].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
     const lane = request.lanes.find((l) => l.id === option.toLaneId);
     const stage = lane?.stages.find((s) => s.id === option.toStageId);
-    const support = lane?.name === 'Finance' && stage?.name === 'Paid' ? secondBundle.id : firstBundle.id;
+    const support = lane?.name === 'Finance' && stage?.name === 'Paid' ? financeBundle : primaryBundle;
     answers[`support:${option.id}`] = choice(supportOptions, support);
   }
   if (mode === 'low') {
@@ -87,17 +105,17 @@ export function rawChoices(request: MovementRequest, mode: RawMode): RawChoiceEn
   if (mode === 'generic-support') {
     for (const option of request.options) delete answers[`support:${option.id}`];
     delete answers['support:stay'];
-    answers.support = choice(supportOptions, firstBundle.id);
+    answers.support = choice(supportOptions, primaryBundle);
   }
-  if (mode === 'extra-answer') answers['support:unoffered'] = choice(supportOptions, firstBundle.id);
+  if (mode === 'extra-answer') answers['support:unoffered'] = choice(supportOptions, primaryBundle);
   return { model: null, answers, usage: null };
 }
 
 /** Intentionally mismatched application-boundary fixture for later A1/E2 injection.
  * This is a typed synthetic response, not normalization or movement execution.
  */
-export function mismatchedSupportFixture(request: MovementRequest): MovementResult {
-  const envelope = rawChoices(request, 'finance');
+export function mismatchedSupportFixture(request: MovementRequest, selectors: RawEvidenceSelectors): MovementResult {
+  const envelope = rawChoices(request, 'finance', selectors);
   const movement = envelope.answers.movement;
   const shipping = request.options.find((option) => {
     const lane = request.lanes.find((item) => item.id === option.toLaneId);

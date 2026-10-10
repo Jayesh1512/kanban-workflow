@@ -44,6 +44,8 @@ export function accountFor(chat: number): string {
 export function companyFor(chat: number): string | null {
   // Unknown-evidence contacts have no named company. The withdrawal marker company
   // occurs only in chat 016, so later physical purge checks can scan it honestly.
+  // Uncertain nonwork chat 080 shares that contact but adds no human company link.
+  if (chat === 79) return null;
   if (chat === 1) return COMPANY_NAMES[0];
   if (chat % 64 >= 60) return null;
   const index = chat % 16;

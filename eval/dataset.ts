@@ -1,5 +1,5 @@
 import type { FixtureLine, MovementReplayLine, ScriptLine } from '../src/contracts/index.ts';
-import { MOVEMENT_CASES, type RawMode } from './cases.ts';
+import { MOVEMENT_CASES, type RawMode, rawEvidenceFor } from './cases.ts';
 import { rawChoices } from './raw-choices.ts';
 import { accountFor, buildSetup, COMPANY_NAMES, chatKey, messageKey, senderFor, WITHDRAWAL_MARKER } from './setup.ts';
 import { structuralSnapshot } from './structural-snapshot.ts';
@@ -76,7 +76,7 @@ function addMovement(data: ReplayDataset): void {
         messageKey: key,
         version: 1,
         subjectKey: previous.subjectKey,
-        raw: rawChoices(structuralSnapshot(data, key), item.mode as RawMode),
+        raw: rawChoices(structuralSnapshot(data, key), item.mode as RawMode, rawEvidenceFor(key)),
       };
     } else {
       const destination = item.mode === 'review' ? 'review' : 'stay';
@@ -108,6 +108,7 @@ export function buildDataset(): ReplayDataset {
     injections: [],
   };
   const data: ReplayDataset = { recording, setup, script, movement: [], labels };
+  const bobNativeId = (nativeId: string) => `bob-${nativeId}`;
   for (const teammate of setup.teammates)
     recording.push({
       t: 'account',
@@ -154,7 +155,8 @@ export function buildDataset(): ReplayDataset {
           account: 'bob',
           message: {
             ...message,
-            nativeId: `bob-${message.nativeId}`,
+            nativeId: bobNativeId(message.nativeId),
+            replyToNativeId: message.replyToNativeId === null ? null : bobNativeId(message.replyToNativeId),
             cursor: String(recording.length + 1).padStart(6, '0'),
           },
         });

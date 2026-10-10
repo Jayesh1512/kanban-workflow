@@ -464,7 +464,7 @@
     {
       "account": "bob",
       "chatKey": "chat-080",
-      "company": "Acme Systems Group"
+      "company": null
     },
     {
       "account": "bob",

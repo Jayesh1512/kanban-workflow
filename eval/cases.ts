@@ -63,3 +63,22 @@ export type RawMode =
   | 'missing-answer'
   | 'generic-support'
   | 'extra-answer';
+
+export interface RawEvidenceSelectors {
+  primaryMessageKey: string;
+  financeMessageKey: string;
+}
+
+/** Eval-owned case selectors, not evidence positions or product ID allocations.
+ * The independent Shipping/Finance case names m-070-002/003. Other cases retain
+ * their original two preceding logical messages (including chat071 negatives).
+ * E2 passes these selectors along with its actual immutable request.
+ */
+export function rawEvidenceFor(key: string): RawEvidenceSelectors {
+  const item = MOVEMENT_CASES.find((entry) => messageKey(entry.chat, entry.message) === key);
+  if (!item || item.message < 2) throw new Error(`No raw evidence selectors for fixture case ${key}`);
+  return {
+    primaryMessageKey: messageKey(item.chat, item.message - 2),
+    financeMessageKey: messageKey(item.chat, item.message - 1),
+  };
+}
