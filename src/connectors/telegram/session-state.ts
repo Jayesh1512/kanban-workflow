@@ -126,11 +126,16 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
     },
     async save(valid: () => boolean = () => true) {
       healthy();
+      if (!valid()) throw new AppError('invalid', 'Connector stopped');
       let opaque: string;
       try {
         opaque = await api.exportSession();
       } catch {
-        return serial(() => latch());
+        return serial(() => {
+          // A late canceled export must not fault a stopped or successfully cleared session.
+          if (!valid()) throw new AppError('invalid', 'Connector stopped');
+          return latch();
+        });
       }
       // Read keys here, AFTER export: concurrent live/history learning must not be overwritten.
       return serial(async () => {

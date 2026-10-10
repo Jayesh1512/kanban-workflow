@@ -1,6 +1,6 @@
 # Connector contract
 
-Exact copy of final architecture section 3.3, including 3.3.1 and the final 3.3.2 session-envelope amendment. Fixture, RecordedApi, the neutral Telegram connector and MemoryStorage MtcuteApi are implemented. The pinned installed-source audit and connection procedure exist. The approved shared compiler prerequisite resolves the former typecheck block; skipLibCheck skips all .d.ts bodies, without fixing or certifying them. C1-F1–F5 correction evidence is prepared for a new independent full C1 review. Host storage, notice enforcement, sealing, cursors/gaps, final component equivalence and real-account observations remain later gates.
+Exact copy of final architecture section 3.3, including 3.3.1 and the final 3.3.2 session-envelope amendment. Fixture, RecordedApi, the neutral Telegram connector and MemoryStorage MtcuteApi are implemented. The pinned installed-source audit and connection procedure exist. The approved shared compiler prerequisite resolves the former typecheck block; skipLibCheck skips all .d.ts bodies, without fixing or certifying them. Independent round2 resolved C1-F1–F5 within their stated limits. C1-F6 lifecycle correction evidence is prepared for a new independent full round3; approval remains pending. Host storage, notice enforcement, sealing, cursors/gaps, final component equivalence and real-account observations remain later gates.
 
 ### 3.3 Connector contract — `src/contracts/connector.ts`
 

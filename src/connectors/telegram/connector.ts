@@ -59,6 +59,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
     if (session === null) throw new AppError('unauthenticated', 'Login required');
     if (self === null) {
       await api.importSession(session);
+      sessions.healthy();
       if (!valid()) throw new AppError('invalid', 'Connector stopped');
       const restored = await api.getMe();
       sessions.healthy();
@@ -128,7 +129,19 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
       sessions.restore();
       sessions.healthy();
       if (input === null) {
-        if (sessions.opaque() !== null) return { kind: 'done', self: participant(await ready()) };
+        if (sessions.opaque() !== null) {
+          try {
+            const result = await ready(() => generation === epoch);
+            await sessions.save(() => generation === epoch);
+            sessions.healthy();
+            if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
+            return { kind: 'done', self: participant(result) };
+          } catch (error) {
+            sessions.healthy();
+            if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
+            throw error;
+          }
+        }
         loginStage = 'phone';
         phone = null;
         hash = null;
@@ -155,6 +168,8 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
         if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
         self = result;
         await sessions.save(() => generation === epoch);
+        sessions.healthy();
+        if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
         phone = null;
         hash = null;
         return { kind: 'done', self: participant(result) };
@@ -167,21 +182,26 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
     async start(sink) {
       const generation = ++epoch;
       active = false;
+      const cancelled = () => {
+        // Fault cleanup also invalidates epoch; it must never masquerade as caller cancellation.
+        sessions.healthy();
+        return generation !== epoch;
+      };
       try {
         await ready(() => generation === epoch);
       } catch (error) {
-        if (generation !== epoch) return;
+        if (cancelled()) return;
         throw error;
       }
-      if (generation !== epoch) return;
+      if (cancelled()) return;
       // Only the opaque inner SDK session is reimported on every start, including a restart of this instance.
       try {
         await api.importSession(sessions.opaque() as string);
       } catch (error) {
-        if (generation !== epoch) return;
+        if (cancelled()) return;
         throw error;
       }
-      if (generation !== epoch) return;
+      if (cancelled()) return;
       delivery.start(sink);
       active = true;
       try {
@@ -213,8 +233,9 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
             });
           },
         });
+        cancelled(); // A canceled adapter startup can resolve normally after fault-triggered destroy.
       } catch (error) {
-        if (generation !== epoch) return;
+        if (cancelled()) return;
         if (generation === epoch) {
           active = false;
           epoch++;
