@@ -265,4 +265,18 @@ test('E1 structural: default-one scenario is separate from below-one automatic f
     ),
   );
   assert.equal(Object.keys(scenario.labels.messages).length, 30);
+  assert.ok(scenario.setup.included.every((entry) => entry.company === null));
+  assert.ok(
+    scenario.script.every(
+      (line) => 'decision' in line && line.decision.cardCompany === null && line.decision.contacts.length === 0,
+    ),
+  );
+  assert.deepEqual(scenario.labels.contacts['u-contact-015'], {
+    company: 'unknown',
+    roleCategory: 'unknown',
+    hasCompanyEvidence: false,
+    hasRoleEvidence: false,
+  });
+  assert.ok(Object.values(scenario.labels.cards).every((card) => card.company === null));
+  assert.equal(scenario.labels.companies.length, 0);
 });
