@@ -1,0 +1,481 @@
+{
+  "teammates": [
+    {
+      "username": "alice",
+      "account": "alice"
+    },
+    {
+      "username": "bob",
+      "account": "bob"
+    }
+  ],
+  "lanes": [
+    {
+      "name": "Sales",
+      "sop": "Track a client requesting a quote for a new purchase. Shipping and invoicing evidence may need human review.",
+      "stages": [
+        {
+          "name": "Lead",
+          "criteria": "A client asks about a purchase."
+        },
+        {
+          "name": "Quoted",
+          "criteria": "A written quote has been sent."
+        },
+        {
+          "name": "Agreed",
+          "criteria": "The client approves the quote."
+        }
+      ]
+    },
+    {
+      "name": "Shipping",
+      "sop": "Track an accepted order explicitly assigned to shipment.",
+      "stages": [
+        {
+          "name": "Queued",
+          "criteria": "An accepted order is queued for shipment."
+        },
+        {
+          "name": "Packed",
+          "criteria": "Packing is complete."
+        },
+        {
+          "name": "In transit",
+          "criteria": "The carrier has collected the package."
+        },
+        {
+          "name": "Done",
+          "criteria": "The customer confirms delivery."
+        }
+      ]
+    },
+    {
+      "name": "Finance",
+      "sop": "Track an invoice explicitly assigned to finance for collection.",
+      "stages": [
+        {
+          "name": "Open",
+          "criteria": "An invoice has been issued."
+        },
+        {
+          "name": "Paid",
+          "criteria": "The invoice payment has cleared."
+        }
+      ]
+    }
+  ],
+  "included": [
+    {
+      "account": "alice",
+      "chatKey": "chat-001",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-002",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-003",
+      "company": "Northstar Labs Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-004",
+      "company": "Cedar Works Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-005",
+      "company": "Bluebird Studio Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-006",
+      "company": "Atlas Supply Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-007",
+      "company": "Harbor Devices Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-008",
+      "company": "Orchid Services Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-009",
+      "company": "Copper Networks Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-010",
+      "company": "Juniper Design Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-011",
+      "company": "Willow Foods Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-012",
+      "company": "Redwood Partners Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-013",
+      "company": "Meridian Tools Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-014",
+      "company": "Summit Research Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-015",
+      "company": "The Global Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-016",
+      "company": "E1R_WITHDRAW_ONLY_7QX Company"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-017",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-018",
+      "company": "Globex Logistics Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-019",
+      "company": "Northstar Labs Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-020",
+      "company": "Cedar Works Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-021",
+      "company": "Bluebird Studio Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-022",
+      "company": "Atlas Supply Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-023",
+      "company": "Harbor Devices Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-024",
+      "company": "Orchid Services Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-025",
+      "company": "Copper Networks Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-026",
+      "company": "Juniper Design Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-027",
+      "company": "Willow Foods Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-028",
+      "company": "Redwood Partners Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-029",
+      "company": "Meridian Tools Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-030",
+      "company": "Summit Research Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-031",
+      "company": "The Global Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-032",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-033",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-034",
+      "company": "Globex Logistics Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-035",
+      "company": "Northstar Labs Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-036",
+      "company": "Cedar Works Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-037",
+      "company": "Bluebird Studio Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-038",
+      "company": "Atlas Supply Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-039",
+      "company": "Harbor Devices Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-040",
+      "company": "Orchid Services Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-041",
+      "company": "Copper Networks Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-042",
+      "company": "Juniper Design Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-043",
+      "company": "Willow Foods Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-044",
+      "company": "Redwood Partners Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-045",
+      "company": "Meridian Tools Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-046",
+      "company": "Summit Research Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-047",
+      "company": "The Global Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-048",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-049",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-050",
+      "company": "Globex Logistics Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-051",
+      "company": "Northstar Labs Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-052",
+      "company": "Cedar Works Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-053",
+      "company": "Bluebird Studio Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-054",
+      "company": "Atlas Supply Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-055",
+      "company": "Harbor Devices Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-056",
+      "company": "Orchid Services Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-057",
+      "company": "Copper Networks Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-058",
+      "company": "Juniper Design Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-059",
+      "company": "Willow Foods Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-060",
+      "company": "Redwood Partners Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-061",
+      "company": null
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-062",
+      "company": null
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-063",
+      "company": null
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-064",
+      "company": null
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-065",
+      "company": "Acme Systems Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-066",
+      "company": "Globex Logistics Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-067",
+      "company": "Northstar Labs Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-068",
+      "company": "Cedar Works Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-069",
+      "company": "Bluebird Studio Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-070",
+      "company": "Atlas Supply Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-071",
+      "company": "Harbor Devices Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-072",
+      "company": "Orchid Services Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-073",
+      "company": "Copper Networks Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-074",
+      "company": "Juniper Design Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-075",
+      "company": "Willow Foods Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-076",
+      "company": "Redwood Partners Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-077",
+      "company": "Meridian Tools Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-078",
+      "company": "Summit Research Group"
+    },
+    {
+      "account": "alice",
+      "chatKey": "chat-079",
+      "company": "The Global Group"
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-080",
+      "company": null
+    },
+    {
+      "account": "bob",
+      "chatKey": "chat-001",
+      "company": "Acme Systems Group"
+    }
+  ],
+  "settings": {
+    "review_threshold": 0.8,
+    "require_agreement": true,
+    "role_categories": ["sales", "technical", "finance", "operations", "support", "leadership", "other", "unknown"],
+    "keep_deleted_text": true
+  }
+}
