@@ -71,7 +71,7 @@ test('F1 auth uses scrypt/hash-only credentials, expiring sessions and authentic
   h.clock.advance(15 * 86400000);
   assert.equal(teammateForSession(h.db, session.token, h.clock.now()), null);
   assert.equal(getSetting(h.db, 'review_threshold'), 1);
-  assert.throws(() => setSetting({ ...ctx, actor: { kind: 'credential', id: 1 } }, 'review_threshold', 0), /Teammate/);
+  assert.throws(() => setSetting({ ...ctx, actor: { kind: 'credential', id: 1 } }, 'review_threshold', 0), /teammate/i);
 });
 
 test('F1 all inventory routes authenticate before executing their real or not-built handlers', async (t) => {
@@ -255,7 +255,31 @@ test('F1 supplemental threshold0 applies only admitted create/attach/same-lane m
   assert.ok(JSON.parse(move.message_ids).length === 1);
   assert.match(move.reason, /Sales SOP/);
   assert.notEqual(JSON.parse(move.before).stageId, JSON.parse(move.after).stageId);
-  assert.throws(() => getMessages(ctx, { chatId: 1 }), /not built: getMessages/);
+  const allStored = h.db.all<{ id: number; message_key: string; text: string }>(
+    'SELECT id,message_key,text FROM message ORDER BY sent_at DESC,id DESC',
+  );
+  assert.equal(allStored.length, 12);
+  const stored = allStored.filter((m) => ['m-1', 'm-2'].includes(m.message_key));
+  assert.equal(stored.length, 2);
+  assert.deepEqual(
+    stored.map((m) => m.message_key),
+    ['m-2', 'm-1'],
+  );
+  const messages = getMessages(ctx, { ids: stored.map((m) => m.id) });
+  assert.deepEqual(
+    messages.map((m) => ({ id: m.id, text: m.text, cardId: m.cardId })),
+    stored.map((m) => ({ id: m.id, text: m.text, cardId: card.id })),
+  );
+  const companyId = h.db.get<{ company_id: number }>('SELECT company_id FROM contact_company')?.company_id;
+  assert.ok(companyId);
+  assert.deepEqual(
+    getMessages(ctx, { companyId }).map((m) => ({ id: m.id, text: m.text })),
+    allStored.map((m) => ({ id: m.id, text: m.text })),
+  );
+  assert.ok(messages.every((m) => m.sender.name === 'Bob' && m.direction === 'in'));
+  assert.ok(
+    getMessages({ ...ctx, canReadText: false }, { ids: stored.map((m) => m.id) }).every((m) => m.text === null),
+  );
 });
 
 test('F1 stop aborts in-flight scripted-boundary work and discards a late model reply', async (t) => {

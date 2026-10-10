@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import type { Db, SqlValue } from '../contracts/index.ts';
+import { AppError } from '../contracts/index.ts';
 
 export function openDb(path: string): Db {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
@@ -37,8 +38,18 @@ export function openDb(path: string): Db {
       if (/^\s*(INSERT|UPDATE|DELETE)\s+(INTO\s+)?action_log\b/i.test(sql) && depth === 0) {
         throw new Error('action log writes require Db.tx');
       }
-      const result = sqlite.prepare(sql).run(...params);
-      return { changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) };
+      try {
+        const result = sqlite.prepare(sql).run(...params);
+        return { changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) };
+      } catch (error) {
+        if (error instanceof Error && 'errcode' in error) {
+          if (error.errcode === 2067 || error.errcode === 1555)
+            throw new AppError('conflict', 'Conflicting stored value');
+          if (error.errcode === 787) throw new AppError('invalid', 'Invalid reference (FOREIGN KEY)');
+          if (error.errcode === 1299 || error.errcode === 275) throw new AppError('invalid', 'Invalid stored value');
+        }
+        throw error;
+      }
     },
     tx<T>(fn: () => T): T {
       if (fn.constructor.name === 'AsyncFunction') throw new Error('Db.tx requires a synchronous callback');

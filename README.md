@@ -1,17 +1,9 @@
-# Kanban foundation
+# Kanban — I1 shared infrastructure
 
-Local Node 26 / pnpm application. No build step. Install with `pnpm install --frozen-lockfile`. Gate: `pnpm typecheck`, `pnpm check`, `pnpm test`.
+Node26+ / pnpm11.10.0, one local SQLite database, no build step. Start with [install](docs/install.md), [outbound boundaries](docs/outbound.md) and [installed parts/licences](docs/parts-and-licences.md). Disable dependency build scripts (`export npm_config_ignore_scripts=true`), then run the ordered gate: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm check`, `pnpm test`.
 
-This foundation provides exact contracts and a bounded synthetic spine. Unbuilt features throw `AppError('invalid', 'not built: <name>')`. General cloud provider adapters and full movement guards are assigned to later streams. No real credentials or model calls are required for tests.
+I1 completes auth/settings/sealing/revocation, shared schemas/store/log and explicit bounded provider ports. Hosted OpenAI general judgment and Jev cross-swimlane judgment/guards belong to later A1; no model ID or paid call is selected. Full connector/host/MCP/web/purge bodies and final E1-R/report remain at their named gates. Backup/measures remain exact not-built until I2/I3. No real accounts, secrets or inference runtime are required for tests.
 
-The active spine starts with an empty database and twelve synthetic messages at the default review threshold of 1. It creates a proposal, accepts it through a named teammate's HTTP session, checks the actual board HTML, and reads company contacts and roles through MCP. The recording and general script are in `test/fixtures/spine.ts`; replay movement stays in the initial lane. Separate support tests cover atomic rollback, authenticated session sealing, cancellation, restart and ingestion deduplication.
+The primary active test uses an empty database and twelve synthetic messages at review threshold1, creates a proposal, accepts it through a named teammate's actual HTTP session, checks board HTML and reads company contacts/roles through MCP. Supplemental tests retain automatic create/attach/same-lane move/contact behavior, real message views, rollback, cancellation and file-backed close/reopen. Source-injected ports are [F] code tests, never model-quality [M] or real-account procedure [U] passes.
 
-Offline replay uses the normal component assembly:
-
-```sh
-node src/cli.ts replay recording.jsonl setup.json script.jsonl
-```
-
-The setup contains `teammates`, `lanes`, `included` chats and `settings` as declared in the architecture. Replay uses an in-memory database and prints actual message, decision, card, review and contact counts. An optional sibling `movement.jsonl` supplies replay movement answers. The CLI does not accept reviews; at threshold 1 cards remain proposals until a teammate accepts them through the web route.
-
-Foundation supports only the admitted happy path. Search, full guard and movement semantics, non-new-card review settlement, hosted provider adapters, catch-up, purge, backup and measurement remain not built.
+`node src/cli.ts teammate:add <username>` creates a local teammate and shows its generated password once. `node src/cli.ts replay recording.jsonl setup.json script.jsonl` uses the actual fixture/model/app factories and sibling movement.jsonl (or explicit replay path); prints stored counts. At default1 cards remain proposals until human acceptance. Full hosted readiness/status and guard tests arrive A1/W1, independent official MCP client connection P1/E2, source audit C1, final five-part report I4.
