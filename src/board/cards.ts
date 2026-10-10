@@ -1,135 +1,9 @@
 import { z } from 'zod';
-import type { BoardView, CardSummary, Ctx, Id, LaneView, SetBy, WriteOpts } from '../contracts/index.ts';
-import { AppError, IdSchema, WriteOptsSchema } from '../contracts/index.ts';
-import { boardVersion, record } from '../log/index.ts';
+import type { CardSummary, Ctx, Id, SetBy, WriteOpts } from '../contracts/index.ts';
+import { AppError, IdSchema } from '../contracts/index.ts';
+import { record } from '../log/index.ts';
+import { actor, lane, setBy, summary, validate } from './helpers.ts';
 
-function validate<T>(schema: z.ZodType<T>, value: unknown): T {
-  const p = schema.safeParse(value);
-  if (!p.success) throw new AppError('invalid', 'Invalid board input');
-  return p.data;
-}
-function actor(ctx: Ctx): 'agent' | 'teammate' | 'credential' {
-  if (ctx.actor.kind === 'system') throw new AppError('forbidden', 'Board actor required');
-  return ctx.actor.kind;
-}
-function setBy(ctx: Ctx, o?: WriteOpts): SetBy {
-  if (o) validate(WriteOptsSchema, o);
-  const value = o?.setBy ?? (actor(ctx) === 'agent' ? 'agent' : 'human');
-  if (ctx.actor.kind === 'agent' && value === 'human') throw new AppError('forbidden', 'Agent cannot set human values');
-  return value;
-}
-function lane(ctx: Ctx, id: Id): LaneView {
-  const r = ctx.db.get<{
-    id: Id;
-    name: string;
-    sop: string;
-    version: number;
-    position: number;
-    archived_at: string | null;
-  }>('SELECT * FROM lane WHERE id=?', id);
-  if (!r) throw new AppError('not_found', 'Lane not found');
-  return {
-    id: r.id,
-    name: r.name,
-    sop: r.sop,
-    version: r.version,
-    position: r.position,
-    archived: r.archived_at !== null,
-    stages: ctx.db.all(
-      'SELECT id,name,position,criteria FROM stage WHERE lane_id=? AND removed_at IS NULL ORDER BY position',
-      id,
-    ),
-  };
-}
-function summary(ctx: Ctx, id: Id): CardSummary {
-  const r = ctx.db.get<{
-    id: Id;
-    lane_id: Id;
-    stage_id: Id;
-    title: string;
-    company_id: Id | null;
-    company_name: string | null;
-    last_message_at: string | null;
-    last_change_by_kind: CardSummary['lastChangeBy'];
-    from_history: number;
-    archived_at: string | null;
-  }>('SELECT c.*,co.name AS company_name FROM card c LEFT JOIN company co ON co.id=c.company_id WHERE c.id=?', id);
-  if (!r) throw new AppError('not_found', 'Card not found');
-  const contacts = ctx.db.all<{ id: Id; name: string }>(
-    'SELECT DISTINCT co.id,co.display_name AS name FROM card_chat cc JOIN chat_participant cp ON cp.chat_id=cc.chat_id JOIN identity i ON i.id=cp.identity_id JOIN contact co ON co.id=i.contact_id WHERE cc.card_id=? ORDER BY co.id',
-    id,
-  );
-  const teammates = ctx.db.all<{ id: Id; name: string }>(
-    'SELECT DISTINCT t.id,t.display_name AS name FROM card_chat cc JOIN account_chat ac ON ac.chat_id=cc.chat_id JOIN channel_account a ON a.id=ac.account_id JOIN teammate t ON t.id=a.teammate_id WHERE cc.card_id=? ORDER BY t.id',
-    id,
-  );
-  const hasGap = Boolean(
-    ctx.db.get(
-      'SELECT g.id FROM chat_gap g JOIN card_chat cc ON cc.chat_id=g.chat_id WHERE cc.card_id=? AND g.closed_at IS NULL LIMIT 1',
-      id,
-    ),
-  );
-  return {
-    id: r.id,
-    laneId: r.lane_id,
-    stageId: r.stage_id,
-    title: r.title,
-    company: r.company_id === null ? null : { id: r.company_id, name: r.company_name as string },
-    contacts,
-    teammates,
-    lastMessageAt: r.last_message_at,
-    lastChangeBy: r.last_change_by_kind,
-    fromHistory: Boolean(r.from_history),
-    archived: r.archived_at !== null,
-    hasGap,
-  };
-}
-export function createLane(
-  ctx: Ctx,
-  i: { name: string; sop: string; stages: { name: string; criteria: string }[] },
-): LaneView {
-  if (ctx.actor.kind === 'agent') throw new AppError('forbidden', 'Human required');
-  actor(ctx);
-  validate(
-    z.strictObject({
-      name: z.string().trim().min(1),
-      sop: z.string().trim().min(1),
-      stages: z.array(z.strictObject({ name: z.string().trim().min(1), criteria: z.string() })).min(2),
-    }),
-    i,
-  );
-  if (new Set(i.stages.map((s) => s.name)).size !== i.stages.length)
-    throw new AppError('invalid', 'Duplicate stage names');
-  return ctx.db.tx(() => {
-    if (ctx.db.get('SELECT id FROM lane WHERE name=?', i.name)) throw new AppError('conflict', 'Lane name exists');
-    const position = ctx.db.get<{ n: number }>('SELECT coalesce(max(position)+1,0) AS n FROM lane')?.n ?? 0;
-    const id = ctx.db.run(
-      'INSERT INTO lane(name,sop,position,created_at) VALUES (?,?,?,?)',
-      i.name,
-      i.sop,
-      position,
-      ctx.now().toISOString(),
-    ).lastInsertRowid;
-    i.stages.forEach((s, p) => {
-      ctx.db.run('INSERT INTO stage(lane_id,name,position,criteria) VALUES (?,?,?,?)', id, s.name, p, s.criteria);
-    });
-    const view = lane(ctx, id);
-    record(ctx, { action: 'lane.create', subjectKind: 'lane', subjectId: id, after: view });
-    return view;
-  });
-}
-export function getBoard(ctx: Ctx): BoardView {
-  return {
-    version: boardVersion(ctx.db),
-    lanes: ctx.db.all<{ id: Id }>('SELECT id FROM lane WHERE archived_at IS NULL ORDER BY position,id').map((r) => ({
-      ...lane(ctx, r.id),
-      cards: ctx.db
-        .all<{ id: Id }>('SELECT id FROM card WHERE lane_id=? AND archived_at IS NULL ORDER BY id', r.id)
-        .map((c) => summary(ctx, c.id)),
-    })),
-    openReviewCount: ctx.db.get<{ n: number }>("SELECT count(*) AS n FROM review_item WHERE status='open'")?.n ?? 0,
-  };
-}
 export function createCard(
   ctx: Ctx,
   i: {
@@ -169,7 +43,10 @@ export function createCard(
     const m =
       i.messageId === undefined
         ? undefined
-        : ctx.db.get<{ chat_id: Id; sent_at: string }>('SELECT chat_id,sent_at FROM message WHERE id=?', i.messageId);
+        : ctx.db.get<{ chat_id: Id; sent_at: string }>(
+            'SELECT m.chat_id,m.sent_at FROM message m JOIN chat ch ON ch.id=m.chat_id WHERE m.id=? AND m.deleted_at IS NULL AND ch.withdrawn_at IS NULL',
+            i.messageId,
+          );
     if (i.messageId !== undefined && !m) throw new AppError('not_found', 'Message not found');
     if (m && i.chatId !== undefined && i.chatId !== m.chat_id) throw new AppError('invalid', 'Message chat mismatch');
     const chatId = i.chatId ?? m?.chat_id;
@@ -231,6 +108,7 @@ export function moveCard(
   const by = setBy(ctx, o);
   ctx.db.tx(() => {
     const before = summary(ctx, cardId);
+    if (before.archived) throw new AppError('invalid', 'Card is archived');
     const target = ctx.db.get<{ lane_id: Id }>(
       'SELECT s.lane_id FROM stage s JOIN lane l ON l.id=s.lane_id WHERE s.id=? AND s.removed_at IS NULL AND l.archived_at IS NULL',
       i.stageId,
@@ -268,7 +146,10 @@ export function attachMessage(ctx: Ctx, messageId: Id, cardId: Id | null, o?: Wr
   if (cardId !== null) validate(IdSchema, cardId);
   const by = setBy(ctx, o);
   ctx.db.tx(() => {
-    const m = ctx.db.get<{ chat_id: Id; sent_at: string }>('SELECT chat_id,sent_at FROM message WHERE id=?', messageId);
+    const m = ctx.db.get<{ chat_id: Id; sent_at: string }>(
+      'SELECT m.chat_id,m.sent_at FROM message m JOIN chat ch ON ch.id=m.chat_id WHERE m.id=? AND m.deleted_at IS NULL AND ch.withdrawn_at IS NULL',
+      messageId,
+    );
     if (!m) throw new AppError('not_found', 'Message not found');
     const before = ctx.db.get<{ card_id: Id | null; set_by: SetBy }>(
       'SELECT card_id,set_by FROM card_message WHERE message_id=?',
@@ -277,7 +158,8 @@ export function attachMessage(ctx: Ctx, messageId: Id, cardId: Id | null, o?: Wr
     if (ctx.actor.kind === 'agent' && before?.set_by === 'human')
       throw new AppError('forbidden', 'Human attachment is locked');
     if (cardId !== null) {
-      summary(ctx, cardId);
+      const card = summary(ctx, cardId);
+      if (card.archived || lane(ctx, card.laneId).archived) throw new AppError('invalid', 'Card or lane is archived');
       if (
         by === 'agent' &&
         !ctx.db.get('SELECT card_id FROM card_chat WHERE card_id=? AND chat_id=?', cardId, m.chat_id)

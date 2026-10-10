@@ -1,5 +1,5 @@
 import type { Ctx, Db, Id, IsoTime, LogEntry, LogEntryInput, SubjectKind } from '../contracts/index.ts';
-import { AppError, IdSchema, LogEntryInputSchema, SubjectKindSchema } from '../contracts/index.ts';
+import { AppError, IdSchema, IsoTimeSchema, LogEntryInputSchema, SubjectKindSchema } from '../contracts/index.ts';
 
 export type { LogEntry, LogEntryInput, SubjectKind } from '../contracts/index.ts';
 
@@ -57,6 +57,8 @@ export function history(
     throw new AppError('invalid', 'Invalid log subject');
   for (const id of [q.subjectId, q.beforeId])
     if (id !== undefined && !IdSchema.safeParse(id).success) throw new AppError('invalid', 'Invalid log id');
+  for (const at of [q.from, q.to])
+    if (at !== undefined && !IsoTimeSchema.safeParse(at).success) throw new AppError('invalid', 'Invalid log time');
   const limit = q.limit ?? 100;
   if (!Number.isSafeInteger(limit) || limit < 1) throw new AppError('invalid', 'Invalid log limit');
   return ctx.db

@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createModel, createMovementProvider } from '../src/agent/index.ts';
 import { createApp } from '../src/app.ts';
 import { addTeammate, createCredential, setSetting, signIn } from '../src/auth/index.ts';
@@ -68,7 +71,9 @@ export async function testApp(o?: {
   const fixture = createFixtureConnector(
     options.recordingPath !== undefined ? { path: options.recordingPath } : { lines: options.lines ?? [] },
   );
-  const db = openDb(':memory:');
+  const dir = mkdtempSync(join(tmpdir(), 'kanban-test-'));
+  const path = join(dir, 'kanban.db');
+  let db = openDb(path);
   const ids = new Map<string, number>();
   const cookies = new Map<string, string>();
   const system: Ctx = { db, actor: { kind: 'system' }, canReadText: true, now: clock.now };
@@ -198,6 +203,10 @@ export async function testApp(o?: {
       async restart() {
         if (closed) throw new AppError('invalid', 'Test app is closed');
         await app.stop();
+        db.close();
+        db = openDb(path);
+        system.db = db;
+        helper.db = db;
         app = await build();
         helper.app = app;
         await app.start();
@@ -205,7 +214,10 @@ export async function testApp(o?: {
       close() {
         if (closed) return;
         closed = true;
-        void app.stop().then(() => db.close());
+        void app.stop().finally(() => {
+          db.close();
+          rmSync(dir, { recursive: true, force: true });
+        });
       },
     };
     for (const teammate of options.teammates ?? [])
@@ -218,6 +230,7 @@ export async function testApp(o?: {
     return helper;
   } catch (error) {
     db.close();
+    rmSync(dir, { recursive: true, force: true });
     throw error;
   }
 }
