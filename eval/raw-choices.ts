@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { MovementChoice, MovementRequest } from '../src/contracts/index.ts';
+import type { MovementChoice, MovementRequest, MovementResult } from '../src/contracts/index.ts';
 import type { RawMode } from './cases.ts';
 
 export interface RawChoiceEnvelope {
@@ -91,4 +91,34 @@ export function rawChoices(request: MovementRequest, mode: RawMode): RawChoiceEn
   }
   if (mode === 'extra-answer') answers['support:unoffered'] = choice(supportOptions, firstBundle.id);
   return { model: null, answers, usage: null };
+}
+
+/** Intentionally mismatched application-boundary fixture for later A1/E2 injection.
+ * This is a typed synthetic response, not normalization or movement execution.
+ */
+export function mismatchedSupportFixture(request: MovementRequest): MovementResult {
+  const envelope = rawChoices(request, 'finance');
+  const movement = envelope.answers.movement;
+  const shipping = request.options.find((option) => {
+    const lane = request.lanes.find((item) => item.id === option.toLaneId);
+    return lane?.name === 'Shipping' && lane.stages.find((stage) => stage.id === option.toStageId)?.name === 'Done';
+  });
+  const support = movement ? envelope.answers[`support:${movement.choice}`] : undefined;
+  if (!movement || !shipping || !support) throw new Error('Mismatch fixture needs both configured targets');
+  return {
+    provider: 'jev',
+    execution: 'replay',
+    configuredModel: null,
+    providerRequestId: null,
+    schemaVersion: 1,
+    requestId: request.requestId,
+    snapshotHash: request.snapshotHash,
+    kind: 'answered',
+    resolvedModel: null,
+    usage: null,
+    movement: { choice: movement.choice, confidence: movement.confidence, probabilities: movement.probabilities },
+    support: { choice: support.choice, confidence: support.confidence, probabilities: support.probabilities },
+    supportTarget: shipping.id,
+    supportQuestionId: `support:${shipping.id}`,
+  };
 }

@@ -5,7 +5,7 @@ import { MOVEMENT_LIMITS, MovementRequestSchema } from '../src/contracts/index.t
 import { MOVEMENT_CASES } from './cases.ts';
 import { buildDataset } from './dataset.ts';
 import type { RawChoiceEnvelope } from './raw-choices.ts';
-import { rawChoices } from './raw-choices.ts';
+import { mismatchedSupportFixture, rawChoices } from './raw-choices.ts';
 import { messageKey } from './setup.ts';
 import { structuralSnapshot } from './structural-snapshot.ts';
 
@@ -187,4 +187,18 @@ test('E1 movement structural: complete example fits frozen question/message/byte
   assert.ok(Buffer.byteLength(JSON.stringify(envelope), 'utf8') <= MOVEMENT_LIMITS.responseBytes);
   // Full production question-template body and overflow zero-call evidence belongs
   // A1/I1. This assertion covers the fixture state/answers, not that unbuilt adapter.
+});
+
+test('E1 movement structural: normalized Finance selection has deliberately mismatched Shipping target/question fixture', () => {
+  const request = structuralSnapshot(buildDataset(), messageKey(69, 3));
+  const result = mismatchedSupportFixture(request);
+  assert.equal(result.kind, 'answered');
+  if (result.kind !== 'answered') throw new Error('Expected synthetic answered mismatch');
+  assert.equal(result.movement.choice, target(request, 'Finance', 'Paid').id);
+  assert.equal(result.supportTarget, target(request, 'Shipping', 'Done').id);
+  assert.notEqual(result.supportTarget, result.movement.choice);
+  assert.notEqual(result.supportQuestionId, `support:${result.movement.choice}`);
+  assert.equal(result.execution, 'replay');
+  assert.equal(result.resolvedModel, null);
+  assert.equal(result.usage, null);
 });

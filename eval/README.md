@@ -81,8 +81,9 @@ pseudo-events and not E1 passes:
 - Make a real human correction at `before-human-override`, then replay old evidence.
   Open-join inherited-move clearing, stale-SOP/permission/evidence/settlement and normalized
   Finance+Shipping support mismatch require actual injected request/result boundary tests.
-  The `invalid_response` replay line labels the expected mismatch outcome only; it does
-  not prove that guard validation. Duplicate JSON keys require raw HTTP-byte fixtures.
+  `mismatchedSupportFixture(actualRequest)` builds that typed application-boundary
+  mismatch; the `invalid_response` replay line labels its expected outcome only.
+  Neither fixture proves the unbuilt guard validation. Duplicate JSON keys require raw HTTP-byte fixtures.
 - Withdraw chat 016 at `before-withdrawal`; the following repeated message must be dropped.
   Compare baseline labels before withdrawal and explicit remaining labels afterwards;
   scan SQLite/FTS/WAL for `E1R_WITHDRAW_ONLY_7QX`, including title/summary/company/log bytes.
