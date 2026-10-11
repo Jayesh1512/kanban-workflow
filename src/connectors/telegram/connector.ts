@@ -10,8 +10,10 @@ import type {
 import { AppError, HistoryRequestSchema, TgFloodWait } from '../../contracts/index.ts';
 import { createDelivery } from '../delivery.ts';
 import { historyToken, readHistoryToken } from '../history-token.ts';
+import { createApiLifecycle } from './api-lifecycle.ts';
 import { chatRef, nativeId, participant } from './decode.ts';
 import { createSessionState } from './session-state.ts';
+import { createTerminalLogout } from './terminal-logout.ts';
 
 export function telegramLoginNotice(config: Record<string, string>) {
   return {
@@ -39,29 +41,51 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
   let epoch = 0;
   let lastRequest: number | null = null;
   const delivery = createDelivery();
+  const lifecycle = createApiLifecycle(api);
   const sessions = createSessionState(ctx, api, async () => {
     active = false;
-    epoch++;
+    const failedGeneration = ++epoch;
     // A slow/broken host observer cannot delay abort and bounded SDK cleanup.
     void delivery.emit({ type: 'status', state: 'disconnected' }).catch(() => {});
     try {
-      await api.destroy();
+      await lifecycle.destroy();
     } catch {
       ctx.log('warn', 'connector.cleanup_failed', { accountId: ctx.accountId });
     } finally {
-      delivery.stop();
+      if (failedGeneration === epoch) delivery.stop();
     }
   });
+  const terminal = createTerminalLogout(
+    ctx,
+    sessions,
+    lifecycle,
+    () => api.logOut(),
+    () => {
+      active = false;
+      epoch++;
+      delivery.stop();
+    },
+    () => {
+      self = null;
+      phone = null;
+      hash = null;
+      titles.clear();
+    },
+  );
   const titles = new Map<string, string>();
   async function ready(valid = () => true) {
+    terminal.assertOpen();
+    const health = sessions.guard();
     sessions.healthy();
     const session = sessions.opaque();
     if (session === null) throw new AppError('unauthenticated', 'Login required');
-    if (self === null) {
-      await api.importSession(session);
+    if (self === null || !lifecycle.currentAuth()) {
+      await lifecycle.importSession(session);
+      health();
       sessions.healthy();
       if (!valid()) throw new AppError('invalid', 'Connector stopped');
       const restored = await api.getMe();
+      health();
       sessions.healthy();
       if (!valid()) throw new AppError('invalid', 'Connector stopped');
       self = restored;
@@ -111,11 +135,12 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
           message: record,
         });
       } catch (error) {
+        if (generation !== epoch) throw error;
         active = false;
         epoch++;
         delivery.stop();
         try {
-          await api.destroy();
+          await lifecycle.destroy();
         } catch {
           ctx.log('warn', 'connector.cleanup_failed', { accountId: ctx.accountId });
         }
@@ -125,7 +150,9 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
   }
   return {
     async login(input) {
+      terminal.assertOpen();
       const generation = epoch;
+      const health = sessions.guard();
       sessions.restore();
       sessions.healthy();
       if (input === null) {
@@ -137,6 +164,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
             if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
             return { kind: 'done', self: participant(result) };
           } catch (error) {
+            health();
             sessions.healthy();
             if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
             throw error;
@@ -153,6 +181,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
         if (loginStage === 'phone') {
           phone = input.phone ?? null;
           const sent = await api.sendCode(phone as string);
+          if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
           hash = sent.phoneCodeHash;
           loginStage = 'code';
           return need('code');
@@ -161,11 +190,13 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
           loginStage === 'password'
             ? await api.checkPassword(input.password as string)
             : await api.signIn({ phone: phone as string, phoneCodeHash: hash as string, code: input.code as string });
+        if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
         if (result === 'password_needed') {
           loginStage = 'password';
           return need('password');
         }
         if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
+        lifecycle.authorized();
         self = result;
         await sessions.save(() => generation === epoch);
         sessions.healthy();
@@ -174,16 +205,20 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
         hash = null;
         return { kind: 'done', self: participant(result) };
       } catch (error) {
+        health();
         if (sessions.isFailed()) throw error;
         ctx.log('warn', 'connector.login_failed', { accountId: ctx.accountId });
         return { kind: 'failed', message: 'Login failed; retry the requested field', retryable: true };
       }
     },
     async start(sink) {
+      terminal.assertOpen();
       const generation = ++epoch;
+      const health = sessions.guard();
       active = false;
       const cancelled = () => {
         // Fault cleanup also invalidates epoch; it must never masquerade as caller cancellation.
+        health();
         sessions.healthy();
         return generation !== epoch;
       };
@@ -196,7 +231,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
       if (cancelled()) return;
       // Only the opaque inner SDK session is reimported on every start, including a restart of this instance.
       try {
-        await api.importSession(sessions.opaque() as string);
+        await lifecycle.importSession(sessions.opaque() as string);
       } catch (error) {
         if (cancelled()) return;
         throw error;
@@ -220,12 +255,13 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
           },
           onState(state) {
             if (!active || generation !== epoch) return;
+            if (state === 'auth_lost') lifecycle.lost();
             void delivery.emit({ type: 'status', state }).catch(() => {
               if (active && generation === epoch) {
                 active = false;
                 epoch++;
                 delivery.stop();
-                void api
+                void lifecycle
                   .destroy()
                   .catch(() => ctx.log('warn', 'connector.cleanup_failed', { accountId: ctx.accountId }));
               }
@@ -245,35 +281,40 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
       }
     },
     async stop() {
+      if (terminal.active()) return terminal.stop() as Promise<void>;
+      const health = sessions.guard();
       active = false;
       const generation = ++epoch;
-      delivery.stop();
-      await api.destroy();
-      if (sessions.opaque() !== null && self !== null) await sessions.save(() => generation === epoch);
-    },
-    async logout() {
-      active = false;
-      epoch++;
+      sessions.invalidate();
       delivery.stop();
       try {
-        await api.logOut();
-      } finally {
-        try {
-          await api.destroy();
-        } finally {
-          await sessions.clear();
-          self = null;
+        await lifecycle.destroy();
+        health();
+        if (generation !== epoch) {
+          sessions.healthy();
+          return;
         }
+        if (sessions.opaque() !== null && self !== null) await sessions.save(() => generation === epoch);
+      } finally {
+        health(); // An admitted save may throw AFTER synchronously invoking this stop.
       }
     },
+    logout() {
+      return terminal.logout();
+    },
     async listChats() {
-      const me = await ready();
+      const generation = epoch;
+      const me = await ready(() => generation === epoch);
       const pace = { interval: 3000 };
       const result = [];
       let offset: string | null = null;
       const seen = new Set<string>();
       do {
-        const page = await request(() => api.dialogs({ offset, limit: 100 }), pace);
+        const page = await request(() => {
+          if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
+          return api.dialogs({ offset, limit: 100 });
+        }, pace);
+        if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
         for (const dialog of page.dialogs) {
           const chat = chatRef(dialog.peer, me.id, dialog.title);
           titles.set(chat.nativeId, chat.title);
@@ -292,7 +333,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
     async *fetchHistory(req) {
       if (!HistoryRequestSchema.safeParse(req).success) throw new AppError('invalid', 'Invalid history request');
       const generation = epoch;
-      const me = await ready();
+      const me = await ready(() => generation === epoch);
       const match = /^(user|group|supergroup|channel):(\d+)$/.exec(req.chat.nativeId);
       if (!match) throw new AppError('invalid', 'Invalid chat handle');
       const peer: TgPeer = { type: match[1] as TgPeer['type'], id: Number(match[2]) };
@@ -307,7 +348,11 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
       const pace = { interval: 3000 };
       while (req.limit === null || returned < req.limit) {
         const limit = Math.min(100, req.limit === null ? 100 : req.limit - returned);
-        const page = await request(() => api.history(peer, { minId, maxId, limit }), pace);
+        const page = await request(() => {
+          if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
+          return api.history(peer, { minId, maxId, limit });
+        }, pace);
+        if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
         const last = page.at(-1);
         if (last && (last.id <= minId || (maxId !== 0 && last.id >= maxId)))
           throw new AppError('invalid', 'History cursor made no progress');
@@ -321,6 +366,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
           staged.push(m);
         }
         const messages = await sessions.learn(staged, () => generation === epoch);
+        if (generation !== epoch) throw new AppError('invalid', 'Connector stopped');
         returned += messages.length;
         const finished = page.length < limit || reachedSince || (req.limit !== null && returned >= req.limit);
         yield {
