@@ -57,6 +57,10 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   let keys = new Map<string, string>();
   let candidate: Map<string, string> | null = null;
   let failure = false;
+  let token = 0;
+  let terminal = false;
+  let cleanup: Promise<void> | null = null;
+  let evidence: { error: AppError | null } = { error: null };
   let queue: Promise<unknown> = Promise.resolve();
   function restore() {
     if (restored) return;
@@ -71,27 +75,45 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   function healthy() {
     if (failure) throw failed();
   }
-  async function latch(): Promise<never> {
-    if (!failure) {
+  function latch(admitted = evidence): never {
+    // An admitted synchronous callback can reenter teardown before throwing. Its waiters still own this fault.
+    admitted.error ??= failed();
+    if (admitted === evidence && !failure) {
       failure = true;
-      await onFailure();
+      if (!terminal) {
+        cleanup = Promise.resolve(onFailure());
+        void cleanup.catch(() => {});
+      }
     }
-    throw failed();
+    throw admitted.error;
   }
-  function serial<T>(run: () => T | Promise<T>, allowFailed = false): Promise<T> {
+  function serial<T>(run: (current: () => boolean) => T, allowFailed = false): Promise<T> {
+    const admission = token;
+    const current = () => admission === token && !terminal;
     const pending = queue.then(() => {
       if (!allowFailed) healthy();
-      return run();
+      if (!current()) throw new AppError('invalid', 'Connector stopped');
+      return run(current);
     });
     queue = pending.catch(() => {});
     return pending;
   }
-  function persist(next: Map<string, string>, opaque: string) {
+  function persist(next: Map<string, string>, opaque: string, current: () => boolean) {
     candidate = next; // On failure retain the entire candidate; recovery requires explicit authoritative recreation.
-    if (!opaque.length) throw failed();
-    const entries = [...next].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    const envelope = sessionPrefix + JSON.stringify({ v: 1, sdkSession: opaque, keys: entries });
-    ctx.saveSession(envelope); // Synchronous atomic replacement or throw; never acknowledge first.
+    const admitted = evidence;
+    let envelope: string;
+    try {
+      if (!opaque.length) throw failed();
+      const entries = [...next].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      envelope = sessionPrefix + JSON.stringify({ v: 1, sdkSession: opaque, keys: entries });
+      ctx.saveSession(envelope); // Only actual serialization/callback exceptions enter this catch.
+    } catch {
+      return latch(admitted);
+    }
+    if (!current()) {
+      candidate = null;
+      throw new AppError('invalid', 'Connector stopped');
+    }
     saved = envelope;
     sdkSession = opaque;
     keys = next;
@@ -100,6 +122,12 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   return {
     restore,
     healthy,
+    guard() {
+      const admitted = evidence;
+      return () => {
+        if (admitted.error) throw admitted.error;
+      };
+    },
     isFailed: () => failure,
     opaque() {
       restore();
@@ -107,61 +135,98 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
       return sdkSession;
     },
     async learn(messages: TgMessage[], valid: () => boolean) {
-      return serial(async () => {
+      return serial((current) => {
         if (!valid()) throw new AppError('invalid', 'Connector stopped');
         restore();
+        let next: Map<string, string>;
+        let records: NonNullable<ReturnType<ReturnType<typeof createDecoder>>>[];
         try {
-          const next = new Map(keys);
+          next = new Map(keys);
           const decode = createDecoder(next);
-          const records = messages.map(decode).filter((m) => m !== null);
-          if (next.size !== keys.size) {
-            if (sdkSession === null) throw failed();
-            persist(next, sdkSession);
-          }
-          return records;
+          records = messages.map(decode).filter((m) => m !== null);
         } catch {
           return latch();
         }
+        if (next.size !== keys.size) {
+          if (sdkSession === null) return latch();
+          persist(next, sdkSession, () => current() && valid());
+        }
+        return records;
       });
     },
     async save(valid: () => boolean = () => true) {
+      const admission = token;
       healthy();
-      if (!valid()) throw new AppError('invalid', 'Connector stopped');
+      if (terminal || !valid()) throw new AppError('invalid', 'Connector stopped');
       let opaque: string;
       try {
         opaque = await api.exportSession();
       } catch {
         return serial(() => {
           // A late canceled export must not fault a stopped or successfully cleared session.
-          if (!valid()) throw new AppError('invalid', 'Connector stopped');
+          if (admission !== token || terminal || !valid()) throw new AppError('invalid', 'Connector stopped');
           return latch();
         });
       }
+      if (admission !== token || terminal) throw new AppError('invalid', 'Connector stopped');
       // Read keys here, AFTER export: concurrent live/history learning must not be overwritten.
-      return serial(async () => {
+      return serial((current) => {
         if (!valid()) throw new AppError('invalid', 'Connector stopped');
         restore();
+        let next: Map<string, string>;
         try {
-          persist(new Map(keys), opaque);
+          next = new Map(keys);
         } catch {
           return latch();
         }
+        persist(next, opaque, () => current() && valid());
       });
     },
+    barrier() {
+      const admitted = evidence;
+      const snapshot = {
+        saved,
+        get error() {
+          return admitted.error;
+        },
+        cleanup,
+      };
+      terminal = true;
+      ++token;
+      queue = Promise.resolve(); // Async old fault cleanup never owns this synchronous lane.
+      return snapshot;
+    },
+    invalidate() {
+      ++token;
+      queue = Promise.resolve();
+    },
     async clear() {
-      return serial(async () => {
+      const admission = token;
+      return queue.then(() => {
+        if (admission !== token) throw new AppError('invalid', 'Connector stopped');
         try {
           ctx.saveSession(null);
+          if (admission !== token) throw new AppError('invalid', 'Connector stopped');
           saved = null;
           sdkSession = null;
-          keys.clear();
+          keys = new Map();
           candidate = null;
           restored = true;
           failure = false;
         } catch {
-          return latch();
+          if (admission === token) {
+            failure = true;
+            evidence.error ??= failed();
+          }
+          throw failed();
         }
-      }, true);
+      });
+    },
+    finish() {
+      evidence = { error: failure ? failed() : null };
+      terminal = false;
+      ++token;
+      queue = Promise.resolve();
     },
     // Deliberately private instance state; never logged or exported to a client.
     failedCandidate: () => candidate,

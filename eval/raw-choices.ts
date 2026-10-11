@@ -1,0 +1,142 @@
+import { createHash } from 'node:crypto';
+import type { MovementChoice, MovementRequest, MovementResult } from '../src/contracts/index.ts';
+import type { RawEvidenceSelectors, RawMode } from './cases.ts';
+
+export interface RawChoiceEnvelope {
+  model: null;
+  answers: Record<string, MovementChoice & { type: 'choice' }>;
+  usage: null;
+}
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([key, item]) => [key, canonical(item)]),
+    );
+  }
+  return value;
+}
+export function digest(value: unknown): string {
+  return createHash('sha256')
+    .update(JSON.stringify(canonical(value)))
+    .digest('hex');
+}
+function singletonForKey(request: MovementRequest, key: string): string {
+  const matches = request.evidence.filter((item) => item.key === key);
+  if (matches.length === 0) throw new Error(`Missing required evidence key: ${key}`);
+  if (matches.length !== 1) throw new Error(`Ambiguous required evidence key: ${key}`);
+  const evidence = matches.find((item) => item.key === key);
+  if (!evidence) throw new Error(`Missing required evidence key: ${key}`);
+  const bundles = request.evidenceOptions.filter(
+    (item) => item.messageIds.length === 1 && item.messageIds.includes(evidence.id),
+  );
+  if (bundles.length === 0) throw new Error(`Missing singleton evidence bundle: ${key}`);
+  if (bundles.length !== 1) throw new Error(`Ambiguous singleton evidence bundle: ${key}`);
+  const bundle = bundles.find((item) => item.messageIds.includes(evidence.id));
+  if (!bundle) throw new Error(`Missing singleton evidence bundle: ${key}`);
+  return bundle.id;
+}
+function choice(options: string[], selected: string, confidence = 0.99): MovementChoice & { type: 'choice' } {
+  if (!options.includes(selected)) throw new Error('Fixture choice must belong to its question');
+  return {
+    type: 'choice',
+    choice: selected,
+    confidence,
+    probabilities: Object.fromEntries(options.map((id) => [id, Number(id === selected)])),
+  };
+}
+
+/** Build a full N+2 raw fixture from supplied snapshot IDs, never global/assumed DB IDs.
+ * E2 passes its actual request and explicit eval-only logical-key selectors here.
+ * Static generated raw lines use a documented
+ * eval-only structural projection; those numbers must be rebound before runtime use.
+ * This produces fixtures, not a provider parser, normalizer, guard or scorer.
+ */
+export function rawChoices(
+  request: MovementRequest,
+  mode: RawMode,
+  selectors: RawEvidenceSelectors,
+): RawChoiceEnvelope {
+  if (request.options.length === 0) throw new Error('No-destination has no wire response');
+  const movementOptions = [...request.options.map((o) => o.id).sort(), 'stay', 'review'];
+  const supportOptions = [...request.evidenceOptions.map((o) => o.id).sort(), 'review'];
+  if (selectors.primaryMessageKey === selectors.financeMessageKey)
+    throw new Error('Independent-support fixture requires distinct logical evidence keys');
+  const primaryBundle = singletonForKey(request, selectors.primaryMessageKey);
+  const financeBundle = singletonForKey(request, selectors.financeMessageKey);
+  const finance = request.options.find(
+    (o) =>
+      request.lanes.find((l) => l.id === o.toLaneId)?.name === 'Finance' &&
+      request.lanes.flatMap((l) => l.stages).find((s) => s.id === o.toStageId)?.name === 'Paid',
+  );
+  if (mode === 'finance' && !finance) throw new Error('Configured Finance/Paid destination is required');
+  const movement = mode === 'finance' ? (finance?.id ?? 'review') : mode === 'review' ? 'review' : 'stay';
+  const answers: RawChoiceEnvelope['answers'] = {
+    movement: choice(movementOptions, movement),
+    'support:stay': choice(supportOptions, primaryBundle),
+  };
+  for (const option of [...request.options].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
+    const lane = request.lanes.find((l) => l.id === option.toLaneId);
+    const stage = lane?.stages.find((s) => s.id === option.toStageId);
+    const support = lane?.name === 'Finance' && stage?.name === 'Paid' ? financeBundle : primaryBundle;
+    answers[`support:${option.id}`] = choice(supportOptions, support);
+  }
+  if (mode === 'low') {
+    answers.movement = {
+      type: 'choice',
+      choice: 'stay',
+      confidence: 0.1,
+      probabilities: Object.fromEntries(
+        movementOptions.map((id) => [id, id === 'stay' ? 0.4 : 0.6 / (movementOptions.length - 1)]),
+      ),
+    };
+  }
+  if (mode === 'support-review') answers['support:stay'] = choice(supportOptions, 'review');
+  if (mode === 'unselected-review') {
+    for (const option of request.options) answers[`support:${option.id}`] = choice(supportOptions, 'review', 0.1);
+  }
+  const movementAnswer = answers.movement;
+  if (!movementAnswer) throw new Error('Fixture movement answer is missing');
+  if (mode === 'invalid-destination') answers.movement = { ...movementAnswer, choice: 'unoffered:destination' };
+  if (mode === 'invalid-distribution') movementAnswer.probabilities.stay = 1.5;
+  if (mode === 'missing-answer') delete answers[`support:${request.options[0]?.id}`];
+  if (mode === 'generic-support') {
+    for (const option of request.options) delete answers[`support:${option.id}`];
+    delete answers['support:stay'];
+    answers.support = choice(supportOptions, primaryBundle);
+  }
+  if (mode === 'extra-answer') answers['support:unoffered'] = choice(supportOptions, primaryBundle);
+  return { model: null, answers, usage: null };
+}
+
+/** Intentionally mismatched application-boundary fixture for later A1/E2 injection.
+ * This is a typed synthetic response, not normalization or movement execution.
+ */
+export function mismatchedSupportFixture(request: MovementRequest, selectors: RawEvidenceSelectors): MovementResult {
+  const envelope = rawChoices(request, 'finance', selectors);
+  const movement = envelope.answers.movement;
+  const shipping = request.options.find((option) => {
+    const lane = request.lanes.find((item) => item.id === option.toLaneId);
+    return lane?.name === 'Shipping' && lane.stages.find((stage) => stage.id === option.toStageId)?.name === 'Done';
+  });
+  const support = movement ? envelope.answers[`support:${movement.choice}`] : undefined;
+  if (!movement || !shipping || !support) throw new Error('Mismatch fixture needs both configured targets');
+  return {
+    provider: 'jev',
+    execution: 'replay',
+    configuredModel: null,
+    providerRequestId: null,
+    schemaVersion: 1,
+    requestId: request.requestId,
+    snapshotHash: request.snapshotHash,
+    kind: 'answered',
+    resolvedModel: null,
+    usage: null,
+    movement: { choice: movement.choice, confidence: movement.confidence, probabilities: movement.probabilities },
+    support: { choice: support.choice, confidence: support.confidence, probabilities: support.probabilities },
+    supportTarget: shipping.id,
+    supportQuestionId: `support:${shipping.id}`,
+  };
+}

@@ -3,6 +3,7 @@ import { Dialog, Long, Message, PeersIndex, tl } from '@mtcute/node';
 import { z } from 'zod';
 import type { ConnectorContext, TelegramApi, TgPeer } from '../../contracts/index.ts';
 import { AppError, TgFloodWait } from '../../contracts/index.ts';
+import { terminalControl } from './api-lifecycle.ts';
 import type { MtcuteClient } from './mtcute-client.ts';
 import { createMtcuteClient } from './mtcute-client.ts';
 import { mtMessage, mtPeer, mtUser } from './mtcute-decode.ts';
@@ -26,14 +27,32 @@ export class MtcuteApi implements TelegramApi {
   private detach: (() => void) | null = null;
   private queue: Promise<void> = Promise.resolve();
   private peers = new Map<string, tl.TypeInputPeer>();
+  private authClient: MtcuteClient | null = null;
+  private terminal = false;
+  readonly [terminalControl] = {
+    detachedCleanup: true,
+    authenticated: () => this.client !== null && this.authClient === this.client,
+    pause: () => {
+      this.terminal = true;
+      ++this.generation;
+      this.detach?.();
+      this.queue = Promise.resolve();
+      void this.client?.sdk.stopUpdatesLoop().catch(() => {});
+    },
+    finish: () => {
+      this.terminal = false;
+    },
+  };
   private closing: Promise<void> | null = null;
   constructor(ctx: ConnectorContext, makeClient = () => createMtcuteClient(ctx)) {
     this.ctx = ctx;
     this.makeClient = makeClient;
   }
   private getClient() {
-    if (this.closing) throw new AppError('invalid', 'Connector stopping');
-    this.client ??= this.makeClient();
+    if (!this.client) {
+      this.client = this.makeClient();
+      ++this.generation;
+    }
     return this.client;
   }
   private async call<T>(run: (client: MtcuteClient) => Promise<T>): Promise<T> {
@@ -58,28 +77,46 @@ export class MtcuteApi implements TelegramApi {
     }
   }
   async importSession(session: string): Promise<void> {
+    this.getClient();
     const generation = this.generation;
     await this.call((c) => c.sdk.importSession(session));
     if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
+    this.authClient = this.client;
     this.session = session;
     this.sessionExportFailed = false;
   }
   async exportSession(): Promise<string> {
     if (this.sessionExportFailed) throw new AppError('invalid', 'Connector session persistence failed');
     if (!this.client && this.session !== null) return this.session;
-    this.session = await this.call((c) => c.sdk.exportSession());
-    return this.session;
+    this.getClient();
+    const generation = this.generation;
+    const session = await this.call((c) => c.sdk.exportSession());
+    if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
+    this.session = session;
+    return session;
   }
   async sendCode(phone: string): Promise<{ phoneCodeHash: string }> {
+    const client = this.getClient();
+    const generation = this.generation;
     const code = await this.call((c) => c.sdk.sendCode({ phone }));
-    if (!('phoneCodeHash' in code)) throw new AppError('invalid', 'Account already authorized; restart login');
+    if (generation !== this.generation || client !== this.client) throw new AppError('invalid', 'Connector stopped');
+    if (!('phoneCodeHash' in code)) {
+      // The real sentCodeSuccess helper has already notified SDK authorization in this captured client.
+      this.authClient = client;
+      throw new AppError('invalid', 'Account already authorized; restart login');
+    }
     return { phoneCodeHash: code.phoneCodeHash };
   }
   async signIn(a: { phone: string; phoneCodeHash: string; code: string }) {
+    this.getClient();
+    const generation = this.generation;
     try {
-      return mtUser(
-        await this.call((c) => c.sdk.signIn({ phone: a.phone, phoneCodeHash: a.phoneCodeHash, phoneCode: a.code })),
+      const result = await this.call((c) =>
+        c.sdk.signIn({ phone: a.phone, phoneCodeHash: a.phoneCodeHash, phoneCode: a.code }),
       );
+      if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
+      this.authClient = this.client;
+      return mtUser(result);
     } catch (error) {
       // SESSION_PASSWORD_NEEDED must be recognized before safe generic RPC error translation.
       if (error instanceof AppError && error.message === 'Telegram password required')
@@ -88,12 +125,19 @@ export class MtcuteApi implements TelegramApi {
     }
   }
   async checkPassword(password: string) {
-    return mtUser(await this.call((c) => c.sdk.checkPassword(password)));
+    this.getClient();
+    const generation = this.generation;
+    const result = await this.call((c) => c.sdk.checkPassword(password));
+    if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
+    this.authClient = this.client;
+    return mtUser(result);
   }
   async getMe() {
     return mtUser(await this.call((c) => c.sdk.getMe()));
   }
   async dialogs(o: { offset: string | null; limit: number }) {
+    this.getClient();
+    const generation = this.generation;
     this.checkLimit(o.limit);
     const offset = o.offset === null ? null : offsetSchema.parse(JSON.parse(o.offset));
     const offsetPeer = offset ? this.peers.get(offset.peer) : { _: 'inputPeerEmpty' as const };
@@ -109,6 +153,7 @@ export class MtcuteApi implements TelegramApi {
         hash: Long.ZERO,
       }),
     );
+    if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
     if (res._ === 'messages.dialogsNotModified') throw new AppError('invalid', 'Unexpected dialog response');
     const parsed = Dialog.parseTlDialogs(res);
     const dialogs = parsed.map((d) => {
@@ -165,8 +210,8 @@ export class MtcuteApi implements TelegramApi {
   }
   async startUpdates(h: Parameters<TelegramApi['startUpdates']>[0]): Promise<void> {
     this.detach?.();
-    const generation = ++this.generation;
     const client = this.getClient();
+    const generation = ++this.generation;
     const { sdk } = client;
     let failed = false;
     let authLost = false;
@@ -206,6 +251,7 @@ export class MtcuteApi implements TelegramApi {
       if (generation !== this.generation || failed) return;
       if (tl.RpcError.is(error) && error.code === 401 && error.text !== 'SESSION_PASSWORD_NEEDED') {
         // Latch synchronously in the real RPC observer, before UpdatesManager swallows the error.
+        this.authClient = null;
         authLost = true;
         failed = true;
         this.detach?.();
@@ -261,29 +307,34 @@ export class MtcuteApi implements TelegramApi {
     }
   }
   async logOut(): Promise<void> {
+    this.getClient();
+    const generation = this.generation;
     await this.call((c) => c.sdk.logOut());
+    if (generation !== this.generation) throw new AppError('invalid', 'Connector stopped');
+    this.authClient = null;
     this.session = null;
     this.sessionExportFailed = false;
   }
   async destroy(): Promise<void> {
-    if (this.closing) return this.closing;
+    if (this.closing && !this.client) return this.closing;
     ++this.generation;
     this.detach?.();
     this.queue = Promise.resolve();
     const client = this.client;
     this.client = null;
+    this.authClient = null;
     this.peers.clear();
     if (!client) return;
     client.closeNow(); // Abort connects and close all sockets immediately, before any asynchronous SDK cleanup.
     const generation = this.generation;
     const cleanup = (async () => {
-      try {
-        const snapshot = await client.sdk.exportSession();
-        if (generation === this.generation) this.session = snapshot;
-      } catch {
-        // A cancelled unauthenticated construction has nothing to save. An imported/exported
-        // authorized session must expose failure to the connector's required stop save.
-        if (generation === this.generation && this.session !== null) this.sessionExportFailed = true;
+      if (!this.terminal) {
+        try {
+          const snapshot = await client.sdk.exportSession();
+          if (generation === this.generation) this.session = snapshot;
+        } catch {
+          if (generation === this.generation && this.session !== null) this.sessionExportFailed = true;
+        }
       }
       await client.sdk.destroy();
     })();
@@ -294,11 +345,12 @@ export class MtcuteApi implements TelegramApi {
     const timeout = this.ctx.sleep(5000).then(() => {
       if (!finished) throw new AppError('invalid', 'Telegram cleanup exceeded five seconds');
     });
-    this.closing = Promise.race([tracked, timeout]);
+    const closing = Promise.race([tracked, timeout]);
+    this.closing = closing;
     try {
-      await this.closing;
+      await closing;
     } finally {
-      this.closing = null;
+      if (this.closing === closing) this.closing = null;
     }
   }
   private checkLimit(limit: number) {

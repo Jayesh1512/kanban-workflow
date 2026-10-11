@@ -43,6 +43,7 @@ export class RecordedApi implements TelegramApi {
   private session: z.output<typeof sessionSchema>;
   private now: () => Date;
   private authenticated = false;
+  private exported: string | null = null;
   private handlers: Parameters<TelegramApi['startUpdates']>[0] | null = null;
   private position = 0;
   private advancing = false;
@@ -77,14 +78,15 @@ export class RecordedApi implements TelegramApi {
         .parse(JSON.parse(session));
       if (parsed.selfId !== this.session.self.id) throw new Error('mismatch');
       this.authenticated = true;
+      this.exported = session;
     } catch {
       throw new AppError('unauthenticated', 'Invalid synthetic session token');
     }
   }
   async exportSession() {
     this.record('exportSession');
-    this.ready();
-    return JSON.stringify({ v: 1, selfId: this.session.self.id });
+    if (!this.authenticated && this.exported === null) this.ready();
+    return this.exported ?? JSON.stringify({ v: 1, selfId: this.session.self.id });
   }
   async sendCode(_phone: string) {
     this.record('sendCode');
@@ -96,12 +98,14 @@ export class RecordedApi implements TelegramApi {
       throw new AppError('unauthenticated', 'Invalid synthetic login code');
     if (this.session.passwordNeeded) return 'password_needed';
     this.authenticated = true;
+    this.exported = JSON.stringify({ v: 1, selfId: this.session.self.id });
     return structuredClone(this.session.self);
   }
   async checkPassword(password: string) {
     this.record('checkPassword');
     if (password !== 'synthetic-password') throw new AppError('unauthenticated', 'Invalid synthetic password');
     this.authenticated = true;
+    this.exported = JSON.stringify({ v: 1, selfId: this.session.self.id });
     return structuredClone(this.session.self);
   }
   async getMe() {
@@ -145,11 +149,14 @@ export class RecordedApi implements TelegramApi {
   }
   async logOut() {
     this.record('logOut');
+    this.ready();
     this.handlers = null;
     this.authenticated = false;
+    this.exported = null;
   }
   async destroy() {
     this.record('destroy');
+    this.authenticated = false;
     this.handlers = null;
   }
   /** Test-only replay control. Stopped sessions never receive queued or future updates. */
