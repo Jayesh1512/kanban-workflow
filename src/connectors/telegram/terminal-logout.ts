@@ -120,49 +120,53 @@ export function createTerminalLogout(
         }
       };
       operation = (async () => {
-        let error: unknown = snapshot.error;
         try {
-          await within(ctx, t0 + 45000, prepare(), cancellation, () => cancelled);
-        } catch (cause) {
-          invalidate();
-          if (!error)
-            error =
-              cause instanceof AppError &&
-              ['Invalid saved connector session', 'Connector logout timed out/cancelled'].includes(cause.message)
-                ? cause
+          let error: unknown = snapshot.error;
+          try {
+            await within(ctx, t0 + 45000, prepare(), cancellation, () => cancelled);
+          } catch (cause) {
+            invalidate();
+            if (!error)
+              error =
+                cause instanceof AppError &&
+                ['Invalid saved connector session', 'Connector logout timed out/cancelled'].includes(cause.message)
+                  ? cause
+                  : failed();
+          }
+          error = snapshot.error ?? error;
+          valid = false;
+          const cleanupEnd = Math.min(ctx.now().getTime() + 5000, t0 + 50000);
+          const destruction = lifecycle.destroy();
+          // Callback ordering is synchronous: this tail runs after any reentrant callback stack returns.
+          try {
+            await sessions.clear();
+            cleared();
+            if (cancelled || ctx.now().getTime() >= cleanupEnd) throw timeout();
+          } catch (cause) {
+            error ??= cancelled ? timeout() : cause;
+          }
+          try {
+            await within(ctx, cleanupEnd, destruction, cancellation, () => cancelled);
+            if (cancelled || ctx.now().getTime() >= cleanupEnd) throw timeout();
+          } catch (cause) {
+            error ??=
+              cancelled ||
+              ctx.now().getTime() >= cleanupEnd ||
+              (cause instanceof AppError && cause.message === timeout().message)
+                ? timeout()
                 : failed();
+          }
+          error = snapshot.error ?? error;
+          sessions.finish();
+          lifecycle.finish();
+          if (error) throw error;
+        } finally {
+          // The public operation is this async promise. Admission closes in its final
+          // synchronous job, as return/throw settles it; no later finalizer owns state.
+          operation = null;
+          cancel = null;
         }
-        error = snapshot.error ?? error;
-        valid = false;
-        const cleanupEnd = Math.min(ctx.now().getTime() + 5000, t0 + 50000);
-        const destruction = lifecycle.destroy();
-        // Callback ordering is synchronous: this tail runs after any reentrant callback stack returns.
-        try {
-          await sessions.clear();
-          cleared();
-          if (cancelled || ctx.now().getTime() >= cleanupEnd) throw timeout();
-        } catch (cause) {
-          error ??= cancelled ? timeout() : cause;
-        }
-        try {
-          await within(ctx, cleanupEnd, destruction, cancellation, () => cancelled);
-          if (cancelled || ctx.now().getTime() >= cleanupEnd) throw timeout();
-        } catch (cause) {
-          error ??=
-            cancelled ||
-            ctx.now().getTime() >= cleanupEnd ||
-            (cause instanceof AppError && cause.message === timeout().message)
-              ? timeout()
-              : failed();
-        }
-        error = snapshot.error ?? error;
-        sessions.finish();
-        lifecycle.finish();
-        if (error) throw error;
-      })().finally(() => {
-        operation = null;
-        cancel = null;
-      });
+      })();
       return operation;
     },
   };
