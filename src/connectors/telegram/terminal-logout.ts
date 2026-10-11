@@ -10,18 +10,41 @@ const failed = () => new AppError('invalid', 'Connector logout failed');
 /** Absolute clock, with already-ready microtasks allowed to finish before asking the injected clock to wait. */
 export async function within<T>(ctx: ConnectorContext, deadline: number, work: Promise<T>, cancel?: Promise<never>) {
   let finished = false;
-  const tracked = work.finally(() => {
-    finished = true;
-  });
+  const check = () => {
+    if (ctx.now().getTime() >= deadline) throw timeout();
+  };
+  const tracked = work.then(
+    (value) => {
+      finished = true;
+      check();
+      return value;
+    },
+    (error: unknown) => {
+      finished = true;
+      check();
+      throw error;
+    },
+  );
   const timer = (async () => {
-    for (let n = 0; n < 32 && !finished; n++) await Promise.resolve();
+    for (let n = 0; n < 32 && !finished; n++) {
+      await Promise.resolve();
+      check();
+    }
+    check();
     if (finished) return new Promise<never>(() => {});
     const remaining = deadline - ctx.now().getTime();
-    if (remaining > 0) await ctx.sleep(remaining);
-    if (!finished) throw timeout();
+    await ctx.sleep(remaining);
+    check();
     return new Promise<never>(() => {});
   })();
-  return Promise.race(cancel ? [tracked, timer, cancel] : [tracked, timer]);
+  try {
+    const value = await Promise.race(cancel ? [tracked, timer, cancel] : [tracked, timer]);
+    check();
+    return value;
+  } catch (error) {
+    check();
+    throw error;
+  }
 }
 
 export function createTerminalLogout(
@@ -101,6 +124,7 @@ export function createTerminalLogout(
                 ? cause
                 : failed();
         }
+        error = snapshot.error ?? error;
         valid = false;
         const cleanupEnd = Math.min(ctx.now().getTime() + 5000, t0 + 50000);
         const destruction = lifecycle.destroy();
@@ -108,6 +132,7 @@ export function createTerminalLogout(
         try {
           await sessions.clear();
           cleared();
+          if (ctx.now().getTime() >= cleanupEnd) throw timeout();
         } catch (cause) {
           error ??= cause;
         }
@@ -119,6 +144,7 @@ export function createTerminalLogout(
               ? timeout()
               : failed();
         }
+        error = snapshot.error ?? error;
         sessions.finish();
         lifecycle.finish();
         if (error) throw error;

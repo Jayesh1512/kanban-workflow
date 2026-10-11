@@ -96,8 +96,15 @@ export class MtcuteApi implements TelegramApi {
     return session;
   }
   async sendCode(phone: string): Promise<{ phoneCodeHash: string }> {
+    const client = this.getClient();
+    const generation = this.generation;
     const code = await this.call((c) => c.sdk.sendCode({ phone }));
-    if (!('phoneCodeHash' in code)) throw new AppError('invalid', 'Account already authorized; restart login');
+    if (generation !== this.generation || client !== this.client) throw new AppError('invalid', 'Connector stopped');
+    if (!('phoneCodeHash' in code)) {
+      // The real sentCodeSuccess helper has already notified SDK authorization in this captured client.
+      this.authClient = client;
+      throw new AppError('invalid', 'Account already authorized; restart login');
+    }
     return { phoneCodeHash: code.phoneCodeHash };
   }
   async signIn(a: { phone: string; phoneCodeHash: string; code: string }) {

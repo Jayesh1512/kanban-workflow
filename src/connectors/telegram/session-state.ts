@@ -60,7 +60,7 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   let token = 0;
   let terminal = false;
   let cleanup: Promise<void> | null = null;
-  const faults = new Map<number, AppError>();
+  let evidence: { error: AppError | null } = { error: null };
   let queue: Promise<unknown> = Promise.resolve();
   function restore() {
     if (restored) return;
@@ -75,14 +75,17 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   function healthy() {
     if (failure) throw failed();
   }
-  function latch(): never {
-    if (!failure) {
+  function latch(admitted = evidence): never {
+    // An admitted synchronous callback can reenter teardown before throwing. Its waiters still own this fault.
+    admitted.error ??= failed();
+    if (admitted === evidence && !failure) {
       failure = true;
-      faults.set(token, failed());
-      cleanup = Promise.resolve(onFailure());
-      void cleanup.catch(() => {});
+      if (!terminal) {
+        cleanup = Promise.resolve(onFailure());
+        void cleanup.catch(() => {});
+      }
     }
-    throw failed();
+    throw admitted.error;
   }
   function serial<T>(run: (current: () => boolean) => T, allowFailed = false): Promise<T> {
     const admission = token;
@@ -97,10 +100,16 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   }
   function persist(next: Map<string, string>, opaque: string, current: () => boolean) {
     candidate = next; // On failure retain the entire candidate; recovery requires explicit authoritative recreation.
-    if (!opaque.length) throw failed();
-    const entries = [...next].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    const envelope = sessionPrefix + JSON.stringify({ v: 1, sdkSession: opaque, keys: entries });
-    ctx.saveSession(envelope); // Synchronous atomic replacement or throw; never acknowledge first.
+    const admitted = evidence;
+    let envelope: string;
+    try {
+      if (!opaque.length) throw failed();
+      const entries = [...next].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      envelope = sessionPrefix + JSON.stringify({ v: 1, sdkSession: opaque, keys: entries });
+      ctx.saveSession(envelope); // Only actual serialization/callback exceptions enter this catch.
+    } catch {
+      return latch(admitted);
+    }
     if (!current()) {
       candidate = null;
       throw new AppError('invalid', 'Connector stopped');
@@ -114,10 +123,9 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
     restore,
     healthy,
     guard() {
-      const admission = token;
+      const admitted = evidence;
       return () => {
-        const error = faults.get(admission);
-        if (error) throw error;
+        if (admitted.error) throw admitted.error;
       };
     },
     isFailed: () => failure,
@@ -130,19 +138,20 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
       return serial((current) => {
         if (!valid()) throw new AppError('invalid', 'Connector stopped');
         restore();
+        let next: Map<string, string>;
+        let records: NonNullable<ReturnType<ReturnType<typeof createDecoder>>>[];
         try {
-          const next = new Map(keys);
+          next = new Map(keys);
           const decode = createDecoder(next);
-          const records = messages.map(decode).filter((m) => m !== null);
-          if (next.size !== keys.size) {
-            if (sdkSession === null) throw failed();
-            persist(next, sdkSession, () => current() && valid());
-          }
-          return records;
+          records = messages.map(decode).filter((m) => m !== null);
         } catch {
-          if (!current() || !valid()) throw new AppError('invalid', 'Connector stopped');
           return latch();
         }
+        if (next.size !== keys.size) {
+          if (sdkSession === null) return latch();
+          persist(next, sdkSession, () => current() && valid());
+        }
+        return records;
       });
     },
     async save(valid: () => boolean = () => true) {
@@ -164,16 +173,24 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
       return serial((current) => {
         if (!valid()) throw new AppError('invalid', 'Connector stopped');
         restore();
+        let next: Map<string, string>;
         try {
-          persist(new Map(keys), opaque, () => current() && valid());
+          next = new Map(keys);
         } catch {
-          if (!current() || !valid()) throw new AppError('invalid', 'Connector stopped');
           return latch();
         }
+        persist(next, opaque, () => current() && valid());
       });
     },
     barrier() {
-      const snapshot = { saved, error: failure ? failed() : null, cleanup };
+      const admitted = evidence;
+      const snapshot = {
+        saved,
+        get error() {
+          return admitted.error;
+        },
+        cleanup,
+      };
       terminal = true;
       ++token;
       queue = Promise.resolve(); // Async old fault cleanup never owns this synchronous lane.
@@ -197,12 +214,16 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
           restored = true;
           failure = false;
         } catch {
-          if (admission === token) failure = true;
+          if (admission === token) {
+            failure = true;
+            evidence.error ??= failed();
+          }
           throw failed();
         }
       });
     },
     finish() {
+      evidence = { error: failure ? failed() : null };
       terminal = false;
       ++token;
       queue = Promise.resolve();

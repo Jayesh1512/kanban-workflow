@@ -205,6 +205,7 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
         hash = null;
         return { kind: 'done', self: participant(result) };
       } catch (error) {
+        health();
         if (sessions.isFailed()) throw error;
         ctx.log('warn', 'connector.login_failed', { accountId: ctx.accountId });
         return { kind: 'failed', message: 'Login failed; retry the requested field', retryable: true };
@@ -281,16 +282,22 @@ export function createTelegramConnector(ctx: ConnectorContext, api: TelegramApi)
     },
     async stop() {
       if (terminal.active()) return terminal.stop() as Promise<void>;
+      const health = sessions.guard();
       active = false;
       const generation = ++epoch;
       sessions.invalidate();
       delivery.stop();
-      await lifecycle.destroy();
-      if (generation !== epoch) {
-        sessions.healthy();
-        return;
+      try {
+        await lifecycle.destroy();
+        health();
+        if (generation !== epoch) {
+          sessions.healthy();
+          return;
+        }
+        if (sessions.opaque() !== null && self !== null) await sessions.save(() => generation === epoch);
+      } finally {
+        health(); // An admitted save may throw AFTER synchronously invoking this stop.
       }
-      if (sessions.opaque() !== null && self !== null) await sessions.save(() => generation === epoch);
     },
     logout() {
       return terminal.logout();
