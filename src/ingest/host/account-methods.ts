@@ -26,6 +26,7 @@ export function accountMethods(
     },
     listAccounts: (ctx) => listAccounts(s, ctx),
     async beginLogin(ctx, channel, i) {
+      const cleanupDeadline = s.now().getTime() + 5000;
       const teammateId = s.human(ctx);
       if (!z.strictObject({ acknowledgedNoticeVersion: z.number().int().positive().nullable() }).safeParse(i).success)
         throw new AppError('invalid', 'Invalid login input');
@@ -61,7 +62,7 @@ export function accountMethods(
         rt.epoch++;
         scheduler.cancel(id);
         try {
-          await cleanup(s, () => rt.connector.stop(), 5000);
+          await cleanup(s, () => rt.connector.stop(), cleanupDeadline);
         } finally {
           rt.saving = false;
           s.live.delete(id);

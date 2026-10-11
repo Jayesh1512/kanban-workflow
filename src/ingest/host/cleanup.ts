@@ -1,26 +1,47 @@
 import { AppError } from '../../contracts/index.ts';
 import type { State } from './state.ts';
 
-export async function cleanup(s: State, run: () => Promise<void>, ms: number): Promise<void> {
-  const deadline = s.now().getTime() + ms;
-  const operation = run();
-  // Let a synchronous/microtask-only cleanup finish before allocating a deadline wait.
-  let finished = false;
+export function checkCleanupDeadline(s: State, deadline: number): void {
+  if (s.now().getTime() >= deadline) throw new AppError('invalid', 'Account cleanup timed out');
+}
+
+/** A caller-owned absolute deadline includes its local preparation. Outcomes are
+ * observed even after timeout; neither a ready rejection nor a timer loser can
+ * become an unhandled rejection. The microtask grace consumes time, not budget.
+ */
+export async function cleanup(s: State, run: () => Promise<void>, deadline: number): Promise<void> {
+  checkCleanupDeadline(s, deadline);
+  let settled: { ok: true } | { ok: false; error: unknown } | undefined;
+  let operation: Promise<void>;
+  try {
+    operation = run();
+  } catch (error) {
+    checkCleanupDeadline(s, deadline);
+    throw error;
+  }
   const result = operation.then(
     () => {
-      finished = true;
+      settled = { ok: true };
     },
     (error: unknown) => {
-      finished = true;
-      throw error;
+      settled = { ok: false, error };
     },
   );
-  for (let n = 0; n < 64 && !finished; n++) await Promise.resolve();
-  if (finished) return result;
-  await Promise.race([
-    result,
-    s.sleep(Math.max(0, deadline - s.now().getTime())).then(() => {
-      if (!finished) throw new AppError('invalid', 'Account cleanup timed out');
-    }),
-  ]);
+  // Retain timely synchronous/microtask cleanup without advancing an instant test clock.
+  for (let n = 0; n < 64 && !settled; n++) {
+    await Promise.resolve();
+    checkCleanupDeadline(s, deadline);
+  }
+  if (!settled) {
+    await Promise.race([
+      result,
+      s.sleep(Math.max(0, deadline - s.now().getTime())).then(() => {
+        checkCleanupDeadline(s, deadline);
+        if (!settled) throw new AppError('invalid', 'Account cleanup timed out');
+      }),
+    ]);
+  }
+  // Settlement and consumption are distinct async boundaries, including race winners.
+  checkCleanupDeadline(s, deadline);
+  if (settled && !settled.ok) throw settled.error;
 }

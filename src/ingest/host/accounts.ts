@@ -2,7 +2,7 @@ import type { Ctx, Id, LoginStep } from '../../contracts/index.ts';
 import { AppError, ConnectorEventSchema, LoginStepSchema } from '../../contracts/index.ts';
 import { bindSelfIdentity } from '../../graph/index.ts';
 import { record } from '../../log/index.ts';
-import { cleanup } from './cleanup.ts';
+import { checkCleanupDeadline, cleanup } from './cleanup.ts';
 import { clearSync } from './gaps.ts';
 import { refreshListing } from './listing.ts';
 import { clearPending, resolveReplies } from './replies.ts';
@@ -129,13 +129,14 @@ export function createAccounts(s: State, scheduler: Scheduler) {
         s.status(a.id, 'connected');
         await refresh(a, runtime, generation);
       } catch (error) {
+        const deadline = s.now().getTime() + 5000;
         if (s.stopped || runtime.epoch !== generation) return;
         runtime.accepting = false;
         runtime.fault = true;
         scheduler.cancel(a.id);
         s.status(a.id, error instanceof AppError && error.code === 'unauthenticated' ? 'auth_lost' : 'disconnected');
         try {
-          await cleanup(s, () => runtime.connector.stop(), 5000);
+          await cleanup(s, () => runtime.connector.stop(), deadline);
         } catch {
           s.oplog('warn', 'host.cleanup_failed', { accountId: a.id });
         }
@@ -175,6 +176,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
               historical.channel !== a.channel ||
               historical.teammate_id !== a.teammate_id)
           ) {
+            const deadline = s.now().getTime() + 50000;
             // The authenticated new access is rejected before any self/history overwrite.
             rt.accepting = false;
             scheduler.cancel(a.id);
@@ -189,7 +191,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
             });
             rt.saving = false;
             try {
-              await cleanup(s, () => rt.connector.logout(), 50000);
+              await cleanup(s, () => rt.connector.logout(), deadline);
             } catch {
               s.oplog('warn', 'host.logout_failed', { accountId: a.id });
             }
@@ -210,6 +212,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
           ? { kind: 'failed', message: 'Account login failed', retryable: step.retryable }
           : step;
       } catch (error) {
+        const deadline = s.now().getTime() + 5000;
         if (rt.epoch === generation && s.active(a.id)) {
           rt.fault = true;
           rt.accepting = false;
@@ -221,7 +224,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
               : 'disconnected',
           );
           try {
-            await cleanup(s, () => rt.connector.stop(), 5000);
+            await cleanup(s, () => rt.connector.stop(), deadline);
           } catch {
             s.oplog('warn', 'host.cleanup_failed', { accountId: a.id });
           }
@@ -232,6 +235,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
     });
   }
   async function disconnect(ctx: Ctx, accountId: Id) {
+    const deadline = s.now().getTime() + 50000;
     if (ctx.db !== s.db || ctx.actor.kind !== 'system') s.owner(ctx, accountId, true);
     const a = s.account(accountId);
     let rt = s.live.get(a.id);
@@ -261,7 +265,8 @@ export function createAccounts(s: State, scheduler: Scheduler) {
     if (restoreFailed) throw new AppError('invalid', 'Account removed; remote logout restoration failed');
     if (rt) {
       try {
-        await cleanup(s, () => rt.connector.logout(), 50000);
+        await cleanup(s, () => rt.connector.logout(), deadline);
+        checkCleanupDeadline(s, deadline);
       } catch {
         s.oplog('warn', 'host.logout_failed', { accountId: a.id });
         throw new AppError('invalid', 'Account removed; remote logout failed');
@@ -286,6 +291,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       if (results.some((r) => r.status === 'rejected')) throw new AppError('invalid', 'Account connection failed');
     },
     async stopAll() {
+      const deadline = s.now().getTime() + 5000;
       if (s.stopped) return stopping ?? undefined;
       s.stopped = true;
       stopping = (async () => {
@@ -300,7 +306,13 @@ export function createAccounts(s: State, scheduler: Scheduler) {
             rt.cancelCatchup?.();
             scheduler.cancel(id);
             try {
-              await cleanup(s, () => rt.connector.stop(), 5000);
+              await cleanup(s, () => rt.connector.stop(), deadline);
+              checkCleanupDeadline(s, deadline);
+            } catch (error) {
+              // A timed-out/faulted old port must never regain save authority on restart.
+              rt.fault = true;
+              if (s.live.get(id) === rt) s.live.delete(id);
+              throw error;
             } finally {
               rt.saving = false;
             }

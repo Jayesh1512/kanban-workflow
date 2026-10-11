@@ -187,16 +187,17 @@ export function createScheduler(s: State) {
       return true;
     }
     let complete = false;
-    const iterator = rt.connector
-      .fetchHistory({
-        chat: { ...entry.chat, nativeId: r.native_chat_id },
-        after: r.sync_after,
-        since: r.sync_since,
-        limit: r.sync_limit,
-        resume: r.sync_resume,
-      })
-      [Symbol.asyncIterator]();
+    let iterator: AsyncIterator<HistoryPage> | undefined;
     try {
+      iterator = rt.connector
+        .fetchHistory({
+          chat: { ...entry.chat, nativeId: r.native_chat_id },
+          after: r.sync_after,
+          since: r.sync_since,
+          limit: r.sync_limit,
+          resume: r.sync_resume,
+        })
+        [Symbol.asyncIterator]();
       for (;;) {
         // Cancellation does not release the I/O lane until the actual next() ends.
         const next = await iterator.next();
@@ -241,10 +242,19 @@ export function createScheduler(s: State) {
       s.oplog('warn', 'host.history_failed', { accountId: job.accountId, chatId: job.chatId });
       return false;
     } finally {
-      if (!complete && iterator.return)
-        void iterator
-          .return()
-          .catch(() => s.oplog('warn', 'host.history_cleanup_failed', { accountId: job.accountId }));
+      if (!complete && iterator) {
+        // Getter, call and returned-promise faults are all cleanup failures; none
+        // may mask the owning history failure/rollback or stop its retry.
+        try {
+          const finish = iterator.return;
+          if (finish)
+            void Promise.resolve(finish.call(iterator)).catch(() =>
+              s.oplog('warn', 'host.history_cleanup_failed', { accountId: job.accountId }),
+            );
+        } catch {
+          s.oplog('warn', 'host.history_cleanup_failed', { accountId: job.accountId });
+        }
+      }
     }
   }
   function schedule(accountId: Id, chatId: Id, newRequest = false): void {
