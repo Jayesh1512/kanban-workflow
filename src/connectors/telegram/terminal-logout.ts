@@ -8,10 +8,16 @@ const timeout = () => new AppError('invalid', 'Connector logout timed out/cancel
 const failed = () => new AppError('invalid', 'Connector logout failed');
 
 /** Absolute clock, with already-ready microtasks allowed to finish before asking the injected clock to wait. */
-export async function within<T>(ctx: ConnectorContext, deadline: number, work: Promise<T>, cancel?: Promise<never>) {
+export async function within<T>(
+  ctx: ConnectorContext,
+  deadline: number,
+  work: Promise<T>,
+  cancel?: Promise<never>,
+  isCancelled?: () => boolean,
+) {
   let finished = false;
   const check = () => {
-    if (ctx.now().getTime() >= deadline) throw timeout();
+    if (isCancelled?.() || ctx.now().getTime() >= deadline) throw timeout();
   };
   const tracked = work.then(
     (value) => {
@@ -73,6 +79,7 @@ export function createTerminalLogout(
       barrier();
       lifecycle.pause();
       let valid = true;
+      let cancelled = false; // Explicit stop survives ordinary preparation/final work invalidation.
       let rejectCancel: (error: AppError) => void = () => {};
       const cancellation = new Promise<never>((_, reject) => {
         rejectCancel = reject;
@@ -82,6 +89,7 @@ export function createTerminalLogout(
         void lifecycle.destroy().catch(() => {}); // Abort now, even when the effective promise never settles.
       };
       cancel = () => {
+        cancelled = true;
         invalidate();
         rejectCancel(timeout());
       };
@@ -114,7 +122,7 @@ export function createTerminalLogout(
       operation = (async () => {
         let error: unknown = snapshot.error;
         try {
-          await within(ctx, t0 + 45000, prepare(), cancellation);
+          await within(ctx, t0 + 45000, prepare(), cancellation, () => cancelled);
         } catch (cause) {
           invalidate();
           if (!error)
@@ -132,15 +140,18 @@ export function createTerminalLogout(
         try {
           await sessions.clear();
           cleared();
-          if (ctx.now().getTime() >= cleanupEnd) throw timeout();
+          if (cancelled || ctx.now().getTime() >= cleanupEnd) throw timeout();
         } catch (cause) {
-          error ??= cause;
+          error ??= cancelled ? timeout() : cause;
         }
         try {
-          await within(ctx, cleanupEnd, destruction);
+          await within(ctx, cleanupEnd, destruction, cancellation, () => cancelled);
+          if (cancelled || ctx.now().getTime() >= cleanupEnd) throw timeout();
         } catch (cause) {
           error ??=
-            ctx.now().getTime() >= cleanupEnd || (cause instanceof AppError && cause.message === timeout().message)
+            cancelled ||
+            ctx.now().getTime() >= cleanupEnd ||
+            (cause instanceof AppError && cause.message === timeout().message)
               ? timeout()
               : failed();
         }

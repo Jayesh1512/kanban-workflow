@@ -1,6 +1,6 @@
 # Connector contract
 
-Exact copy of current final architecture section 3.3, including all fixture, Telegram session and authenticated terminal teardown requirements. Full C1 and its historical F1-F6 corrections were approved in round3; whole round4 requested changes for C1-F7–F9. The admitted corrections are implemented for NEW independent whole C1 round5 review and parent main gate. Offline seams do not establish remote revocation. The approved compiler policy skips all .d.ts bodies without fixing or certifying them. Host durability, inclusion/notice enforcement, cursors/gaps, final component equivalence, and real-account/model observations remain later gates.
+Exact copy of current final architecture section 3.3, including all fixture, Telegram session and authenticated terminal teardown requirements. Full C1 and its historical F1-F6 corrections were approved in round3; independent whole round5 found C1-F1–F9 fixed within their stated limits and requested changes for C1-F10, final stop cancellation. The F10 correction is implementation-answered for NEW independent whole C1 round6 review and parent main gate; whole current C1 is not yet approved. Offline seams do not establish remote revocation. The approved compiler policy skips all .d.ts bodies without fixing or certifying them. Host durability, inclusion/notice enforcement, cursors/gaps, final component equivalence, and real-account/model observations remain later gates.
 
 ### 3.3 Connector contract — `src/contracts/connector.ts`
 
