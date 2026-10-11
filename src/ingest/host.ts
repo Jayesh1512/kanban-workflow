@@ -1,5 +1,6 @@
 import type { AppConfig, ConnectorFactory, Db, Host, OpLog } from '../contracts/index.ts';
-import { accountMethods, createAccounts } from './host/accounts.ts';
+import { accountMethods } from './host/account-methods.ts';
+import { createAccounts } from './host/accounts.ts';
 import { createScheduler } from './host/scheduler.ts';
 import { createSelection } from './host/selection.ts';
 import { createState } from './host/state.ts';

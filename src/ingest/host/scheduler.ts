@@ -1,32 +1,28 @@
 import type { ChatListEntry, HistoryPage, Id } from '../../contracts/index.ts';
 import { AppError, HistoryPageSchema } from '../../contracts/index.ts';
+import { record } from '../../log/index.ts';
 import { clearSync, finishGaps, openGap } from './gaps.ts';
+import { resolveReplies } from './replies.ts';
 import type { Runtime, State } from './state.ts';
-import type { PendingReply } from './store-once.ts';
-import { resolveReplies, storeOnce } from './store-once.ts';
+import { storeOnce } from './store-once.ts';
+import { assertAccountOrigins, assertGaps, assertOrigin, type OriginRow } from './sync-origin.ts';
 
-interface SyncRow {
+interface SyncRow extends OriginRow {
   chat_id: Id;
   chat_key: string;
   kind: ChatListEntry['chat']['kind'];
   title: string;
   native_chat_id: string;
   live_cursor: string | null;
-  sync_state: 'idle' | 'syncing' | 'failed';
-  sync_after: string | null;
-  sync_since: string | null;
-  sync_limit: number | null;
-  sync_resume: string | null;
-  sync_newest: string | null;
-  sync_failed_since: string | null;
 }
 interface Job {
   accountId: Id;
   chatId: Id;
   controller: AbortController;
   task: Promise<void>;
-  pending: PendingReply[];
-  fromTime: string;
+  epoch: number;
+  queueId: Id;
+  request: Pick<SyncRow, 'sync_after' | 'sync_since' | 'sync_limit'>;
 }
 const day = 86400000;
 export function createScheduler(s: State) {
@@ -41,15 +37,35 @@ export function createScheduler(s: State) {
       chatId,
     );
   }
-  function valid(job: Job): boolean {
-    // Check volatile cancellation BEFORE any DB access; late results after DB close are inert.
+  function queueId(accountId: Id, chatId: Id): Id {
     return (
-      !s.stopped &&
-      !job.controller.signal.aborted &&
-      s.active(job.accountId) &&
-      Boolean(s.live.get(job.accountId)?.accepting) &&
-      row(job.accountId, job.chatId)?.sync_state !== 'idle' &&
-      row(job.accountId, job.chatId) !== undefined
+      s.db.get<{ id: Id }>(
+        "SELECT id FROM action_log WHERE action='chat.sync_queue' AND subject_kind='chat' AND subject_id=? AND json_extract(after,'$.accountId')=? ORDER BY id DESC LIMIT 1",
+        chatId,
+        accountId,
+      )?.id ?? 0
+    );
+  }
+  function valid(job: Job): boolean {
+    // Volatile fences precede DB access: callbacks after removal/close are inert.
+    if (
+      s.stopped ||
+      job.controller.signal.aborted ||
+      jobs.get(key(job.accountId, job.chatId)) !== job ||
+      !s.active(job.accountId)
+    )
+      return false;
+    const rt = s.live.get(job.accountId);
+    if (!rt?.accepting || rt.epoch !== job.epoch) return false;
+    const r = row(job.accountId, job.chatId);
+    if (!r || queueId(job.accountId, job.chatId) !== job.queueId) return false;
+    assertOrigin(r);
+    assertGaps(s.db, job.accountId, job.chatId);
+    return (
+      r.sync_state !== 'idle' &&
+      r.sync_after === job.request.sync_after &&
+      r.sync_since === job.request.sync_since &&
+      r.sync_limit === job.request.sync_limit
     );
   }
   function track(p: Promise<void>): Promise<void> {
@@ -84,31 +100,69 @@ export function createScheduler(s: State) {
       }
     );
   }
+  function audit(job: Job, action: string, timeKey: string, messageIds: Id[] = []): void {
+    record(s.system, {
+      action,
+      subjectKind: 'chat',
+      subjectId: job.chatId,
+      after: { accountId: job.accountId, [timeKey]: s.now().toISOString() },
+      messageIds,
+    });
+  }
+  function capture(job: Job): SyncRow | undefined {
+    return s.db.tx(() => {
+      if (!valid(job)) return undefined;
+      const r = row(job.accountId, job.chatId);
+      if (!r) return undefined;
+      if (r.sync_origin_state === 'queued') {
+        const witness = s.db.get<{ id: Id; sent_at: string }>(
+          'SELECT id,sent_at FROM message WHERE chat_id=? ORDER BY sent_at DESC,id DESC LIMIT 1',
+          job.chatId,
+        );
+        const at = s.now().toISOString();
+        const fromTime = witness?.sent_at ?? r.sync_since ?? at;
+        s.db.run(
+          "UPDATE account_chat SET sync_origin_state='captured',sync_gap_from=? WHERE account_id=? AND chat_id=?",
+          fromTime,
+          job.accountId,
+          job.chatId,
+        );
+        record(s.system, {
+          action: 'chat.sync_start',
+          subjectKind: 'chat',
+          subjectId: job.chatId,
+          after: { accountId: job.accountId, fromTime, startedAt: at },
+          messageIds: witness ? [witness.id] : [],
+        });
+      }
+      return row(job.accountId, job.chatId);
+    });
+  }
   function abandon(job: Job, entry: ChatListEntry): void {
     s.db.tx(() => {
       if (!valid(job)) return;
-      openGap(s, job.accountId, job.chatId, job.fromTime);
+      openGap(s, job.accountId, job.chatId);
       const r = row(job.accountId, job.chatId);
       if (!r) return;
-      // A concurrently observed live cursor is never replaced by older metadata.
+      finishGaps(s, job.accountId, job.chatId, true);
       s.db.run(
         `UPDATE account_chat SET ${clearSync},live_cursor=? WHERE account_id=? AND chat_id=?`,
         r.live_cursor === r.sync_after ? entry.latestCursor : r.live_cursor,
         job.accountId,
         job.chatId,
       );
-      finishGaps(s, job.accountId, job.chatId, true);
     });
   }
   function commitPage(job: Job, page: HistoryPage): void {
-    const pending = s.db.tx(() => {
-      if (!valid(job)) return job.pending;
+    s.db.tx(() => {
+      if (!valid(job)) return;
       const a = s.account(job.accountId);
-      const next = [...job.pending];
+      const ids: Id[] = [];
       for (const message of page.messages) {
-        const reply = storeOnce(s.system, a, job.chatId, message, 'history');
-        if (reply) next.push(reply);
+        const id = storeOnce(s.system, a, job.chatId, message, 'history');
+        if (id !== null) ids.push(id);
       }
+      ids.push(...resolveReplies(s.system, job.chatId));
       s.db.run(
         'UPDATE account_chat SET sync_resume=?,sync_newest=coalesce(sync_newest,?) WHERE account_id=? AND chat_id=?',
         page.resume,
@@ -116,21 +170,19 @@ export function createScheduler(s: State) {
         job.accountId,
         job.chatId,
       );
-      return resolveReplies(s.system, job.accountId, job.chatId, next);
+      audit(job, 'chat.sync_page', 'committedAt', [...new Set(ids)]);
     });
-    job.pending = pending; // Only install memory corresponding to a successfully committed page.
   }
   async function fetch(job: Job, rt: Runtime): Promise<boolean> {
-    if (!valid(job)) return false;
-    const r = row(job.accountId, job.chatId);
+    // This runs INSIDE the acquired account I/O lane. No await separates capture from dispatch.
+    const r = capture(job);
     if (!r) return false;
     const entry = listing(job.accountId, r);
     const a = s.account(job.accountId);
-    if (!s.factory(a.channel).capabilities.history) {
-      abandon(job, entry);
-      return true;
-    }
-    if (r.sync_failed_since !== null && s.now().getTime() - new Date(r.sync_failed_since).getTime() >= day) {
+    if (
+      !s.factory(a.channel).capabilities.history ||
+      (r.sync_failed_since !== null && s.now().getTime() - new Date(r.sync_failed_since).getTime() >= day)
+    ) {
       abandon(job, entry);
       return true;
     }
@@ -145,8 +197,8 @@ export function createScheduler(s: State) {
       })
       [Symbol.asyncIterator]();
     try {
-      // The I/O lock remains held until the outstanding next actually ends, including cancellation.
       for (;;) {
+        // Cancellation does not release the I/O lane until the actual next() ends.
         const next = await iterator.next();
         if (!valid(job)) return false;
         if (next.done) {
@@ -161,19 +213,20 @@ export function createScheduler(s: State) {
         if (!valid(job)) return;
         const current = row(job.accountId, job.chatId);
         if (!current) return;
-        // Empty non-service results use the snapshot listing cursor ONLY after complete success.
         const newest = current.sync_newest ?? entry.latestCursor;
+        finishGaps(s, job.accountId, job.chatId, false);
         s.db.run(
           `UPDATE account_chat SET ${clearSync},live_cursor=? WHERE account_id=? AND chat_id=?`,
           current.live_cursor === current.sync_after ? newest : current.live_cursor,
           job.accountId,
           job.chatId,
         );
-        finishGaps(s, job.accountId, job.chatId, false);
+        audit(job, 'chat.sync_complete', 'completedAt');
       });
       return true;
-    } catch {
+    } catch (error) {
       if (!valid(job)) return false;
+      if (error instanceof AppError && error.message === 'Stored sync origin is unavailable') throw error;
       s.db.tx(() => {
         if (!valid(job)) return;
         s.db.run(
@@ -182,52 +235,60 @@ export function createScheduler(s: State) {
           job.accountId,
           job.chatId,
         );
-        openGap(s, job.accountId, job.chatId, job.fromTime);
+        openGap(s, job.accountId, job.chatId);
+        audit(job, 'chat.sync_failure', 'failedAt');
       });
       s.oplog('warn', 'host.history_failed', { accountId: job.accountId, chatId: job.chatId });
       return false;
     } finally {
-      if (!complete && iterator.return) {
-        // No await of an uncooperative return: cancellation is bounded, and late failures are handled.
+      if (!complete && iterator.return)
         void iterator
           .return()
           .catch(() => s.oplog('warn', 'host.history_cleanup_failed', { accountId: job.accountId }));
-      }
     }
   }
-  function schedule(accountId: Id, chatId: Id): void {
+  function schedule(accountId: Id, chatId: Id, newRequest = false): void {
+    assertAccountOrigins(s.db, accountId);
     const k = key(accountId, chatId);
     const rt = s.live.get(accountId);
-    if (s.stopped || !rt?.accepting || jobs.has(k)) return;
+    if (s.stopped || !rt?.accepting) return;
+    const previous = jobs.get(k);
+    if (
+      !newRequest &&
+      previous &&
+      previous.queueId === queueId(accountId, chatId) &&
+      !previous.controller.signal.aborted
+    )
+      return;
+    previous?.controller.abort();
     const r = row(accountId, chatId);
     if (!r || r.sync_state === 'idle') return;
-    const fromTime =
-      s.db.get<{ at: string | null }>('SELECT max(sent_at) AS at FROM message WHERE chat_id=?', chatId)?.at ??
-      r.sync_since ??
-      s.now().toISOString();
     const job: Job = {
       accountId,
       chatId,
       controller: new AbortController(),
       task: Promise.resolve(),
-      pending: [],
-      fromTime,
+      epoch: rt.epoch,
+      queueId: queueId(accountId, chatId),
+      request: { sync_after: r.sync_after, sync_since: r.sync_since, sync_limit: r.sync_limit },
     };
     jobs.set(k, job);
     job.task = track(
       Promise.resolve()
         .then(async () => {
           let delay = 60000;
-          // Retained failed work retries after a wait, never silently resets its original request.
           let wait = r.sync_state === 'failed';
           while (valid(job)) {
             const current = row(accountId, chatId);
             if (
-              current?.sync_failed_since !== null &&
-              current?.sync_failed_since !== undefined &&
+              current?.sync_failed_since != null &&
               s.now().getTime() - new Date(current.sync_failed_since).getTime() >= day
             ) {
-              abandon(job, listing(accountId, current));
+              // Captured already; abandonment still owns the I/O dispatch boundary.
+              await cancellable(
+                s.serial(rt, () => fetch(job, rt)),
+                job.controller.signal,
+              );
               break;
             }
             if (wait) {
@@ -248,8 +309,8 @@ export function createScheduler(s: State) {
           }
         })
         .finally(() => {
-          jobs.delete(k);
-          // Callback may have joined a later-rolled-back outer purge transaction. Durable state wins.
+          if (jobs.get(k) === job) jobs.delete(k);
+          // A withdrawal callback can join an outer transaction which later rolls back.
           if (job.controller.signal.aborted && !s.stopped && rt.accepting && s.active(accountId))
             schedule(accountId, chatId);
         }),
@@ -260,23 +321,13 @@ export function createScheduler(s: State) {
       if (job.accountId === accountId && (chatId === undefined || job.chatId === chatId)) job.controller.abort();
   }
   function restore(accountId: Id): void {
+    assertAccountOrigins(s.db, accountId);
     for (const r of s.db.all<SyncRow>(
       'SELECT ac.*,ch.chat_key,ch.kind,ch.title FROM account_chat ac JOIN chat ch ON ch.id=ac.chat_id WHERE ac.account_id=? AND ac.sync_state<>? ORDER BY ch.id',
       accountId,
       'idle',
     )) {
-      if (r.sync_newest !== null || r.sync_failed_since !== null)
-        s.db.tx(() =>
-          openGap(
-            s,
-            accountId,
-            r.chat_id,
-            r.sync_since ??
-              s.db.get<{ at: string | null }>('SELECT min(sent_at) AS at FROM message WHERE chat_id=?', r.chat_id)
-                ?.at ??
-              s.now().toISOString(),
-          ),
-        );
+      if (r.sync_origin_state === 'captured') s.db.tx(() => openGap(s, accountId, r.chat_id));
       schedule(accountId, r.chat_id);
     }
   }
@@ -290,14 +341,22 @@ export function createScheduler(s: State) {
         entry.chat.key,
       );
       if (r?.sync_state !== 'idle' || r.live_cursor === entry.latestCursor) continue;
-      s.db.tx(() =>
+      s.db.tx(() => {
+        assertOrigin(r);
+        assertGaps(s.db, accountId, r.chat_id);
         s.db.run(
-          "UPDATE account_chat SET sync_state='syncing',sync_after=live_cursor,sync_since=NULL,sync_limit=NULL,sync_resume=NULL,sync_newest=NULL,sync_failed_since=NULL WHERE account_id=? AND chat_id=? AND sync_state='idle'",
+          "UPDATE account_chat SET sync_state='syncing',sync_after=live_cursor,sync_since=NULL,sync_limit=NULL,sync_resume=NULL,sync_newest=NULL,sync_failed_since=NULL,sync_origin_state='queued',sync_gap_from=NULL WHERE account_id=? AND chat_id=? AND sync_state='idle'",
           accountId,
           r.chat_id,
-        ),
-      );
-      schedule(accountId, r.chat_id);
+        );
+        record(s.system, {
+          action: 'chat.sync_queue',
+          subjectKind: 'chat',
+          subjectId: r.chat_id,
+          after: { accountId, queuedAt: s.now().toISOString() },
+        });
+      });
+      schedule(accountId, r.chat_id, true);
     }
   }
   return {
@@ -309,7 +368,9 @@ export function createScheduler(s: State) {
     async settle() {
       while (tasks.size) await Promise.all([...tasks]);
       if (errors.length) {
+        const error = errors.shift();
         errors.length = 0;
+        if (error instanceof AppError && error.message === 'Stored sync origin is unavailable') throw error;
         throw new AppError('invalid', 'Host background work failed');
       }
     },

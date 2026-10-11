@@ -5,8 +5,10 @@ import { AppError, IdSchema } from '../../contracts/index.ts';
 import { ensureCompany, setContactCompany } from '../../graph/index.ts';
 import { record } from '../../log/index.ts';
 import { agreementWording } from './agreement.ts';
+import { clearPending } from './replies.ts';
 import type { Scheduler } from './scheduler.ts';
 import type { Account, State } from './state.ts';
+import { assertAccountOrigins } from './sync-origin.ts';
 
 function agree(s: State, a: Account, chatKey: string): void {
   const wording = agreementWording();
@@ -39,6 +41,7 @@ export function createSelection(
   return {
     includeChat(ctx, accountId, chatKey, input) {
       const a = s.owner(ctx, accountId);
+      assertAccountOrigins(s.db, a.id);
       if (!s.active(a.id)) throw new AppError('unauthenticated', 'Reconnect account before inclusion');
       const parsed = z
         .strictObject({
@@ -96,7 +99,7 @@ export function createSelection(
         );
         // This persisted hold precedes any asynchronous queue wait, even inside a caller transaction.
         s.db.run(
-          "INSERT INTO account_chat(account_id,chat_id,native_chat_id,sync_state,sync_after,sync_since,sync_limit) VALUES (?,?,?,'syncing',NULL,?,200)",
+          "INSERT INTO account_chat(account_id,chat_id,native_chat_id,sync_state,sync_after,sync_since,sync_limit,sync_origin_state,sync_gap_from) VALUES (?,?,?,'syncing',NULL,?,200,'queued',NULL)",
           a.id,
           id,
           entry.chat.nativeId,
@@ -119,9 +122,15 @@ export function createSelection(
           subjectId: id,
           after: { accountId: a.id, companyId, agreedWordingVersion: required ? agreementWording().version : null },
         });
+        record(ctx, {
+          action: 'chat.sync_queue',
+          subjectKind: 'chat',
+          subjectId: id,
+          after: { accountId: a.id, queuedAt: s.now().toISOString() },
+        });
         return id;
       });
-      scheduler.schedule(a.id, chatId);
+      scheduler.schedule(a.id, chatId, true);
     },
     excludeChat(ctx, accountId, chatKey) {
       const a = s.owner(ctx, accountId);
@@ -143,7 +152,10 @@ export function createSelection(
           chatKey,
           s.now().toISOString(),
         );
-        if (ch) s.db.run('DELETE FROM account_chat WHERE account_id=? AND chat_id=?', a.id, ch.id);
+        if (ch) {
+          clearPending(s.system, a.id, ch.id);
+          s.db.run('DELETE FROM account_chat WHERE account_id=? AND chat_id=?', a.id, ch.id);
+        }
         record(ctx, {
           action: 'chat.exclude',
           subjectKind: 'chat',
@@ -208,6 +220,7 @@ export function createSelection(
           chatId,
         );
         // named_company_id intentionally remains for the later graph.forget callback.
+        clearPending(s.system, null, chatId);
         s.db.run('DELETE FROM account_chat WHERE chat_id=?', chatId);
         s.db.run('DELETE FROM chat_gap WHERE chat_id=?', chatId);
         return {

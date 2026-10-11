@@ -321,6 +321,10 @@ test('cold disconnect destroys reopened sealed state synchronously and invokes t
   assert.equal(host.listAccounts(r.ctx())[0]?.state, 'removed');
   assert.ok(r.h.clock.now().getTime() - at < 60000);
   assert.ok(r.apis.at(-1)?.calls.some((c) => c.op === 'logOut'));
-  // Actual C1 invokes logOut without importing the cold saved auth. H1-REQ-2 records the upstream revocation limit.
-  assert.equal(r.apis.at(-1)?.calls.filter((c) => c.op === 'importSession').length, 0);
+  const calls = r.apis.at(-1)?.calls.map((c) => c.op) ?? [];
+  assert.equal(calls.filter((op) => op === 'importSession').length, 1);
+  assert.ok(calls.indexOf('importSession') < calls.indexOf('logOut'));
+  assert.equal(calls.includes('getMe'), false);
+  assert.equal(calls.includes('exportSession'), false);
+  assert.ok(calls.includes('destroy'));
 });

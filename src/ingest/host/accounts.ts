@@ -1,38 +1,17 @@
-import { z } from 'zod';
-import type { Ctx, Host, Id, LoginStep } from '../../contracts/index.ts';
+import type { Ctx, Id, LoginStep } from '../../contracts/index.ts';
 import { AppError, ConnectorEventSchema, LoginStepSchema } from '../../contracts/index.ts';
 import { bindSelfIdentity } from '../../graph/index.ts';
 import { record } from '../../log/index.ts';
-import { counts, listAccounts, refreshListing, showListing } from './listing.ts';
+import { cleanup } from './cleanup.ts';
+import { clearSync } from './gaps.ts';
+import { refreshListing } from './listing.ts';
+import { clearPending, resolveReplies } from './replies.ts';
 import type { Scheduler } from './scheduler.ts';
 import type { Account, Runtime, State } from './state.ts';
-import { resolveReplies, storeOnce } from './store-once.ts';
+import { storeOnce } from './store-once.ts';
+import { assertAccountOrigins } from './sync-origin.ts';
 
-async function cleanup(s: State, run: () => Promise<void>, ms: number): Promise<void> {
-  const operation = run();
-  // Let a synchronous/microtask-only cleanup finish before allocating a deadline wait.
-  let finished = false;
-  const result = operation.then(
-    () => {
-      finished = true;
-    },
-    (error: unknown) => {
-      finished = true;
-      throw error;
-    },
-  );
-  await Promise.resolve();
-  await Promise.resolve();
-  if (finished) return result;
-  await Promise.race([
-    result,
-    s.sleep(ms).then(() => {
-      if (!finished) throw new AppError('invalid', 'Account cleanup timed out');
-    }),
-  ]);
-}
 export function createAccounts(s: State, scheduler: Scheduler) {
-  const replies = new Map<Id, ReturnType<typeof storeOnce>[]>();
   let stopping: Promise<void> | null = null;
   async function refresh(a: Account, rt: Runtime, generation: number): Promise<void> {
     await refreshListing(s, a, rt, () => !s.stopped && rt.epoch === generation && rt.accepting);
@@ -70,6 +49,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
     );
   }
   async function startAccount(a: Account): Promise<void> {
+    assertAccountOrigins(s.db, a.id);
     if (!s.active(a.id)) return;
     let rt = s.live.get(a.id);
     if (rt?.fault) {
@@ -137,13 +117,10 @@ export function createAccounts(s: State, scheduler: Scheduler) {
               e.chat.key,
             );
             if (!ch) return;
-            const pending = s.db.tx(() => {
-              const reply = storeOnce(s.system, a, ch.id, e.message, 'live');
-              const prior = (replies.get(a.id) ?? []).filter((p) => p !== null);
-              if (reply) prior.push(reply);
-              return resolveReplies(s.system, a.id, ch.id, prior);
+            s.db.tx(() => {
+              storeOnce(s.system, a, ch.id, e.message, 'live');
+              resolveReplies(s.system, ch.id);
             });
-            replies.set(a.id, pending);
           },
         });
         if (s.stopped || runtime.epoch !== generation) return;
@@ -187,7 +164,40 @@ export function createAccounts(s: State, scheduler: Scheduler) {
         if (rt.epoch !== generation || !rt.saving || rt.fault || s.live.get(a.id) !== rt)
           throw new AppError('invalid', 'Account login cancelled');
         const step = parsed.data;
-        if (step.kind === 'done')
+        if (step.kind === 'done') {
+          const historical = s.db.get<{ user_key: string; channel: string; teammate_id: Id }>(
+            'SELECT i.user_key,i.channel,i.teammate_id FROM channel_account a JOIN identity i ON i.id=a.self_identity_id WHERE a.id=?',
+            a.id,
+          );
+          if (
+            historical &&
+            (historical.user_key !== step.self.userKey ||
+              historical.channel !== a.channel ||
+              historical.teammate_id !== a.teammate_id)
+          ) {
+            // The authenticated new access is rejected before any self/history overwrite.
+            rt.accepting = false;
+            scheduler.cancel(a.id);
+            s.db.tx(() => {
+              s.db.run("UPDATE channel_account SET session_sealed=NULL,state='disconnected' WHERE id=?", a.id);
+              record(s.system, {
+                action: 'account.connect',
+                subjectKind: 'account',
+                subjectId: a.id,
+                after: { state: 'disconnected' },
+              });
+            });
+            rt.saving = false;
+            try {
+              await cleanup(s, () => rt.connector.logout(), 50000);
+            } catch {
+              s.oplog('warn', 'host.logout_failed', { accountId: a.id });
+            }
+            rt.epoch++;
+            rt.fault = true;
+            if (s.live.get(a.id) === rt) s.live.delete(a.id);
+            throw new AppError('invalid', 'Account login failed');
+          }
           s.db.tx(() => {
             const current = s.owner(ctx, a.id);
             if (current.session_sealed === null) throw new AppError('invalid', 'Account session missing');
@@ -195,6 +205,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
             s.db.run("UPDATE channel_account SET self_identity_id=?,state='connected' WHERE id=?", identityId, a.id);
             record(ctx, { action: 'account.connect', subjectKind: 'account', subjectId: a.id, after: { identityId } });
           });
+        }
         return step.kind === 'failed'
           ? { kind: 'failed', message: 'Account login failed', retryable: step.retryable }
           : step;
@@ -234,6 +245,8 @@ export function createAccounts(s: State, scheduler: Scheduler) {
     }
     // Destroy access synchronously before awaiting logout. A late save can never resurrect it.
     s.db.tx(() => {
+      clearPending(s.system, a.id);
+      s.db.run(`UPDATE account_chat SET ${clearSync} WHERE account_id=?`, a.id);
       s.db.run("UPDATE channel_account SET state='removed',session_sealed=NULL WHERE id=?", a.id);
       record(ctx, { action: 'account.disconnect', subjectKind: 'account', subjectId: a.id });
     });
@@ -245,7 +258,6 @@ export function createAccounts(s: State, scheduler: Scheduler) {
     }
     scheduler.cancel(a.id);
     s.cached.delete(a.id);
-    replies.delete(a.id);
     if (restoreFailed) throw new AppError('invalid', 'Account removed; remote logout restoration failed');
     if (rt) {
       try {
@@ -261,6 +273,8 @@ export function createAccounts(s: State, scheduler: Scheduler) {
   return {
     login,
     async startAll() {
+      // Validate the WHOLE restored set before changing status, connector state, or hold.
+      for (const a of s.db.all<Account>('SELECT * FROM channel_account ORDER BY id')) assertAccountOrigins(s.db, a.id);
       s.stopped = false;
       const results = await Promise.allSettled(
         s.db
@@ -298,97 +312,5 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       // Canceled history/retry tasks resolve without awaiting an uncooperative external iterator.
     },
     disconnect,
-  };
-}
-export function accountMethods(
-  s: State,
-  accounts: ReturnType<typeof createAccounts>,
-  scheduler: Scheduler,
-): Pick<
-  Host,
-  'listChannels' | 'listAccounts' | 'beginLogin' | 'continueLogin' | 'disconnect' | 'listChats' | 'chatCounts'
-> {
-  return {
-    listChannels() {
-      return s.connectors.map((f) => ({
-        channel: f.channel,
-        label: f.label,
-        loginNotice: f.loginNotice(s.config.connectors[f.channel] ?? {}),
-      }));
-    },
-    listAccounts: (ctx) => listAccounts(s, ctx),
-    async beginLogin(ctx, channel, i) {
-      const teammateId = s.human(ctx);
-      if (!z.strictObject({ acknowledgedNoticeVersion: z.number().int().positive().nullable() }).safeParse(i).success)
-        throw new AppError('invalid', 'Invalid login input');
-      const notice = s.factory(channel).loginNotice(s.config.connectors[channel] ?? {});
-      if (notice && notice.version !== i.acknowledgedNoticeVersion)
-        throw new AppError('invalid', 'Login notice acknowledgement required');
-      const id = s.db.tx(() => {
-        const previous = s.db.get<Account>(
-          'SELECT * FROM channel_account WHERE teammate_id=? AND channel=?',
-          teammateId,
-          channel,
-        );
-        const id =
-          previous?.id ??
-          s.db.run(
-            "INSERT INTO channel_account(teammate_id,channel,state,created_at) VALUES (?,?,'login',?)",
-            teammateId,
-            channel,
-            s.now().toISOString(),
-          ).lastInsertRowid;
-        s.db.run("UPDATE channel_account SET state='login' WHERE id=?", id);
-        record(ctx, {
-          action: 'account.acknowledge',
-          subjectKind: 'account',
-          subjectId: id,
-          after: { noticeVersion: notice?.version ?? null },
-        });
-        return id;
-      });
-      const rt = s.live.get(id);
-      if (rt?.accepting || rt?.fault) {
-        rt.accepting = false;
-        rt.epoch++;
-        scheduler.cancel(id);
-        try {
-          await cleanup(s, () => rt.connector.stop(), 5000);
-        } finally {
-          rt.saving = false;
-          s.live.delete(id);
-        }
-      }
-      return { accountId: id, step: await accounts.login(ctx, s.account(id), null) };
-    },
-    async continueLogin(ctx, accountId, input) {
-      const a = s.owner(ctx, accountId);
-      if (a.state !== 'login') throw new AppError('invalid', 'Begin account login first');
-      if (!z.record(z.string(), z.string()).safeParse(input).success)
-        throw new AppError('invalid', 'Invalid login input');
-      const notice = s.factory(a.channel).loginNotice(s.config.connectors[a.channel] ?? {});
-      if (
-        notice &&
-        !s.db.get(
-          "SELECT id FROM action_log WHERE action='account.acknowledge' AND subject_id=? AND actor_kind='teammate' AND actor_id=? AND json_extract(after,'$.noticeVersion')=? ORDER BY id DESC LIMIT 1",
-          a.id,
-          a.teammate_id,
-          notice.version,
-        )
-      )
-        throw new AppError('invalid', 'Login notice acknowledgement required');
-      return accounts.login(ctx, a, input);
-    },
-    disconnect: accounts.disconnect,
-    async listChats(ctx, accountId) {
-      const a = s.owner(ctx, accountId);
-      if (!s.active(a.id) || a.state === 'login') throw new AppError('unauthenticated', 'Account not connected');
-      const rt = s.runtime(a);
-      const generation = rt.epoch;
-      await refreshListing(s, a, rt, () => rt.epoch === generation && s.active(a.id));
-      s.owner(ctx, accountId);
-      return showListing(s, a);
-    },
-    chatCounts: (ctx) => counts(s, ctx),
   };
 }

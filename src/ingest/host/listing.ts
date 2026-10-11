@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { AccountView, ChatCounts, ChatListing, Ctx, Id } from '../../contracts/index.ts';
 import { AppError, ChatListEntrySchema } from '../../contracts/index.ts';
 import type { Account, Runtime, State } from './state.ts';
+import { assertAccountOrigins } from './sync-origin.ts';
 
 export async function refreshListing(s: State, a: Account, rt: Runtime, valid: () => boolean): Promise<void> {
   await s.serial(rt, async () => {
@@ -56,7 +57,9 @@ export function showListing(s: State, a: Account): ChatListing[] {
 }
 export function listAccounts(s: State, ctx: Ctx): AccountView[] {
   const ownerId = s.human(ctx);
-  return s.db.all<Account>('SELECT * FROM channel_account WHERE teammate_id=? ORDER BY id', ownerId).map((a) => ({
+  const accounts = s.db.all<Account>('SELECT * FROM channel_account WHERE teammate_id=? ORDER BY id', ownerId);
+  for (const a of accounts) assertAccountOrigins(s.db, a.id);
+  return accounts.map((a) => ({
     id: a.id,
     teammateId: a.teammate_id,
     channel: a.channel,
