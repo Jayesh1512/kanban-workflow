@@ -113,8 +113,11 @@ export function createTerminalLogout(
         }
         try {
           await within(ctx, cleanupEnd, destruction);
-        } catch {
-          error ??= failed();
+        } catch (cause) {
+          error ??=
+            ctx.now().getTime() >= cleanupEnd || (cause instanceof AppError && cause.message === timeout().message)
+              ? timeout()
+              : failed();
         }
         sessions.finish();
         lifecycle.finish();

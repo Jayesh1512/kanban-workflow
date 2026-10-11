@@ -47,7 +47,7 @@ for (const boundary of ['logOut', 'destroy'] as const) {
         await pending.promise;
       };
       const logout = h.connector.logout();
-      const outcome = assert.rejects(logout, boundary === 'logOut' ? safeTimeout : /Connector logout failed/);
+      const outcome = assert.rejects(logout, safeTimeout);
       await flush();
       if (boundary === 'destroy') assert.deepEqual(h.saved, [null]); // Null precedes any wait on destruction.
       h.advance(boundary === 'logOut' ? 45000 : 5000);
