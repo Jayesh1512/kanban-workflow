@@ -106,13 +106,17 @@ test('C1-F6 restored login stop/logout during import or getMe cannot save, resto
       const release = deferred();
       const importing = h.api.importSession.bind(h.api);
       const getMe = h.api.getMe.bind(h.api);
-      if (boundary === 'importSession')
+      if (boundary === 'importSession') {
+        let first = true;
         h.api.importSession = async (value) => {
-          entered.resolve();
-          await release.promise;
+          if (first) {
+            first = false;
+            entered.resolve();
+            await release.promise;
+          }
           await importing(value);
         };
-      else
+      } else
         h.api.getMe = async () => {
           const user = await getMe();
           entered.resolve();

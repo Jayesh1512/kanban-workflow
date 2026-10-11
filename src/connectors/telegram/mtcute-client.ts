@@ -37,6 +37,7 @@ export function createMtcuteClient(
   if (!Number.isSafeInteger(apiId) || apiId <= 0 || !ctx.config.API_HASH || !ctx.config.APP_OWNER)
     throw new AppError('invalid', 'Telegram API_ID, API_HASH and APP_OWNER are required');
   const abort = new AbortController();
+  let closed = false;
   const connections = new Set<ITelegramConnection>();
   const platform = new NodePlatform();
   platform.getDefaultLogLevel = () => 0;
@@ -79,6 +80,8 @@ export function createMtcuteClient(
     dialogs: (request) => client.call(request),
     history: (request) => client.call(request),
     closeNow() {
+      if (closed) return;
+      closed = true;
       abort.abort();
       for (const connection of connections) {
         void Promise.resolve(connection.close()).catch(() =>

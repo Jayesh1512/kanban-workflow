@@ -57,6 +57,10 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   let keys = new Map<string, string>();
   let candidate: Map<string, string> | null = null;
   let failure = false;
+  let token = 0;
+  let terminal = false;
+  let cleanup: Promise<void> | null = null;
+  const faults = new Map<number, AppError>();
   let queue: Promise<unknown> = Promise.resolve();
   function restore() {
     if (restored) return;
@@ -71,27 +75,36 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   function healthy() {
     if (failure) throw failed();
   }
-  async function latch(): Promise<never> {
+  function latch(): never {
     if (!failure) {
       failure = true;
-      await onFailure();
+      faults.set(token, failed());
+      cleanup = Promise.resolve(onFailure());
+      void cleanup.catch(() => {});
     }
     throw failed();
   }
-  function serial<T>(run: () => T | Promise<T>, allowFailed = false): Promise<T> {
+  function serial<T>(run: (current: () => boolean) => T, allowFailed = false): Promise<T> {
+    const admission = token;
+    const current = () => admission === token && !terminal;
     const pending = queue.then(() => {
       if (!allowFailed) healthy();
-      return run();
+      if (!current()) throw new AppError('invalid', 'Connector stopped');
+      return run(current);
     });
     queue = pending.catch(() => {});
     return pending;
   }
-  function persist(next: Map<string, string>, opaque: string) {
+  function persist(next: Map<string, string>, opaque: string, current: () => boolean) {
     candidate = next; // On failure retain the entire candidate; recovery requires explicit authoritative recreation.
     if (!opaque.length) throw failed();
     const entries = [...next].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     const envelope = sessionPrefix + JSON.stringify({ v: 1, sdkSession: opaque, keys: entries });
     ctx.saveSession(envelope); // Synchronous atomic replacement or throw; never acknowledge first.
+    if (!current()) {
+      candidate = null;
+      throw new AppError('invalid', 'Connector stopped');
+    }
     saved = envelope;
     sdkSession = opaque;
     keys = next;
@@ -100,6 +113,13 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
   return {
     restore,
     healthy,
+    guard() {
+      const admission = token;
+      return () => {
+        const error = faults.get(admission);
+        if (error) throw error;
+      };
+    },
     isFailed: () => failure,
     opaque() {
       restore();
@@ -107,7 +127,7 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
       return sdkSession;
     },
     async learn(messages: TgMessage[], valid: () => boolean) {
-      return serial(async () => {
+      return serial((current) => {
         if (!valid()) throw new AppError('invalid', 'Connector stopped');
         restore();
         try {
@@ -116,52 +136,76 @@ export function createSessionState(ctx: ConnectorContext, api: TelegramApi, onFa
           const records = messages.map(decode).filter((m) => m !== null);
           if (next.size !== keys.size) {
             if (sdkSession === null) throw failed();
-            persist(next, sdkSession);
+            persist(next, sdkSession, () => current() && valid());
           }
           return records;
         } catch {
+          if (!current() || !valid()) throw new AppError('invalid', 'Connector stopped');
           return latch();
         }
       });
     },
     async save(valid: () => boolean = () => true) {
+      const admission = token;
       healthy();
-      if (!valid()) throw new AppError('invalid', 'Connector stopped');
+      if (terminal || !valid()) throw new AppError('invalid', 'Connector stopped');
       let opaque: string;
       try {
         opaque = await api.exportSession();
       } catch {
         return serial(() => {
           // A late canceled export must not fault a stopped or successfully cleared session.
-          if (!valid()) throw new AppError('invalid', 'Connector stopped');
+          if (admission !== token || terminal || !valid()) throw new AppError('invalid', 'Connector stopped');
           return latch();
         });
       }
+      if (admission !== token || terminal) throw new AppError('invalid', 'Connector stopped');
       // Read keys here, AFTER export: concurrent live/history learning must not be overwritten.
-      return serial(async () => {
+      return serial((current) => {
         if (!valid()) throw new AppError('invalid', 'Connector stopped');
         restore();
         try {
-          persist(new Map(keys), opaque);
+          persist(new Map(keys), opaque, () => current() && valid());
         } catch {
+          if (!current() || !valid()) throw new AppError('invalid', 'Connector stopped');
           return latch();
         }
       });
     },
+    barrier() {
+      const snapshot = { saved, error: failure ? failed() : null, cleanup };
+      terminal = true;
+      ++token;
+      queue = Promise.resolve(); // Async old fault cleanup never owns this synchronous lane.
+      return snapshot;
+    },
+    invalidate() {
+      ++token;
+      queue = Promise.resolve();
+    },
     async clear() {
-      return serial(async () => {
+      const admission = token;
+      return queue.then(() => {
+        if (admission !== token) throw new AppError('invalid', 'Connector stopped');
         try {
           ctx.saveSession(null);
+          if (admission !== token) throw new AppError('invalid', 'Connector stopped');
           saved = null;
           sdkSession = null;
-          keys.clear();
+          keys = new Map();
           candidate = null;
           restored = true;
           failure = false;
         } catch {
-          return latch();
+          if (admission === token) failure = true;
+          throw failed();
         }
-      }, true);
+      });
+    },
+    finish() {
+      terminal = false;
+      ++token;
+      queue = Promise.resolve();
     },
     // Deliberately private instance state; never logged or exported to a client.
     failedCandidate: () => candidate,
