@@ -306,3 +306,76 @@ test('H1 coupled capture/clear, memberships, accepted empty reply and retained e
     }
   });
 });
+
+for (const lifecycle of ['closed_at', 'abandoned_at'] as const)
+  test(`H1 shared storage retains original origin/page facts and pending replies through ${lifecycle}`, () => {
+    withH1File((path) => {
+      let db = openDb(path);
+      try {
+        seedH1(db);
+        db.tx(() => db.run("UPDATE account_chat SET sync_state='syncing',sync_origin_state='queued' WHERE chat_id=1"));
+        const queued = snapshotH1(path);
+        db.close();
+        h1Probe('registered', path);
+        assert.deepEqual(snapshotH1(path), queued);
+        db = openDb(path);
+        db.tx(() => {
+          db.run("UPDATE account_chat SET sync_origin_state='captured',sync_gap_from=? WHERE chat_id=1", h1Time);
+          db.run("UPDATE message_sighting SET reply_to_native_id='native-target' WHERE message_id=1");
+          insertH1Message(db, 3, 'committed-page-native', '2026-10-10T00:03:00.000Z');
+          db.run("UPDATE account_chat SET sync_resume='page-one',sync_newest='page-newest' WHERE chat_id=1");
+        });
+        const page = snapshotH1(path);
+        db.close();
+        h1Probe('registered', path);
+        assert.deepEqual(snapshotH1(path), page);
+        db = openDb(path);
+        const request = db.get<Record<string, unknown>>('SELECT * FROM account_chat WHERE chat_id=1');
+        assert.ok(request);
+        assert.deepEqual(
+          [
+            request.sync_after,
+            request.sync_since,
+            request.sync_limit,
+            request.sync_resume,
+            request.sync_newest,
+            request.sync_gap_from,
+            request.sync_origin_state,
+          ],
+          ['opaque-after-1', h1Time, 200, 'page-one', 'page-newest', h1Time, 'captured'],
+        );
+        db.tx(() => {
+          const gap = db.run(
+            "INSERT INTO chat_gap(account_id,chat_id,from_time,to_time,opened_at,bound_provenance) VALUES (1,1,?,?,?,'exact')",
+            h1Time,
+            '2026-10-10T01:00:00.000Z',
+            h1Time,
+          ).lastInsertRowid;
+          db.run(`UPDATE chat_gap SET ${lifecycle}=? WHERE id=?`, h1Time, gap);
+          db.run(`UPDATE account_chat SET sync_state='idle',sync_after=NULL,sync_since=NULL,sync_limit=NULL,
+            sync_resume=NULL,sync_newest=NULL,sync_failed_since=NULL,sync_origin_state='none',sync_gap_from=NULL WHERE chat_id=1`);
+        });
+        const completed = snapshotH1(path);
+        db.close();
+        h1Probe('registered', path);
+        assert.deepEqual(snapshotH1(path), completed);
+        db = openDb(path);
+        assert.equal(
+          db.get<{ reply_to_native_id: string }>('SELECT reply_to_native_id FROM message_sighting WHERE message_id=1')
+            ?.reply_to_native_id,
+          'native-target',
+        );
+        assert.equal(db.get<{ n: number }>('SELECT count(*) AS n FROM message')?.n, 3);
+        assert.deepEqual(
+          {
+            ...db.get<Record<string, unknown>>(
+              `SELECT from_time,bound_provenance,${lifecycle} FROM chat_gap WHERE id=4`,
+            ),
+          },
+          { from_time: h1Time, bound_provenance: 'exact', [lifecycle]: h1Time },
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
