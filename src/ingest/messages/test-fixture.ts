@@ -89,7 +89,9 @@ export function fixture(path = ':memory:'): Ctx {
     );
     db.run('INSERT INTO message_version VALUES (2,1,?,?)', 'Earlier secret phrase', time(2));
     db.run("INSERT INTO card_message VALUES (1,1,'agent'),(2,1,'agent'),(3,2,'human'),(4,NULL,'human')");
-    db.run("INSERT INTO message_sighting VALUES (1,1,'a1'),(2,1,'b1'),(3,1,'c1'),(2,2,'b2'),(1,3,'a3'),(2,4,'b4')");
+    db.run(
+      "INSERT INTO message_sighting(account_id,message_id,native_id) VALUES (1,1,'a1'),(2,1,'b1'),(3,1,'c1'),(2,2,'b2'),(1,3,'a3'),(2,4,'b4')",
+    );
     db.run('INSERT INTO company_reference(from_company_id,to_company_id,message_id,card_id) VALUES (1,6,1,1)');
   });
   return ctx;
