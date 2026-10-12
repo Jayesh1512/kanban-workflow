@@ -9,7 +9,9 @@ import { AppError } from '../src/contracts/index.ts';
 import { openDb } from '../src/store/index.ts';
 
 // Construction observations only: an empty database cannot prove a runtime retry budget.
-async function emptyDependencies(env: Record<string, string | undefined> = {}) {
+async function emptyDependencies(
+  env: Record<string, string | undefined> = {},
+): Promise<{ deps: AppDeps; effects: string[] }> {
   const config = loadConfig({
     KANBAN_SECRET_KEY: Buffer.alloc(32, 7).toString('base64'),
     CONNECTORS: '',
