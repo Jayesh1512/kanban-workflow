@@ -5,6 +5,7 @@ import type {
   Db,
   Id,
   Model,
+  ModelConfig,
   MovementDecisionProvider,
   MovementRequest,
   OpLog,
@@ -18,11 +19,15 @@ import { spineInput } from './spine-input.ts';
 export function createPipeline(deps: {
   db: Db;
   model: Model;
+  modelMaxAttempts: ModelConfig['maxAttempts'];
   movement: MovementDecisionProvider;
   now(): Date;
   sleep(ms: number): Promise<void>;
   oplog: OpLog;
 }): Pipeline {
+  const modelMaxAttempts = deps.modelMaxAttempts;
+  if (modelMaxAttempts !== 1 && modelMaxAttempts !== 2)
+    throw new AppError('invalid', 'Invalid pipeline modelMaxAttempts');
   const { db, now, model, movement } = deps;
   const ctx: Ctx = { db, now, actor: { kind: 'agent' }, canReadText: true };
   let running = false;
