@@ -7,8 +7,16 @@ import { createWeb } from './web/index.ts';
 export type { App, AppDeps } from './contracts/index.ts';
 
 export function createApp(deps: AppDeps): App {
+  const pipeline = createPipeline({
+    db: deps.db,
+    model: deps.model,
+    modelMaxAttempts: deps.config.model.maxAttempts,
+    movement: deps.movement,
+    now: deps.now,
+    sleep: deps.sleep,
+    oplog: deps.oplog,
+  });
   const host = createHost(deps);
-  const pipeline = createPipeline(deps);
   const web = createWeb({ ...deps, host, pipeline });
   const mcp = createMcp(deps);
   return {
