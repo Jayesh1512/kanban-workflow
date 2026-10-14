@@ -299,7 +299,7 @@ test('C1 store whole-batch delivery bars reentrant work/close, permits pure capt
 });
 
 // §2.1 only: finite child links the committed body to a native subclass for controlled fault exposure.
-// The unknown-state case alone returns a native-bound receiver with one JS-injected state-read fault.
+// State-read cases use a native-bound receiver; observers retain the independent raw native oracle.
 // No source replacements, algorithm copy, public hooks or global/module-cache/prototype patches.
 const nativeFaultChild = `
 import assert from 'node:assert/strict';
