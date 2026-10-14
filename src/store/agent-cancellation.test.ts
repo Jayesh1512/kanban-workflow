@@ -230,7 +230,10 @@ test('C1 store native automatic rollback bars swallowed-error SQL and nested cal
     assert.equal(callbacks, 0);
     assert.equal(db.all('SELECT * FROM cancellation_unique').length, 0);
     db.tx(() => db.run('INSERT INTO cancellation_unique VALUES (3)'));
-    assert.deepEqual(db.all('SELECT * FROM cancellation_unique'), [{ id: 3 }]);
+    assert.deepEqual(
+      db.all<{ id: number }>('SELECT * FROM cancellation_unique').map((row) => row.id),
+      [3],
+    );
   } finally {
     db.close();
   }
@@ -454,17 +457,6 @@ for(const close of ['pre','post']) {
   console.log('INJECTED_HEALTHY_IDLE_CLOSE_PERMANENT_FAULT',close);
 }
 {
-  const options={unknown:true,unknownActive:false,close:'pre'};
-  const {db,native}=fresh(options);const o=observers(db,native);
-  options.unknownActive=true;
-  assert.ok(faulted(thrown(()=>db.get('SELECT 1'))));
-  assert.equal(o.observed.length,0);assert.ok(o.controllers.every(c=>!c.signal.aborted));
-  fenceAll(db,native);
-  options.unknownActive=false;options.close=undefined;db.close();
-  assert.equal(o.observed.length,2);fenceAll(db,native);
-  console.log('INJECTED_UNKNOWN_STATE_TERMINAL_AND_CLEANUP');
-}
-{
   plan={init:true};const before=natives.length;
   assert.equal(thrown(()=>openDb(newPath())),initError);
   assert.equal(natives.length,before+1);assert.equal(natives.at(-1).isOpen,false);assert.equal(natives.at(-1).closeCalls,1);
@@ -513,10 +505,59 @@ for(const close of ['pre','post']) {
   assert.equal(db.all('SELECT * FROM stage').length,0);db.tx(()=>db.run("INSERT INTO setting VALUES ('healthy-fk','1')"));db.close();
   console.log('NATIVE_DEFERRED_FK_COMMIT_ROLLBACK_IDLE_BEFORE_EVERY_OBSERVER',JSON.stringify(o.observed));
 }
+for(const method of ['get','all','run','tx','register','invalidate']) {
+  const {db,native}=fresh();const o=observers(db,native);let callbacks=0;
+  native.exec('BEGIN IMMEDIATE');
+  assert.equal(native.isTransaction,true);const before=native.prepares;
+  const operations={get:()=>db.get('SELECT 1'),all:()=>db.all('SELECT 1'),run:()=>db.run('SELECT 1'),
+    tx:()=>db.tx(()=>callbacks++),register:()=>db.registerAgentCancellation({chatIds:[1],messageIds:[]},new AbortController()),
+    invalidate:()=>db.invalidateAgentWork({chatIds:[1],messageIds:[]})};
+  assert.ok(faulted(thrown(operations[method])));assert.equal(callbacks,0);assert.equal(native.prepares,before);
+  assert.equal(native.isOpen,false);assert.equal(o.observed.length,2);assert.ok(o.observed.every(state=>!state.open));
+  fenceAll(db,native);db.close();
+  console.log('NATIVE_UNEXPECTED_ACTIVE_ENTRY_ALL_METHOD_FENCE',method);
+}
+{
+  const {db,native}=fresh();const o=observers(db,native);
+  native.setAuthorizer((action,arg)=>action===constants.SQLITE_TRANSACTION&&arg==='COMMIT'?constants.SQLITE_DENY:constants.SQLITE_OK);
+  assert.ok(thrown(()=>db.tx(()=>{
+    db.run("INSERT INTO setting VALUES ('data','1')");db.invalidateAgentWork({chatIds:[1],messageIds:[]});
+  })) instanceof Error);
+  assert.equal(native.isOpen,true);assert.equal(native.isTransaction,false);assert.equal(o.observed.length,1);
+  assert.equal(db.get("SELECT * FROM setting WHERE key='data'"),undefined);
+  native.setAuthorizer(null);db.tx(()=>db.run("INSERT INTO setting VALUES ('healthy-commit','1')"));db.close();
+  assert.equal(o.observed.length,2);console.log('NATIVE_COMMIT_DENIED_ROLLBACK_HEALTHY_REUSE',JSON.stringify(o.observed));
+}
 independent.db.close();
+assert.ok(natives.every(native=>native.isOpen===false));
+let unknownLinkageFailure;
+try {
+{
+  const options={unknown:true,unknownActive:false,close:'pre'};
+  const {db,native}=fresh(options);const o=observers(db,native);
+  options.unknownActive=true;
+  assert.ok(faulted(thrown(()=>db.get('SELECT 1'))));
+  assert.equal(o.observed.length,0);assert.ok(o.controllers.every(c=>!c.signal.aborted));
+  fenceAll(db,native);
+  options.unknownActive=false;options.close=undefined;db.close();
+  assert.equal(o.observed.length,2);fenceAll(db,native);
+  console.log('INJECTED_UNKNOWN_STATE_TERMINAL_AND_CLEANUP');
+}
+} catch(error) {
+  unknownLinkageFailure=error;
+  console.log('UNKNOWN_STATE_LINKAGE_BLOCKED',JSON.stringify({nativeAccessorConfigurable:false,
+    reason:'DatabaseSync instance native state accessor cannot be redefined by the admitted local subclass'}));
+} finally {
+  // The unsupported constructor assertion can leave its just-allocated native handle open.
+  // Explicitly retire that handle before reporting failure, never reopen while it survives.
+  for(const native of natives) if(native.isOpen) {
+    native.plan.close=undefined;native.close();
+  }
+}
 assert.ok(natives.every(native=>native.isOpen===false));
 console.log('RETIREMENT_FILES',JSON.stringify(natives.map(native=>native.allocatedPath)));
 console.log('NATIVE_CHILD_COMPLETE_ALL_HANDLES_RETIRED',natives.length);
+if(unknownLinkageFailure) throw unknownLinkageFailure;
 `;
 
 test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () => {
@@ -533,7 +574,6 @@ test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () =>
     process.stderr.write(child.stderr);
     assert.equal(child.error, undefined);
     assert.equal(child.signal, null);
-    assert.equal(child.status, 0);
     assert.match(child.stdout, /NATIVE_CHILD_COMPLETE_ALL_HANDLES_RETIRED/);
     const line = child.stdout.split('\n').find((line) => line.startsWith('RETIREMENT_FILES '));
     assert.ok(line);
@@ -562,6 +602,7 @@ test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () =>
         db.close();
       }
     }
+    assert.equal(child.status, 0); // Unknown-state linkage remains a required assertion, never skipped/waived.
   } finally {
     rmSync(dir, { recursive: true });
   }
