@@ -2,12 +2,15 @@
 document.querySelectorAll('[data-lane-form]').forEach((form) => {
   const rows = form.querySelector('[data-stage-rows]');
   let nextIndex = rows.children.length;
-  const updateRemoval = () => {
-    rows.querySelectorAll('[data-remove-stage]').forEach((button) => {
-      button.disabled = rows.children.length <= 2;
+  const updateRows = () => {
+    rows.querySelectorAll('.stage-editor').forEach((row, index) => {
+      const name = row.querySelector('input[name^="stageName"]');
+      name.closest('label').firstChild.textContent = `Stage ${index + 1} name`;
+      row.querySelector('textarea[name^="stageCriteria"]').required = index > 0;
+      row.querySelector('[data-remove-stage]').disabled = rows.children.length <= 2;
     });
   };
-  updateRemoval();
+  updateRows();
   form.querySelector('[data-add-stage]').addEventListener('click', () => {
     const index = nextIndex++;
     const row = document.createElement('div');
@@ -37,14 +40,14 @@ document.querySelectorAll('[data-lane-form]').forEach((form) => {
     remove.setAttribute('aria-describedby', form.querySelector('[id^="stage-minimum-"]').id);
     row.append(id, nameLabel, criteriaLabel, remove);
     rows.append(row);
-    updateRemoval();
+    updateRows();
     name.focus();
   });
   rows.addEventListener('click', (event) => {
     const button = event.target.closest('[data-remove-stage]');
     if (!button || button.disabled) return;
     button.closest('.stage-editor').remove();
-    updateRemoval();
+    updateRows();
     form.querySelector('[data-add-stage]').focus();
   });
 });
