@@ -16,7 +16,7 @@ export function openDb(path: string): Db {
   let fault: AppError | undefined;
   let hasLoss = false;
   let loss: unknown;
-  const cleanup: AppError[] = [];
+  const cleanup = new Map<'state' | 'rollback' | 'close', AppError>();
   const registrations = new Set<{ scope: AgentWorkScope; controller: AbortController }>();
   const pending = new Set<AbortController>();
   const abort = AbortController.prototype.abort;
@@ -31,7 +31,7 @@ export function openDb(path: string): Db {
       const active = sqlite.isTransaction;
       return active === true ? 'active' : active === false ? 'idle' : 'unknown';
     } catch {
-      if (cleanup.length < 3) cleanup.push(new AppError('invalid', 'Database state inspection failed'));
+      if (!cleanup.has('state')) cleanup.set('state', new AppError('invalid', 'Database state inspection failed'));
       return 'unknown';
     }
   }
@@ -47,14 +47,15 @@ export function openDb(path: string): Db {
     try {
       sqlite.exec('ROLLBACK');
     } catch {
-      if (cleanup.length < 3) cleanup.push(new AppError('invalid', 'Database rollback cleanup failed'));
+      if (!cleanup.has('rollback'))
+        cleanup.set('rollback', new AppError('invalid', 'Database rollback cleanup failed'));
     }
   }
   function closeNative() {
     try {
       sqlite.close();
     } catch {
-      if (cleanup.length < 3) cleanup.push(new AppError('invalid', 'Database close cleanup failed'));
+      if (!cleanup.has('close')) cleanup.set('close', new AppError('invalid', 'Database close cleanup failed'));
     }
   }
   // One attempt per boundary. Fault retirement precedes every listener, even on a post-effect close throw.

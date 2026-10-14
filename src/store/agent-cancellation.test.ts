@@ -395,12 +395,13 @@ function deny(native,which) {
 }
 function fenceAll(db,native) {
   const before=native.prepares;
-  let callbacks=0,providerCalls=0;
+  let callbacks=0,providerCalls=0,scopeReads=0;
+  const scope={get chatIds(){scopeReads++;return [1];},get messageIds(){scopeReads++;return [];}};
   for(const fn of [()=>db.get('SELECT 1'),()=>db.all('SELECT 1'),()=>db.run('SELECT 1'),
     ()=>db.tx(()=>{callbacks++;providerCalls++;}),
-    ()=>db.registerAgentCancellation({chatIds:[1],messageIds:[]},new AbortController()),
-    ()=>db.invalidateAgentWork({chatIds:[1],messageIds:[]})]) assert.ok(faulted(thrown(fn)));
-  assert.equal(callbacks,0);assert.equal(providerCalls,0);assert.equal(native.prepares,before);
+    ()=>db.registerAgentCancellation(scope,new AbortController()),
+    ()=>db.invalidateAgentWork(scope)]) assert.ok(faulted(thrown(fn)));
+  assert.equal(callbacks,0);assert.equal(providerCalls,0);assert.equal(scopeReads,0);assert.equal(native.prepares,before);
 }
 const independent=fresh();
 for(const primary of [undefined,null,new Error('Primary identity')]) {
