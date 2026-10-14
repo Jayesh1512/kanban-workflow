@@ -808,7 +808,7 @@ for (const mode of ['general', 'movement'] as const) {
             { laneId: f.lane.id, title: 'Contributed title', summary: 'Contributed summary', chatId: 2, messageId: 2 },
             { setBy: 'agent' },
           );
-          attachMessage(f.ctx, 1, card.id, { setBy: 'agent' });
+          attachMessage(f.ctx, 1, card.id);
         } else if (dependency === 'participant-role') {
           setContactRole(agent, 1, {
             category: 'finance',
