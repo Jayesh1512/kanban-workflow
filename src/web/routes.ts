@@ -1,4 +1,4 @@
-/** Frozen core route inventory; feature handlers remain not built until their owners. */
+/** Exact W1 route inventory. Withdrawal remains a protected, deferred action. */
 export function routeInventory(): { method: string; path: string; public: boolean }[] {
   const publicRoutes = [
     ['GET', '/login'],
