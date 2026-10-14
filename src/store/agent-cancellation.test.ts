@@ -299,6 +299,7 @@ test('C1 store whole-batch delivery bars reentrant work/close, permits pure capt
 });
 
 // §2.1 only: finite child links the committed body to a native subclass for controlled fault exposure.
+// The unknown-state case alone returns a native-bound receiver with one JS-injected state-read fault.
 // No source replacements, algorithm copy, public hooks or global/module-cache/prototype patches.
 const nativeFaultChild = `
 import assert from 'node:assert/strict';
@@ -323,6 +324,7 @@ const natives = [];
 const preClose = new Error('Injected pre-effect close');
 const postClose = new Error('Injected post-effect close');
 const initError = new Error('Injected pre-migration initialization');
+const unknownState = new Error('JS-injected unknown state observation');
 class ExposedNative extends DatabaseSync {
   constructor(path) {
     console.log('FIRST_EXACT_NATIVE', JSON.stringify({ identity:randomUUID(), path, handles:0, olderWriters:0, consumer:hash(raw) }));
@@ -337,11 +339,21 @@ class ExposedNative extends DatabaseSync {
     if (this.plan.unknown) {
       const descriptor = Object.getOwnPropertyDescriptor(this,'isTransaction');
       console.log('UNKNOWN_STATE_NATIVE_DESCRIPTOR',JSON.stringify({configurable:descriptor.configurable,enumerable:descriptor.enumerable,getterType:typeof descriptor.get}));
-      assert.equal(descriptor.configurable, true);
-      Object.defineProperty(this,'isTransaction',{ configurable:true, get:()=> {
-        if (this.plan.unknownActive) throw new Error('Injected unknown state observation');
-        return descriptor.get.call(this);
+      assert.equal(descriptor.configurable, false);
+      assert.equal(typeof descriptor.get, 'function');
+      // natives retains this RAW target for state observers, counters and retirement.
+      // Only the linked store receives the facade; no native descriptor is redefined.
+      const target = this;
+      const facade = new Proxy(target,{get(actual,key) {
+        if (key === 'isTransaction' && actual.plan.unknownActive) throw unknownState;
+        const value = Reflect.get(actual,key,actual);
+        return typeof value === 'function' ? value.bind(actual) : value;
       }});
+      assert.deepEqual(Object.getOwnPropertyDescriptor(target,'isTransaction'),descriptor);
+      assert.equal(facade instanceof DatabaseSync,true);
+      assert.equal(facade.isTransaction,false);
+      this.stateDescriptor = descriptor;
+      return facade;
     }
   }
   exec(sql) {
@@ -532,26 +544,44 @@ for(const method of ['get','all','run','tx','register','invalidate']) {
 }
 independent.db.close();
 assert.ok(natives.every(native=>native.isOpen===false));
-let unknownLinkageFailure;
+let unknownCaseFailure;
 try {
 {
   const options={unknown:true,unknownActive:false,close:'pre'};
   const {db,native}=fresh(options);const o=observers(db,native);
+  const before=native.prepares;
   options.unknownActive=true;
+  // The raw native oracle stays observable while ONLY the store receiver read throws.
+  assert.equal(native.isOpen,true);assert.equal(native.isTransaction,false);
   assert.ok(faulted(thrown(()=>db.get('SELECT 1'))));
+  assert.equal(native.prepares,before);assert.equal(native.closeCalls,1);
+  assert.equal(native.isOpen,true);assert.equal(native.isTransaction,false);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(native,'isTransaction'),native.stateDescriptor);
   assert.equal(o.observed.length,0);assert.ok(o.controllers.every(c=>!c.signal.aborted));
   fenceAll(db,native);
+  o.handles.forEach(h=>{h.release();h.cancel();});
+  assert.equal(o.observed.length,0);assert.ok(o.controllers.every(c=>!c.signal.aborted));
+  assert.ok(faulted(thrown(()=>db.close())));assert.equal(native.closeCalls,2);
+  assert.equal(native.isOpen,true);assert.equal(native.isTransaction,false);
+  assert.equal(o.observed.length,0);assert.ok(o.controllers.every(c=>!c.signal.aborted));
   options.unknownActive=false;options.close=undefined;db.close();
+  assert.equal(native.isOpen,false);assert.equal(native.closeCalls,3);
   assert.equal(o.observed.length,2);fenceAll(db,native);
-  console.log('INJECTED_UNKNOWN_STATE_TERMINAL_AND_CLEANUP');
+  assert.ok(o.controllers.every(c=>c.signal.aborted));assert.ok(o.observed.every(state=>!state.open&&!state.active));
+  assert.deepEqual(Object.getOwnPropertyDescriptor(native,'isTransaction'),native.stateDescriptor);
+  o.handles.forEach(h=>{h.release();h.cancel();});db.close();fenceAll(db,native);
+  assert.equal(o.observed.length,2);
+  console.log('INJECTED_UNKNOWN_STATE_TERMINAL_AND_CLEANUP',JSON.stringify({carrier:'test-local native-bound receiver',
+    fault:'JS-injected isTransaction observation',nativeDescriptorUnchanged:true,rawNativeOracleIndependent:true,
+    zeroPrepareEntry:true,terminalNoDelivery:true,laterBoundedCleanup:true,observed:o.observed}));
 }
 } catch(error) {
-  unknownLinkageFailure=error;
-  console.log('UNKNOWN_STATE_LINKAGE_BLOCKED',JSON.stringify({nativeAccessorConfigurable:false,
-    reason:'DatabaseSync instance native state accessor cannot be redefined by the admitted local subclass'}));
+  unknownCaseFailure=error;
+  console.log('UNKNOWN_STATE_CASE_DIAGNOSTIC_FAILURE',JSON.stringify({nativeAccessorConfigurable:false,
+    carrier:'test-local native-bound receiver',reason:'Required injected unknown-state assertions failed; rethrow after native retirement'}));
 } finally {
-  // The unsupported constructor assertion can leave its just-allocated native handle open.
-  // Explicitly retire that handle before reporting failure, never reopen while it survives.
+  // A failed assertion can leave its allocated raw native handle open.
+  // Retirement is cleanup only; the original case failure is still rethrown below.
   for(const native of natives) if(native.isOpen) {
     native.plan.close=undefined;native.close();
   }
@@ -559,7 +589,7 @@ try {
 assert.ok(natives.every(native=>native.isOpen===false));
 console.log('RETIREMENT_FILES',JSON.stringify(natives.map(native=>native.allocatedPath)));
 console.log('NATIVE_CHILD_COMPLETE_ALL_HANDLES_RETIRED',natives.length);
-if(unknownLinkageFailure) throw unknownLinkageFailure;
+if(unknownCaseFailure) throw unknownCaseFailure;
 `;
 
 test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () => {
