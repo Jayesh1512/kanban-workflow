@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createModel, createMovementProvider } from '../src/agent/index.ts';
 import { loadConfig } from '../src/config.ts';
-import { AppConfigSchema } from '../src/contracts/index.ts';
+import { AppConfigSchema, AppError } from '../src/contracts/index.ts';
 import { openDb } from '../src/store/index.ts';
 import { createOpenAIResponsesPort } from '../src/store/provider-ports.ts';
 import { testApp } from './harness.ts';
@@ -106,7 +106,10 @@ test('I1 factory source exclusivity and harness file-backed restart preserve dur
   await first.restart();
   assert.notEqual(first.db, oldDb);
   assert.notEqual(first.app, oldApp);
-  assert.throws(() => oldDb.get('SELECT 1'), /not open/);
+  assert.throws(
+    () => oldDb.get('SELECT 1'),
+    (error) => error instanceof AppError && error.code === 'invalid' && error.message === 'Database is closed',
+  );
   assert.equal(first.db.get<{ value: string }>("SELECT value FROM setting WHERE key='review_threshold'")?.value, '0.8');
   assert.equal((await first.get('/board', { cookie })).status, 200);
   assert.equal((await first.get('/board')).status, 303);
