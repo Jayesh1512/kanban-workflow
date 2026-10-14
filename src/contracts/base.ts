@@ -29,11 +29,23 @@ export class AppError extends Error {
 
 export type SqlValue = string | number | bigint | null | Uint8Array;
 
+export interface AgentWorkScope {
+  readonly chatIds: readonly Id[];
+  readonly messageIds: readonly Id[];
+}
+
+export interface AgentCancellationRegistration {
+  cancel(): void;
+  release(): void;
+}
+
 export interface Db {
   get<T>(sql: string, ...params: SqlValue[]): T | undefined;
   all<T>(sql: string, ...params: SqlValue[]): T[];
   run(sql: string, ...params: SqlValue[]): { changes: number; lastInsertRowid: number };
   tx<T>(fn: () => T): T;
+  registerAgentCancellation(scope: AgentWorkScope, controller: AbortController): AgentCancellationRegistration;
+  invalidateAgentWork(scope: AgentWorkScope): void;
   close(): void;
 }
 

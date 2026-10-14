@@ -56,6 +56,8 @@ async function emptyDependencies(
     const run = db.run;
     const tx = db.tx;
     const close = db.close;
+    const registerAgentCancellation = db.registerAgentCancellation;
+    const invalidateAgentWork = db.invalidateAgentWork;
     db.get = <T>(sql: string, ...params: SqlValue[]): T | undefined => {
       effects.push('db.get');
       return get<T>(sql, ...params);
@@ -75,6 +77,14 @@ async function emptyDependencies(
     db.close = () => {
       effects.push('db.close');
       close();
+    };
+    db.registerAgentCancellation = (scope, controller) => {
+      effects.push('db.registerAgentCancellation');
+      return registerAgentCancellation(scope, controller);
+    };
+    db.invalidateAgentWork = (scope) => {
+      effects.push('db.invalidateAgentWork');
+      invalidateAgentWork(scope);
     };
     const decide = model.decide;
     model.decide = async (input, signal) => {
