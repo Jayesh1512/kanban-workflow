@@ -74,7 +74,19 @@ export function openDb(path: string): Db {
   }
   function flushAgentAborts() {
     if (depth > 0 || boundary || delivering) return;
-    const state = nativeState();
+    let state = nativeState();
+    if (!fault && (state === 'active' || state === 'unknown' || (state === 'retired' && !closed))) {
+      // A first abnormal delivery observation is terminal even when the earlier caller check passed.
+      // Latch before cleanup so recovered reads cannot admit work or omit nonmatching registrations.
+      latchFault();
+      boundary = true;
+      try {
+        state = retireFailure();
+      } finally {
+        boundary = false;
+      }
+    }
+    // Already faulted/unretired lifetimes intentionally retain the queue without dispatch or cleanup retry.
     if (fault ? state !== 'retired' : state !== 'idle' && state !== 'retired') return;
     delivering = true;
     try {
@@ -170,7 +182,9 @@ export function openDb(path: string): Db {
     if (depth > 0 || boundary || delivering) return;
     const state = nativeState();
     if (!fault && state !== 'idle' && state !== 'retired') unexpectedState();
+    const wasFaulted = !!fault;
     flushAgentAborts();
+    if (!wasFaulted && fault) throw fault;
   }
 
   // Initialization owns the entire native lifetime, including failures before the migration loop.
@@ -299,6 +313,7 @@ export function openDb(path: string): Db {
         }
       }
       flushAgentAborts();
+      if (fault) throw fault;
     },
     close() {
       if (depth > 0 || boundary || delivering || closing) {
@@ -320,22 +335,27 @@ export function openDb(path: string): Db {
       if (closed) return;
       fence();
       closing = true;
-      captureAll();
-      flushAgentAborts();
-      let hasPrimary = false;
-      let primary: unknown;
       try {
-        sqlite.close();
-      } catch (error) {
-        hasPrimary = true;
-        primary = error;
-        latchFault();
+        captureAll();
+        flushAgentAborts();
+        // An abnormal flush already attempted retirement; it cannot enter normal close or retry cleanup.
+        if (fault) throw fault;
+        let hasPrimary = false;
+        let primary: unknown;
+        try {
+          sqlite.close();
+        } catch (error) {
+          hasPrimary = true;
+          primary = error;
+          latchFault();
+        }
+        if (nativeState() !== 'retired') latchFault();
+        closed = !fault;
+        if (hasPrimary) throw primary;
+        if (fault) throw fault;
+      } finally {
+        closing = false;
       }
-      if (nativeState() !== 'retired') latchFault();
-      closed = !fault;
-      closing = false;
-      if (hasPrimary) throw primary;
-      if (fault) throw fault;
     },
   };
 }

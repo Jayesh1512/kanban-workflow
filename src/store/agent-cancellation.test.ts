@@ -336,7 +336,7 @@ class ExposedNative extends DatabaseSync {
     this.commits = 0;
     this.closeCalls = 0;
     natives.push(this);
-    if (this.plan.unknown) {
+    if (this.plan.unknown || this.plan.finalFlush) {
       const descriptor = Object.getOwnPropertyDescriptor(this,'isTransaction');
       console.log('UNKNOWN_STATE_NATIVE_DESCRIPTOR',JSON.stringify({configurable:descriptor.configurable,enumerable:descriptor.enumerable,getterType:typeof descriptor.get}));
       assert.equal(descriptor.configurable, false);
@@ -346,6 +346,26 @@ class ExposedNative extends DatabaseSync {
       const target = this;
       const facade = new Proxy(target,{get(actual,key) {
         if (key === 'isTransaction' && actual.plan.unknownActive) throw unknownState;
+        if (key === 'isTransaction' && actual.plan.armed) {
+          const options = actual.plan;
+          options.reads++;
+          if (options.reads === options.failAt) {
+            assert.equal(actual.isOpen, true);
+            assert.equal(actual.isTransaction, false); // independent raw native oracle before exposure
+            options.exposures++;
+            options.nativeBeforeExposure = {open:actual.isOpen,active:actual.isTransaction};
+            if (options.active) {
+              // Explicit test-local raw BEGIN, never an invented boolean transaction result.
+              actual.exec('BEGIN IMMEDIATE');
+              assert.equal(actual.isTransaction, true);
+              options.nativeActiveAtExposure = true;
+            } else {
+              if (options.persistent) options.unknownActive = true;
+              throw unknownState; // first JS-injected UNKNOWN precisely at the armed boundary
+            }
+          }
+        }
+
         const value = Reflect.get(actual,key,actual);
         return typeof value === 'function' ? value.bind(actual) : value;
       }});
@@ -360,14 +380,30 @@ class ExposedNative extends DatabaseSync {
     if (this.plan.init && sql.startsWith('PRAGMA')) throw initError;
     if (sql === 'ROLLBACK') this.rollbacks++;
     if (sql === 'COMMIT') this.commits++;
-    return super.exec(sql);
+    try {
+      const result = super.exec(sql);
+      if (this.plan.armAfter === sql) { this.plan.armed = true; this.plan.reads = 0; }
+      return result;
+    } catch (error) {
+      if (this.plan.finalFlush) this.plan.lastNativeError = error;
+      if (this.plan.armAfterFailure === sql) { this.plan.armed = true; this.plan.reads = 0; }
+      throw error;
+    }
   }
-  prepare(sql) { this.prepares++; return super.prepare(sql); }
+  prepare(sql) {
+    this.prepares++;
+    if (this.plan.statementThrow && sql === 'SELECT final_flush_statement_primary') {
+      this.plan.armed = true; this.plan.reads = 0;
+      throw this.plan.primaryValue;
+    }
+    return super.prepare(sql);
+  }
   close() {
     this.closeCalls++;
     if (this.plan.close === 'pre') throw preClose;
     super.close();
     if (this.plan.close === 'post') throw postClose;
+    if (this.plan.closeThrow) throw this.plan.primaryValue;
   }
 }
 // No new VM context: native AbortController/Error/Promise brands are exactly the caller's realm.
@@ -575,6 +611,139 @@ try {
     fault:'JS-injected isTransaction observation',nativeDescriptorUnchanged:true,rawNativeOracleIndependent:true,
     zeroPrepareEntry:true,terminalNoDelivery:true,laterBoundedCleanup:true,observed:o.observed}));
 }
+
+// F1 additive cases: first abnormal observation at FINAL delivery, not the entry fence.
+const finalFlushEffects = [];
+const finalIndependent = fresh();
+async function finalFlushCase(kind, primary, hasPrimary=false, terminal=false) {
+  const options={finalFlush:true,unknownActive:false,armed:false,reads:0,failAt:2,exposures:0,
+    persistent:terminal,close:terminal?'pre':undefined,active:kind==='commit-active'};
+  const {db,native}=fresh(options);
+  const descriptor=Object.getOwnPropertyDescriptor(native,'isTransaction');
+  const o=observers(db,native);
+  const third=new AbortController();
+  let thirdEvents=0;
+  const thirdHandle=db.registerAgentCancellation({chatIds:[1],messageIds:[]},third);
+  const settlements=o.controllers.concat(third).map(controller=>new Promise(resolve=>{
+    controller.signal.addEventListener('abort',()=>resolve(null),{once:true});
+  }));
+  third.signal.addEventListener('abort',()=>{
+    thirdEvents++;
+    assert.equal(native.isOpen,false); // actual retirement BEFORE every abnormal dispatch
+    fenceAll(db,native);
+  });
+  o.controllers.forEach(controller=>controller.signal.addEventListener('abort',()=>{
+    assert.equal(native.isOpen,false);
+    fenceAll(db,native);
+    assert.ok(faulted(thrown(()=>db.close()))); // whole delivery remains guarded
+    o.handles[1].release();o.handles[1].cancel();o.handles[1].cancel();thirdHandle.release();
+  }));
+  db.run("INSERT INTO setting VALUES ('final-flush-restored','original')");
+  const before={commits:native.commits,rollbacks:native.rollbacks,closes:native.closeCalls};
+  assert.equal(native.isOpen,true);assert.equal(native.isTransaction,false);
+  let completed=false;
+  const original=primary;
+  const operation=()=>{
+    if (kind==='commit' || kind==='commit-active' || kind==='rollback' || kind==='commit-denied') {
+      options.armAfter=kind==='rollback'||kind==='commit-denied'?'ROLLBACK':'COMMIT';
+      if(kind==='commit-denied') native.setAuthorizer((action,arg)=>
+        action===constants.SQLITE_TRANSACTION && arg==='COMMIT'?constants.SQLITE_DENY:constants.SQLITE_OK);
+      return db.tx(()=>{
+        db.run("INSERT INTO setting VALUES ('final-flush-data','retained')");
+        db.run("UPDATE setting SET value='speculative' WHERE key='final-flush-restored'");
+        db.invalidateAgentWork({chatIds:[1],messageIds:[]});
+        thirdHandle.release(); // already captured; release cannot retract this old controller
+        assert.equal(native.isTransaction,true);assert.equal(options.exposures,0);
+        assert.ok(o.controllers.concat(third).every(c=>!c.signal.aborted));
+        if(kind==='rollback') throw primary;
+        return 'must not report committed success';
+      });
+    }
+    if(kind==='begin-denied') {
+      options.armAfterFailure='BEGIN IMMEDIATE';
+      native.setAuthorizer((action,arg)=>action===constants.SQLITE_TRANSACTION && arg==='BEGIN'?constants.SQLITE_DENY:constants.SQLITE_OK);
+      return db.tx(()=>assert.fail('Denied BEGIN invoked callback/provider work'));
+    }
+    options.armed=true;options.reads=0;
+    if(kind==='invalidate') return db.invalidateAgentWork({chatIds:[1],messageIds:[]});
+    if(kind==='cancel') {o.handles[0].release();return o.handles[0].cancel();}
+    if(kind==='close') return db.close();
+    assert.fail('Unknown F1 case');
+  };
+  const error=thrown(()=>{const result=operation();completed=true;return result;});
+  assert.equal(completed,false);
+  if(hasPrimary) assert.equal(error,original);else if(kind.endsWith('-denied')) {
+    assert.ok(error instanceof Error);assert.equal(faulted(error),false);assert.equal(error,options.lastNativeError);
+  } else assert.ok(faulted(error));
+  assert.equal(options.exposures,1);
+  assert.deepEqual(options.nativeBeforeExposure,{open:true,active:false});
+  assert.equal(options.reads>=2,true);
+  assert.equal(native.commits-before.commits,['commit','commit-active','commit-denied'].includes(kind)?1:0);
+  const expectedRollback=['rollback','commit-denied','commit-active'].includes(kind)?1:0;
+  assert.equal(native.rollbacks-before.rollbacks,expectedRollback+(terminal?1:0));
+  assert.equal(native.closeCalls-before.closes,1); // no automatic cleanup retry or normal-close double close
+  if(terminal) {
+    assert.equal(native.isOpen,true);assert.equal(native.isTransaction,false);
+    assert.equal(o.observed.length,0);assert.equal(thirdEvents,0);
+    assert.ok(o.controllers.concat(third).every(c=>!c.signal.aborted));
+    fenceAll(db,native);
+    o.handles.forEach(h=>{h.release();h.cancel();});thirdHandle.release();thirdHandle.cancel();
+    assert.equal(native.closeCalls-before.closes,1); // pure handles never retry retirement
+    assert.ok(faulted(thrown(()=>db.close())));
+    assert.equal(native.closeCalls-before.closes,2);assert.equal(o.observed.length,0);
+    options.unknownActive=false;options.armed=false; // recovered reads never unfault the Db
+    fenceAll(db,native);assert.equal(o.observed.length,0);
+    options.close=undefined;db.close();
+    assert.equal(native.closeCalls-before.closes,3);
+  }
+  assert.equal(native.isOpen,false);assert.equal(o.observed.length,2);assert.equal(thirdEvents,1);
+  assert.ok(o.observed.every(state=>!state.open&&!state.active));
+  assert.ok(o.controllers.concat(third).every(c=>c.signal.aborted));
+  assert.deepEqual(await Promise.all(settlements),[null,null,null]);
+  options.unknownActive=false;options.armed=false;
+  fenceAll(db,native);
+  const successor=new AbortController();
+  assert.ok(faulted(thrown(()=>db.registerAgentCancellation({chatIds:[1],messageIds:[]},successor))));
+  o.handles.forEach(h=>{h.release();h.cancel();h.cancel();});thirdHandle.cancel();thirdHandle.release();db.close();
+  assert.equal(successor.signal.aborted,false);assert.equal(o.observed.length,2);assert.equal(thirdEvents,1);
+  fenceAll(db,native);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(native,'isTransaction'),descriptor);
+  finalIndependent.db.tx(()=>finalIndependent.db.run('INSERT OR REPLACE INTO setting VALUES (?,?)','independent-final-flush','healthy'));
+  assert.equal(finalIndependent.db.get("SELECT value FROM setting WHERE key='independent-final-flush'").value,'healthy');
+  const committed=kind==='commit'||kind==='commit-active';
+  finalFlushEffects.push({path:native.allocatedPath,kind,terminal,committed,expectedValue:committed?'speculative':'original'});
+  console.log('F1_FINAL_FLUSH_REGRESSION',JSON.stringify({kind,terminal,primary:hasPrimary?(primary===undefined?'undefined':primary===null?'null':'Error'):kind.endsWith('-denied')?'native Error':'fixed fault',
+    firstAbnormalRead:2,exposures:options.exposures,rawBefore:options.nativeBeforeExposure,rawActiveAtExposure:options.nativeActiveAtExposure===true,
+    signalBeforeOuterThrow:!terminal,terminalNoDelivery:terminal,retiredBeforeEveryAbort:true,permanentAllMethodFence:true,
+    releasedQueuePreserved:true,oldHandlesSuccessorSafe:true,independentDbHealthy:true,observed:o.observed,thirdEvents,committed}));
+}
+await finalFlushCase('commit');
+for(const primary of [new Error('F1 callback primary'),null,undefined]) await finalFlushCase('rollback',primary,true);
+for(const kind of ['invalidate','cancel','close','commit-denied','begin-denied']) await finalFlushCase(kind);
+await finalFlushCase('commit',undefined,false,true);
+await finalFlushCase('close',undefined,false,true);
+await finalFlushCase('commit-active');
+// Standalone statement primaries survive its first anomalous post-statement read and retirement/flush.
+for(const primary of [new Error('F1 statement primary'),null,undefined]) {
+  const options={finalFlush:true,statementThrow:true,primaryValue:primary,failAt:1,reads:0,exposures:0};
+  const {db,native}=fresh(options);const o=observers(db,native);
+  assert.equal(thrown(()=>db.get('SELECT final_flush_statement_primary')),primary);
+  assert.equal(options.exposures,1);assert.equal(native.isOpen,false);assert.equal(o.observed.length,2);
+  assert.ok(o.observed.every(state=>!state.open&&!state.active));fenceAll(db,native);db.close();
+  console.log('F1_STATEMENT_PRIMARY_RETIRED',JSON.stringify({primary:primary===undefined?'undefined':primary===null?'null':'Error',observed:o.observed}));
+}
+// A native close exception remains its exact original value, including post-effect null/undefined.
+for(const primary of [new Error('F1 close primary'),null,undefined]) {
+  const options={closeThrow:true,primaryValue:primary};const {db,native}=fresh(options);const o=observers(db,native);
+  assert.equal(thrown(()=>db.close()),primary);
+  assert.equal(native.isOpen,false);assert.equal(native.closeCalls,1);assert.equal(o.observed.length,2);
+  assert.ok(o.observed.every(state=>state.open&&!state.active)); // certified normal-idle abort before close unchanged
+  fenceAll(db,native);db.close();assert.equal(native.closeCalls,1);fenceAll(db,native);
+  console.log('F1_CLOSE_PRIMARY_IDLE_DELIVERY_RETIRED',JSON.stringify({primary:primary===undefined?'undefined':primary===null?'null':'Error',observed:o.observed}));
+}
+finalIndependent.db.close();
+console.log('F1_FINAL_FLUSH_EFFECTS',JSON.stringify(finalFlushEffects));
+
 } catch(error) {
   unknownCaseFailure=error;
   console.log('UNKNOWN_STATE_CASE_DIAGNOSTIC_FAILURE',JSON.stringify({nativeAccessorConfigurable:false,
@@ -611,6 +780,12 @@ test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () =>
     assert.ok(line);
     const paths: unknown = JSON.parse(line.slice('RETIREMENT_FILES '.length));
     assert.ok(Array.isArray(paths));
+    assert.equal(child.status, 0); // FIRST-EXACT forbids successors of a failed finite child.
+    const effectsLine = child.stdout.split('\n').find((line) => line.startsWith('F1_FINAL_FLUSH_EFFECTS '));
+    assert.ok(effectsLine);
+    const effects: { path: string; committed: boolean; expectedValue: string }[] = JSON.parse(
+      effectsLine.slice('F1_FINAL_FLUSH_EFFECTS '.length),
+    );
     for (const path of paths) {
       assert.equal(typeof path, 'string');
       assert.ok(path.startsWith(`${dir}/`) && existsSync(path));
@@ -630,6 +805,17 @@ test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () =>
         assert.equal(db.get("SELECT * FROM setting WHERE key IN ('data','escaped')"), undefined);
         assert.equal(db.get<{ n: number }>("SELECT count(*) AS n FROM action_log WHERE action='test'")?.n, 0);
         assert.equal(db.all('SELECT * FROM schema_migration').length, 4);
+        const effect = effects.find((effect) => effect.path === path);
+        if (effect) {
+          assert.equal(
+            db.get<{ value: string }>("SELECT value FROM setting WHERE key='final-flush-restored'")?.value,
+            effect.expectedValue,
+          );
+          assert.equal(
+            db.get<{ value: string }>("SELECT value FROM setting WHERE key='final-flush-data'")?.value,
+            effect.committed ? 'retained' : undefined,
+          );
+        }
       } finally {
         db.close();
       }
