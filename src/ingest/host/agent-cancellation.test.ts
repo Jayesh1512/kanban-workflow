@@ -191,6 +191,38 @@ function snapshot(h: TestApp) {
 
 for (const mode of ['GENERAL', 'MOVEMENT'] as const) {
   for (const outcome of ['success', 'reject'] as const) {
+    for (const action of ['exclude', 'withdraw'] as const) {
+      test(`S Host3 ${mode} actual prohibited log deletion after joined ${action} rolls back SQL, aborts old work; late ${outcome}`, async () => {
+        const s = await fixture(mode);
+        try {
+          const { h } = s;
+          const { work, signal } = await s.hold();
+          const before = snapshot(h);
+          assert.throws(
+            () =>
+              h.db.tx(() => {
+                if (action === 'exclude') h.app.host.excludeChat(h.ctxFor('alice'), accountId(h), 'selected');
+                else h.app.host.markWithdrawn(h.ctxFor('alice'), accountId(h), s.selected);
+                assert.equal(signal.aborted, false); // Inner return still joins the actual outer transaction.
+                h.db.run('DELETE FROM action_log WHERE id=(SELECT min(id) FROM action_log)');
+              }),
+            /action_log is append-only/,
+          );
+          assert.equal(signal.aborted, true); // Outer verified rollback delivered before its error escaped.
+          assert.equal(await work, null); // Raw promise is STILL held.
+          assert.deepEqual(snapshot(h), before);
+          assert.equal(await h.app.pipeline.processNext(), s.trigger);
+          assert.ok(s.signals[1]);
+          assert.notEqual(s.signals[1], signal);
+          const successor = snapshot(h);
+          s.release(outcome);
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          assert.deepEqual(snapshot(h), successor);
+        } finally {
+          await s.close();
+        }
+      });
+    }
     test(`S Host3 ${mode} Alice exclusion preserves Bob pending; ALL nonidle holds block successor; late ${outcome}`, async () => {
       const s = await fixture(mode, true);
       try {
