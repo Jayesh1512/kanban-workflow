@@ -336,6 +336,7 @@ class ExposedNative extends DatabaseSync {
     natives.push(this);
     if (this.plan.unknown) {
       const descriptor = Object.getOwnPropertyDescriptor(this,'isTransaction');
+      console.log('UNKNOWN_STATE_NATIVE_DESCRIPTOR',JSON.stringify({configurable:descriptor.configurable,enumerable:descriptor.enumerable,getterType:typeof descriptor.get}));
       assert.equal(descriptor.configurable, true);
       Object.defineProperty(this,'isTransaction',{ configurable:true, get:()=> {
         if (this.plan.unknownActive) throw new Error('Injected unknown state observation');
