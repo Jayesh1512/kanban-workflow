@@ -642,7 +642,7 @@ for (const mode of ['GENERAL', 'MOVEMENT'] as const) {
         },
         { setBy: 'agent' },
       );
-      attachMessage(s.ctx, s.message, card.id, { setBy: 'agent' });
+      attachMessage(s.ctx, s.message, card.id, { setBy: 'human' });
       const work = s.app.pipeline.processNext();
       await s.held.entered.promise;
       assert.ok(s.inputs[0]?.cards.some((c) => c.id === card.id && c.title === 'Contributed title'));
