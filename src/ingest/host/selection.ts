@@ -146,6 +146,7 @@ export function createSelection(
           throw new AppError('conflict', 'Chat withdrawn; fresh agreement required');
         if (!ch && !s.cached.get(a.id)?.some((e) => e.chat.key === chatKey))
           throw new AppError('not_found', 'Chat not listed');
+        if (ch) s.db.invalidateAgentWork({ chatIds: [ch.id], messageIds: [] });
         s.db.run(
           "INSERT INTO chat_selection(account_id,chat_key,decision,decided_at) VALUES (?,?,'excluded',?) ON CONFLICT(account_id,chat_key) DO UPDATE SET decision='excluded',decided_at=excluded.decided_at",
           a.id,
@@ -186,6 +187,7 @@ export function createSelection(
       const a = s.owner(ctx, accountId);
       const result = s.db.tx(() => {
         const chat = selected(s, a, chatId);
+        s.db.invalidateAgentWork({ chatIds: [chatId], messageIds: [] });
         const owners = s.db.all<{ id: Id; teammate_id: Id }>(
           'SELECT id,teammate_id FROM channel_account WHERE channel=? ORDER BY id',
           a.channel,

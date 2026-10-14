@@ -249,6 +249,10 @@ export function createAccounts(s: State, scheduler: Scheduler) {
     }
     // Destroy access synchronously before awaiting logout. A late save can never resurrect it.
     s.db.tx(() => {
+      const chatIds = s.db
+        .all<{ chat_id: Id }>('SELECT chat_id FROM account_chat WHERE account_id=? ORDER BY chat_id', a.id)
+        .map((row) => row.chat_id);
+      if (chatIds.length) s.db.invalidateAgentWork({ chatIds, messageIds: [] });
       clearPending(s.system, a.id);
       s.db.run(`UPDATE account_chat SET ${clearSync} WHERE account_id=?`, a.id);
       s.db.run("UPDATE channel_account SET state='removed',session_sealed=NULL WHERE id=?", a.id);
