@@ -2,6 +2,12 @@
 document.querySelectorAll('[data-lane-form]').forEach((form) => {
   const rows = form.querySelector('[data-stage-rows]');
   let nextIndex = rows.children.length;
+  const updateRemoval = () => {
+    rows.querySelectorAll('[data-remove-stage]').forEach((button) => {
+      button.disabled = rows.children.length <= 2;
+    });
+  };
+  updateRemoval();
   form.querySelector('[data-add-stage]').addEventListener('click', () => {
     const index = nextIndex++;
     const row = document.createElement('div');
@@ -28,14 +34,17 @@ document.querySelectorAll('[data-lane-form]').forEach((form) => {
     remove.className = 'quiet';
     remove.textContent = 'Remove stage';
     remove.setAttribute('data-remove-stage', '');
+    remove.setAttribute('aria-describedby', form.querySelector('[id^="stage-minimum-"]').id);
     row.append(id, nameLabel, criteriaLabel, remove);
     rows.append(row);
+    updateRemoval();
     name.focus();
   });
   rows.addEventListener('click', (event) => {
     const button = event.target.closest('[data-remove-stage]');
-    if (!button || rows.children.length <= 2) return;
+    if (!button || button.disabled) return;
     button.closest('.stage-editor').remove();
+    updateRemoval();
     form.querySelector('[data-add-stage]').focus();
   });
 });
