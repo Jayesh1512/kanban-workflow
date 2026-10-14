@@ -625,40 +625,141 @@ for (const mode of ['GENERAL', 'MOVEMENT'] as const) {
       await s.close();
     }
   });
-  test(`S ${mode} supplied cross-chat card provenance withdrawal cancels retained trigger`, async () => {
-    const s = await scenario(mode);
-    try {
-      const support = s.db.get<{ id: number }>('SELECT id FROM message WHERE chat_id=?', s.unrelated)?.id;
-      assert.ok(support);
-      const card = createCard(
-        s.ctx,
-        {
-          laneId: s.lane.id,
-          title: 'Contributed title',
-          summary: 'Contributed summary',
-          chatId: s.unrelated,
-          messageId: support,
-          fromHistory: false,
-        },
-        { setBy: 'agent' },
-      );
-      attachMessage(s.ctx, s.message, card.id, { setBy: 'human' });
-      const work = s.app.pipeline.processNext();
-      await s.held.entered.promise;
-      assert.ok(s.inputs[0]?.cards.some((c) => c.id === card.id && c.title === 'Contributed title'));
-      s.app.host.markWithdrawn(s.ctx, s.account, s.unrelated);
-      assert.equal(s.held.signal?.aborted, true);
-      assert.equal(await work, null);
-      s.release('success');
-      untouched(s);
-      assert.equal(
-        s.db.get<{ withdrawn_at: string | null }>('SELECT withdrawn_at FROM chat WHERE id=?', s.chat)?.withdrawn_at,
-        null,
-      );
-    } finally {
-      await s.close();
-    }
-  });
+  for (const outcome of ['success', 'reject'] as const) {
+    const suffix = outcome === 'success' ? '' : ', late rejection inert';
+    test(`S ${mode} supplied cross-chat card provenance withdrawal cancels retained trigger${suffix}`, async () => {
+      const s = await scenario(mode);
+      try {
+        const support = s.db.get<{ id: number }>('SELECT id FROM message WHERE chat_id=?', s.unrelated)?.id;
+        assert.ok(support);
+        const card = createCard(
+          s.ctx,
+          {
+            laneId: s.lane.id,
+            title: 'Contributed title',
+            summary: 'Contributed summary',
+            chatId: s.unrelated,
+            messageId: support,
+            fromHistory: false,
+          },
+          { setBy: 'agent' },
+        );
+        attachMessage(s.ctx, s.message, card.id, { setBy: 'human' });
+        const work = s.app.pipeline.processNext();
+        await s.held.entered.promise;
+        assert.ok(s.inputs[0]?.cards.some((c) => c.id === card.id && c.title === 'Contributed title'));
+        assert.ok(s.held.signal);
+        assert.equal(s.held.signal.aborted, false);
+        assert.ok(
+          s.inputs[0]?.cards.some(
+            (c) =>
+              c.id === card.id &&
+              c.summary === 'Contributed summary' &&
+              c.createdFromMessageKey === 'message-unrelated' &&
+              c.link === 'this_chat',
+          ),
+        );
+        s.app.host.markWithdrawn(s.ctx, s.account, s.unrelated);
+        assert.equal(s.held.signal?.aborted, true);
+        assert.equal(await work, null); // managed settlement while the raw provider is still held
+        untouched(s);
+        assert.equal(s.stops(), 0);
+        assert.equal(s.inputs.length, 1);
+        assert.equal(s.requests.length, mode === 'GENERAL' ? 0 : 1);
+        assert.ok(
+          s.db.get<{ withdrawn_at: string | null }>('SELECT withdrawn_at FROM chat WHERE id=?', s.unrelated)
+            ?.withdrawn_at,
+        );
+        assert.equal(
+          s.db.get<{ decision: string }>(
+            'SELECT decision FROM chat_selection WHERE account_id=? AND chat_key=?',
+            s.account,
+            'selected',
+          )?.decision,
+          'included',
+        );
+        assert.equal(
+          s.db.get<{ sync_state: string }>(
+            'SELECT sync_state FROM account_chat WHERE account_id=? AND chat_id=?',
+            s.account,
+            s.chat,
+          )?.sync_state,
+          'idle',
+        );
+        const retained = () => ({
+          ...snapshot(s),
+          accounts: s.db.all('SELECT * FROM channel_account ORDER BY id'),
+          sightings: s.db.all('SELECT * FROM message_sighting ORDER BY message_id,account_id'),
+          gaps: s.db.all('SELECT * FROM chat_gap ORDER BY id'),
+          cards: s.db.all('SELECT * FROM card ORDER BY id'),
+          cardChats: s.db.all('SELECT * FROM card_chat ORDER BY card_id,chat_id'),
+          cardMessages: s.db.all('SELECT * FROM card_message ORDER BY message_id'),
+          dismissedOffers: s.db.all('SELECT * FROM card_offer_dismissed ORDER BY card_id,chat_id'),
+          decisions: s.db.all('SELECT * FROM decision ORDER BY id'),
+          movementDecisions: s.db.all('SELECT * FROM movement_decision ORDER BY decision_id'),
+          reviews: s.db.all('SELECT * FROM review_item ORDER BY id'),
+          reviewMessages: s.db.all('SELECT * FROM review_message ORDER BY review_item_id,message_id'),
+          pendingMentions: s.db.all('SELECT * FROM pending_mention ORDER BY id'),
+          contacts: s.db.all('SELECT * FROM contact ORDER BY id'),
+          companies: s.db.all('SELECT * FROM company ORDER BY id'),
+          contactCompanies: s.db.all('SELECT * FROM contact_company ORDER BY contact_id,company_id'),
+          evidence: s.db.all('SELECT * FROM evidence ORDER BY id'),
+          references: s.db.all('SELECT * FROM company_reference ORDER BY id'),
+          status: s.app.pipeline.status(),
+          inputs: structuredClone(s.inputs),
+          requests: structuredClone(s.requests),
+        });
+        const afterCancellation = retained();
+        const contributed = s.db.get<{
+          title: string;
+          summary: string;
+          text_set_by: string;
+          created_from_message_id: number;
+        }>('SELECT title,summary,text_set_by,created_from_message_id FROM card WHERE id=?', card.id);
+        assert.ok(contributed);
+        assert.deepEqual(
+          { ...contributed },
+          {
+            title: 'Contributed title',
+            summary: 'Contributed summary',
+            text_set_by: 'agent',
+            created_from_message_id: support,
+          },
+        );
+        assert.deepEqual(
+          s.db
+            .all<{ message_id: number; card_id: number; set_by: string }>(
+              'SELECT message_id,card_id,set_by FROM card_message WHERE card_id=? ORDER BY message_id',
+              card.id,
+            )
+            .map((row) => ({ ...row })),
+          [
+            { message_id: s.message, card_id: card.id, set_by: 'human' },
+            { message_id: support, card_id: card.id, set_by: 'agent' },
+          ].sort((a, b) => a.message_id - b.message_id),
+        );
+        assert.deepEqual(
+          s.db
+            .all<{ chat_id: number }>('SELECT chat_id FROM card_chat WHERE card_id=? ORDER BY chat_id', card.id)
+            .map((row) => row.chat_id),
+          [s.chat, s.unrelated].sort((a, b) => a - b),
+        );
+        s.release(outcome);
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        untouched(s);
+        assert.deepEqual(retained(), afterCancellation);
+        assert.equal(s.inputs.length, 1);
+        assert.equal(s.requests.length, mode === 'GENERAL' ? 0 : 1);
+        assert.equal(s.stops(), 0); // observe losing handlers before App.stop/close can mask effects
+        assert.equal(
+          s.db.get<{ withdrawn_at: string | null }>('SELECT withdrawn_at FROM chat WHERE id=?', s.chat)?.withdrawn_at,
+          null,
+        );
+      } finally {
+        await s.close();
+      }
+    });
+  }
   test(`S ${mode} equal numeric IDs in independent actual Apps keep boundary/selection/pending isolated`, async () => {
     const aGate = gate<unknown>();
     const bGate = gate<unknown>();
