@@ -402,7 +402,7 @@ for (const mode of ['GENERAL', 'MOVEMENT'] as const) {
                   s.db.run("INSERT INTO stage(lane_id,name,position) VALUES (999,'bad',0)");
                 }
                 if (termination === 'log-failure')
-                  s.db.run("UPDATE action_log SET action='illegal' WHERE id=(SELECT min(id) FROM action_log)");
+                  s.db.run('DELETE FROM action_log WHERE id=(SELECT min(id) FROM action_log)');
                 if (termination === 'reinclude')
                   s.app.host.includeChat(s.ctx, s.account, 'selected', { agreedWordingVersion: 1, company: null });
               });
