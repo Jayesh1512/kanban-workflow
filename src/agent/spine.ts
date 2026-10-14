@@ -35,7 +35,7 @@ export function createPipeline(deps: {
   const ctx: Ctx = { db, now, actor: { kind: 'agent' }, canReadText: true };
   let running = false;
   let stopped = false;
-  let loop: Promise<void> | null = null;
+  let loop: Promise<Settlement<void>> | null = null;
   type Settlement<T> = { kind: 'value'; value: T } | { kind: 'error'; error: unknown } | { kind: 'cancelled' };
   type Attempt = {
     readonly token: object;
@@ -51,7 +51,6 @@ export function createPipeline(deps: {
   let active: Promise<Settlement<Id | null>> | null = null;
   let attempt: Attempt | null = null;
   let idleCancel: (() => void) | null = null;
-  let loopFailure: { error: unknown } | null = null;
   let since: string | null = null;
 
   function live(a: Attempt): boolean {
@@ -325,12 +324,12 @@ export function createPipeline(deps: {
   const pipeline: Pipeline = {
     start() {
       if (running) return;
+      generation++;
       running = true;
       stopped = false;
-      loopFailure = null;
       since = now().toISOString();
       const loopGeneration = generation;
-      loop = (async () => {
+      const work = (async () => {
         while (running && generation === loopGeneration) {
           const id = await pipeline.processNext();
           if (!running || generation !== loopGeneration) return;
@@ -352,15 +351,22 @@ export function createPipeline(deps: {
             }
           }
         }
-      })().catch((error: unknown) => {
-        // A loop owns safe reporting, while stop retains genuine failure identity.
-        loopFailure = { error };
-        running = false;
-        deps.oplog('error', 'pipeline.stopped', { code: 'spine_failed' });
-      });
+      })();
+      loop = work.then(
+        () => ({ kind: 'value', value: undefined }),
+        (error: unknown) => {
+          // Retain genuine failure for stop; an older loop cannot change a successor or log.
+          if (generation === loopGeneration) {
+            running = false;
+            deps.oplog('error', 'pipeline.stopped', { code: 'spine_failed' });
+          }
+          return { kind: 'error', error };
+        },
+      );
     },
     async stop() {
       generation++;
+      const stopGeneration = generation;
       stopped = true;
       running = false;
       const captured = attempt;
@@ -368,11 +374,14 @@ export function createPipeline(deps: {
       idleCancel?.();
       for (const registration of captured?.registrations ?? []) registration.cancel();
       const work = active;
-      await loop;
+      const capturedLoop = loop;
+      const loopOutcome = await capturedLoop;
       const outcome = work === null ? null : await work;
-      loop = null;
-      since = null;
-      if (loopFailure) throw loopFailure.error;
+      if (generation === stopGeneration) {
+        if (loop === capturedLoop) loop = null;
+        since = null;
+      }
+      if (loopOutcome?.kind === 'error') throw loopOutcome.error;
       if (outcome?.kind === 'error') throw outcome.error;
     },
     async processNext() {

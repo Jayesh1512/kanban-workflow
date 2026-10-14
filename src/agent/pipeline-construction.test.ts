@@ -845,3 +845,38 @@ test('Agent support missing agent-written role provenance cannot authorize a pro
     await f.close();
   }
 });
+
+test('Agent support overlapping stop completion cannot clear a newly started managed loop', async () => {
+  const f = supportFixture('general');
+  try {
+    const old = f.pipeline.processNext();
+    await f.entered;
+    const oldSignal = f.signals[0];
+    assert.ok(oldSignal);
+    const stopping = f.pipeline.stop();
+    f.holdSleep();
+    f.pipeline.start();
+    await stopping;
+    assert.equal(await old, null);
+    await f.sleepEntered;
+    assert.equal(oldSignal.aborted, true);
+    assert.equal(f.pipeline.status().state, 'running');
+    assert.equal(f.pipeline.status().since, f.ctx.now().toISOString());
+    assert.equal(
+      f.db.get<{ processed_version: number }>('SELECT processed_version FROM message WHERE id=1')?.processed_version,
+      1,
+    );
+    const successor = f.signals.at(-1);
+    assert.ok(successor);
+    assert.notEqual(successor, oldSignal);
+    assert.equal(successor.aborted, false);
+    f.release('reject');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(f.pipeline.status().state, 'running');
+    await f.pipeline.stop();
+    f.releaseSleep();
+  } finally {
+    f.release('success');
+    await f.close();
+  }
+});
