@@ -54,21 +54,21 @@ test('existing Host enforces notice2 before creation and phone/code/password, an
   });
   const ctx = h.ctxFor('alice');
   const old = await host.beginLogin(ctx, 'telegram', { acknowledgedNoticeVersion: 1 });
-  assert.deepEqual(apis[0]?.calls, []);
+  assert.equal(apis[0]?.calls.length, 0);
   // The same saved acknowledgement is insufficient after explicit profile/version change.
   config.connectors.telegram = { APPLICATION_PROFILE: 'tdl' };
   assert.equal(host.listChannels()[0]?.loginNotice?.version, 2);
   await assert.rejects(host.continueLogin(ctx, old.accountId, { phone: '+10000000000' }), /acknowledgement/);
-  assert.deepEqual(apis[0]?.calls, []);
+  assert.equal(apis[0]?.calls.length, 0);
   for (const version of [null, 1])
     await assert.rejects(host.beginLogin(ctx, 'telegram', { acknowledgedNoticeVersion: version }), /acknowledgement/);
   assert.equal(apis.length, 1);
-  await host.removeAccount(ctx, old.accountId);
+  await host.disconnect(ctx, old.accountId);
   const { accountId, step } = await host.beginLogin(ctx, 'telegram', { acknowledgedNoticeVersion: 2 });
   assert.ok(step.kind === 'need_input');
   assert.equal(step.fields[0]?.name, 'phone');
   assert.equal(apis.length, 2);
-  assert.deepEqual(apis[1]?.calls, []);
+  assert.equal(apis[1]?.calls.length, 0);
   const ack = history(ctx, { action: 'account.acknowledge' }).find((entry) => entry.subjectId === accountId);
   assert.equal((ack?.after as { noticeVersion: number }).noticeVersion, 2);
   const code = await host.continueLogin(ctx, accountId, { phone: '+10000000000' });

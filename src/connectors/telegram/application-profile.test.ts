@@ -14,7 +14,8 @@ const preset = { APPLICATION_PROFILE: 'tdl' };
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 test('custom selection and version1 notice remain exactly unchanged, including the missing-owner notice', () => {
-  for (const config of [{}, custom, { ...custom, APPLICATION_PROFILE: 'custom' }]) {
+  const notices: Record<string, string>[] = [{}, custom, { ...custom, APPLICATION_PROFILE: 'custom' }];
+  for (const config of notices) {
     assert.deepEqual(telegramLoginNotice(config), {
       version: 1,
       text: `The stored session gives full control of your account; Telegram offers no read-only credential. Telegram puts unofficial-client accounts under observation and may restrict them; the rate for read-only use is unknown. The application is registered under ${config.APP_OWNER ?? '(registration owner not configured)'}'s phone number; Telegram notifies that account and its remedy ends access for every teammate.`,
@@ -22,7 +23,13 @@ test('custom selection and version1 notice remain exactly unchanged, including t
   }
   assert.deepEqual(telegramApplication(custom), { apiId: 123, apiHash: 'synthetic-private-hash' });
   assert.deepEqual(telegramApplication({ ...custom, APPLICATION_PROFILE: 'custom' }), telegramApplication(custom));
-  for (const config of [{}, { ...custom, API_ID: '0' }, { ...custom, API_HASH: '' }, { API_ID: '123' }])
+  const invalid: Record<string, string>[] = [
+    {},
+    { ...custom, API_ID: '0' },
+    { ...custom, API_HASH: '' },
+    { API_ID: '123' },
+  ];
+  for (const config of invalid)
     assert.throws(() => telegramApplication(config), /Telegram API_ID, API_HASH and APP_OWNER are required/);
 });
 
@@ -145,7 +152,7 @@ for (const mode of ['custom', 'tdl'] as const) {
       }
     });
     // SRP is a cryptographic seam only. The real checkPassword helper still requests both lower RPCs.
-    t.mock.method(base, 'computeSrpParams', async (_obj, password) => {
+    t.mock.method(base, 'computeSrpParams', async (_obj: tl.account.RawPassword, password: string) => {
       assert.equal(password, 'private-account-password');
       return proof;
     });
@@ -157,7 +164,7 @@ for (const mode of ['custom', 'tdl'] as const) {
     const connector = createTelegramFactory(() => api).create(state.ctx);
     const phone = await connector.login(null);
     assert.equal(constructed, 0);
-    assert.deepEqual(calls, []);
+    assert.equal(calls.length, 0);
     assert.ok(phone.kind === 'need_input');
     assert.equal(phone.fields[0]?.name, 'phone');
     assert.equal((await connector.login({ phone: '+10000000000' })).kind, 'failed');
