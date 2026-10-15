@@ -70,7 +70,8 @@ test('existing Host enforces notice2 before creation and phone/code/password, an
   assert.equal(apis.length, 2);
   assert.equal(apis[1]?.calls.length, 0);
   const ack = history(ctx, { action: 'account.acknowledge' }).find((entry) => entry.subjectId === accountId);
-  assert.equal((ack?.after as { noticeVersion: number }).noticeVersion, 2);
+  assert.ok(ack);
+  assert.equal((ack.after as { noticeVersion: number }).noticeVersion, 2);
   const code = await host.continueLogin(ctx, accountId, { phone: '+10000000000' });
   assert.ok(code.kind === 'need_input' && code.fields[0]?.name === 'code');
   const password = await host.continueLogin(ctx, accountId, { code: 'synthetic-code' });
