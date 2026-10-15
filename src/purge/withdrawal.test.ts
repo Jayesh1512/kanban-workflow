@@ -24,7 +24,7 @@ test('R31 real full chain removes synthetic markers from DB/WAL/SHM/FTS, keeps m
   setContactRole(ctx, sharedContact, {
     category: 'technical',
     dealsAbout: 'RETAIN human role',
-    evidenceMessageIds: [],
+    evidenceMessageIds: [selected[1] as number],
   });
   setContactCompany(ctx, sharedContact, { company: { id: f.keptCompany }, evidenceMessageIds: [] });
   // Every marker must have reached actual file-backed SQLite BEFORE erasure.
