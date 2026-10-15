@@ -2,6 +2,7 @@ import type { ITelegramConnection, TelegramTransport } from '@mtcute/node';
 import { MemoryStorage, NodePlatform, networkMiddlewares, TcpTransport, TelegramClient, tl } from '@mtcute/node';
 import type { ConnectorContext } from '../../contracts/index.ts';
 import { AppError } from '../../contracts/index.ts';
+import { telegramApplication } from './application-profile.ts';
 
 /** Internal SDK seam. Production gets exactly these operations; no chat mutation helper is exposed. */
 export interface MtcuteClient {
@@ -33,9 +34,7 @@ export function createMtcuteClient(
   ctx: ConnectorContext,
   transport: TelegramTransport = new TcpTransport(),
 ): MtcuteClient {
-  const apiId = Number(ctx.config.API_ID);
-  if (!Number.isSafeInteger(apiId) || apiId <= 0 || !ctx.config.API_HASH || !ctx.config.APP_OWNER)
-    throw new AppError('invalid', 'Telegram API_ID, API_HASH and APP_OWNER are required');
+  const { apiId, apiHash } = telegramApplication(ctx.config);
   const abort = new AbortController();
   let closed = false;
   const connections = new Set<ITelegramConnection>();
@@ -57,7 +56,7 @@ export function createMtcuteClient(
   const storage = new MemoryStorage();
   const client = new TelegramClient({
     apiId,
-    apiHash: ctx.config.API_HASH,
+    apiHash,
     storage,
     platform,
     transport: guarded,
