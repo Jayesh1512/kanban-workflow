@@ -5,9 +5,10 @@ import { AppError, IdSchema } from '../contracts/index.ts';
 // Internal current-spine provenance, stored inside its existing private decision
 // JSON. Written by the host AFTER schema validation, never accepted from a model.
 // It records full supplied context, not claimed citations or new public schemas.
+// v1 omitted company contributors and cannot certify existing output independence.
 const output = z.strictObject({ id: IdSchema, logId: IdSchema });
 const contextSchema = z.strictObject({
-  version: z.literal(1),
+  version: z.literal(2),
   messageIds: z.array(IdSchema),
   chatIds: z.array(IdSchema),
   unknown: z.boolean(),
@@ -58,6 +59,33 @@ function currentContext(ctx: Ctx, kind: 'card' | 'contact', id: Id): OutputConte
   return null;
 }
 
+// Relationship evidence and freshness hashes are not producing-input support.
+// These writes have no durable field pointer in legacy decisions. Use their
+// actual, still-readable owner write when it matches; redacted/missing writes
+// remain unknown. Never infer support from a current citation alone.
+function relationshipContext(ctx: Ctx, kind: 'card' | 'contact', id: Id, companyId: Id): OutputContext | null {
+  for (const row of ctx.db.all<{ after: string | null; raw: string | null }>(
+    `SELECT a.after,d.raw FROM action_log a LEFT JOIN decision d ON d.id=a.decision_id
+     WHERE a.subject_kind=? AND a.subject_id=? AND
+       ((?='card' AND a.action IN ('card.create','card.update')) OR
+        (?='contact' AND a.action IN ('contact.set_company','contact.remove_company')))
+     ORDER BY a.id DESC`,
+    kind,
+    id,
+    kind,
+    kind,
+  )) {
+    if (row.after === null) return null;
+    const value: unknown = JSON.parse(row.after);
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+    const after = value as Record<string, unknown>;
+    if (!('companyId' in after)) continue;
+    if (kind === 'contact' && after.companyId !== companyId) continue;
+    return after.companyId === companyId && row.raw !== null ? storedContext(row.raw) : null;
+  }
+  return null;
+}
+
 /** Capture transitive context BEFORE applying the new output. Unknown legacy
  * generated input remains unknown even when it has apparently unrelated links. */
 export function captureOutputContext(ctx: Ctx, input: DecideInput, scope: AgentWorkScope): OutputContext {
@@ -70,22 +98,61 @@ export function captureOutputContext(ctx: Ctx, input: DecideInput, scope: AgentW
     for (const id of context?.chatIds ?? []) chats.add(id);
   }
   for (const card of input.cards) {
-    const current = ctx.db.get<{ text_set_by: string; needs_text: number }>(
-      'SELECT text_set_by,needs_text FROM card WHERE id=?',
+    const current = ctx.db.get<{ text_set_by: string; needs_text: number; company_set_by: string | null }>(
+      'SELECT text_set_by,needs_text,company_set_by FROM card WHERE id=?',
       card.id,
     );
-    if (current?.text_set_by === 'agent' && !current.needs_text) inherit(currentContext(ctx, 'card', card.id));
+    if (!current) unknown = true;
+    if (current?.text_set_by === 'agent' && (!current.needs_text || card.title !== '(title removed)' || card.summary))
+      inherit(currentContext(ctx, 'card', card.id));
+    if (card.companyId !== null && current?.company_set_by === 'agent')
+      inherit(relationshipContext(ctx, 'card', card.id, card.companyId));
   }
   for (const participant of input.participants) {
     const current = ctx.db.get<{ role_set_by: string }>(
       'SELECT role_set_by FROM contact WHERE id=?',
       participant.contactId,
     );
+    if (!current) unknown = true;
     if (current?.role_set_by === 'agent' && (participant.roleCategory !== 'unknown' || participant.dealsAbout))
       inherit(currentContext(ctx, 'contact', participant.contactId));
+    // companyIds are supplied even beyond the capped companies list.
+    for (const companyId of participant.companyIds) {
+      const link = ctx.db.get<{ set_by: string }>(
+        'SELECT set_by FROM contact_company WHERE contact_id=? AND company_id=? AND removed=0',
+        participant.contactId,
+        companyId,
+      );
+      if (!link) unknown = true;
+      else if (link.set_by === 'agent') inherit(relationshipContext(ctx, 'contact', participant.contactId, companyId));
+    }
+  }
+  for (const company of input.companies) {
+    const current = ctx.db.get<{ created_by_kind: string }>(
+      'SELECT created_by_kind FROM company WHERE id=?',
+      company.id,
+    );
+    // Actual Graph company.create has NO decision_id, so neither current links
+    // nor even a later complete contact.set_company proves how its name arose.
+    // Aliases are human-only Graph writes; they do not certify a generated name.
+    // This covers participant, card and named-chat suppliers uniformly.
+    // Human/credential company producers are the protected non-agent values.
+    if (current?.created_by_kind !== 'teammate' && current?.created_by_kind !== 'credential') unknown = true;
+    // References are not supplied as payloads, but contribute support IDs to
+    // the spine scope. The current spine cannot produce them (mentions reject).
+    // A legacy generated reference can itself be transitive; its citation alone
+    // is insufficient. Human references remain protected current Graph values.
+    for (const reference of ctx.db.all<{ actor_kind: string | null }>(
+      `SELECT (SELECT actor_kind FROM action_log WHERE subject_kind='reference'
+         AND subject_id=r.id AND action='reference.record' ORDER BY id DESC LIMIT 1) AS actor_kind
+       FROM company_reference r WHERE removed=0 AND (from_company_id=? OR to_company_id=?)`,
+      company.id,
+      company.id,
+    ))
+      if (reference.actor_kind !== 'teammate' && reference.actor_kind !== 'credential') unknown = true;
   }
   return {
-    version: 1,
+    version: 2,
     messageIds: [...messages].sort((a, b) => a - b),
     chatIds: [...chats].sort((a, b) => a - b),
     unknown,

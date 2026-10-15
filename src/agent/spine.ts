@@ -413,6 +413,9 @@ export function createPipeline(deps: {
         const inputHash = digest(input);
         const dependencies = provenance(input);
         if (!dependencies || !selectedEligible(next.id, next.version)) return null;
+        // Freeze the producing support at the same time as the actual supplied
+        // input, before either provider can yield and owner history can change.
+        const outputContext = captureOutputContext(ctx, input, dependencies.scope);
         const captured = newAttempt();
         attempt = captured;
         function fresh(): boolean {
@@ -538,7 +541,6 @@ export function createPipeline(deps: {
               current.withdrawn_at !== null
             )
               return null;
-            const outputContext = captureOutputContext(ctx, input, dependencies.scope);
             const decisionId = db.run(
               "INSERT INTO decision(message_id,message_version,outcome,disposition,confidence,reason,lane_versions,model,raw,decided_at) VALUES (?,?,'none',?,?,?,?,?,?,?)",
               next.id,
