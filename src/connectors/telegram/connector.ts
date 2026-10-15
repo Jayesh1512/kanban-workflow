@@ -11,11 +11,17 @@ import { AppError, HistoryRequestSchema, TgFloodWait } from '../../contracts/ind
 import { createDelivery } from '../delivery.ts';
 import { historyToken, readHistoryToken } from '../history-token.ts';
 import { createApiLifecycle } from './api-lifecycle.ts';
+import { telegramApplicationProfile } from './application-profile.ts';
 import { chatRef, nativeId, participant } from './decode.ts';
 import { createSessionState } from './session-state.ts';
 import { createTerminalLogout } from './terminal-logout.ts';
 
 export function telegramLoginNotice(config: Record<string, string>) {
+  if (telegramApplicationProfile(config) === 'tdl')
+    return {
+      version: 2,
+      text: 'The stored session gives full control of your account; Telegram offers no read-only credential. This connector performs read-only chat operations, but Telegram puts unofficial-client accounts under observation and may restrict them; the rate for read-only use is unknown. You selected the public AppBuiltin application profile published by iyear/tdl v0.20.4 and attributed there to iyear. The actual application registrant and Telegram notification/remedy arrangements are unverified. Shared application disablement may end access for every user of this profile. No personal application registration is requested in this mode. Source publication does not establish Telegram permission or supplier support.',
+    };
   return {
     version: 1,
     text: `The stored session gives full control of your account; Telegram offers no read-only credential. Telegram puts unofficial-client accounts under observation and may restrict them; the rate for read-only use is unknown. The application is registered under ${config.APP_OWNER ?? '(registration owner not configured)'}'s phone number; Telegram notifies that account and its remedy ends access for every teammate.`,
