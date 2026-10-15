@@ -34,6 +34,14 @@ The same mtcute phone → code → password flow, host-only sealing, session for
 
 The host must record that exact version and confirmation before allowing login, including after a notice-version change. Stop if the notice is absent, its custom owner is wrong, its profile attribution is wrong, or confirmation is bypassed. This enforcement is H1 evidence, not established by a connector's notice function alone.
 
+## Login failure diagnostics
+
+If phone submission fails, inspect the operational log for `connector.telegram_login_failed` with `operation: send_code` and the account ID, before the existing generic `connector.login_failed` event. The new event records only a fixed reason label and, for RPC failures, an integer status between 100 and 599. It never records the phone, code, password, session, raw error or request. The public login failure text remains unchanged.
+
+`PHONE_NUMBER_INVALID` distinguishes service-side phone validation; `API_ID_INVALID` / `API_ID_PUBLISHED_FLOOD` identify application rejection; `PHONE_NUMBER_FLOOD` / `FLOOD_WAIT` identify rate limiting; `PHONE_NUMBER_BANNED`, `UPDATE_APP_TO_LOGIN` and `AUTH_RESTART` retain those specific service signals. These labels report the received error, not an inferred underlying cause. Local validation, transport timeout and runtime failures have fixed `local_validation`, `local_transport_timeout` and `local_runtime` labels. Every other reason is `unknown`; raw-looking custom reasons are never printed. A transport error without a recognized timeout type is also unknown.
+
+The old generic event cannot identify a cause retroactively. After the reviewed update is running, the human may make a deliberate manual attempt using the phone's country code (for example, a leading `+` and country code). Inspect that attempt's safe event before deciding a repair. Do not repeatedly retry a flood response, switch application identity automatically or enable raw SDK logging. A successful request emits no failure diagnostic. These diagnostics alone do not establish successful account login or live ingestion.
+
 ## First connection and actual storage check — R4.4 [U]
 
 1. Start the locally gated product with the normal empty local database and unchanged default automatic-apply threshold **1**. Begin Telegram connection, confirm the notice, and enter your phone number. Telegram delivers the login code to you; asking for that code is the accepted effectful login operation. Enter the code, then the account password only if requested. No chat action is available through the connector port.

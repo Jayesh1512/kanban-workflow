@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ConnectorContext, TelegramApi, TgPeer } from '../../contracts/index.ts';
 import { AppError, TgFloodWait } from '../../contracts/index.ts';
 import { terminalControl } from './api-lifecycle.ts';
+import { loginDiagnostic } from './login-diagnostics.ts';
 import type { MtcuteClient } from './mtcute-client.ts';
 import { createMtcuteClient } from './mtcute-client.ts';
 import { mtMessage, mtPeer, mtUser } from './mtcute-decode.ts';
@@ -98,7 +99,23 @@ export class MtcuteApi implements TelegramApi {
   async sendCode(phone: string): Promise<{ phoneCodeHash: string }> {
     const client = this.getClient();
     const generation = this.generation;
-    const code = await this.call((c) => c.sdk.sendCode({ phone }));
+    const code = await this.call(async (c) => {
+      try {
+        return await c.sdk.sendCode({ phone });
+      } catch (error) {
+        // Observe the actual helper failure before call() replaces RPC details with a safe AppError.
+        try {
+          this.ctx.log('warn', 'connector.telegram_login_failed', {
+            operation: 'send_code',
+            accountId: this.ctx.accountId,
+            ...loginDiagnostic(error),
+          });
+        } catch {
+          // Diagnostics must never replace the original login failure, including a broken log sink.
+        }
+        throw error;
+      }
+    });
     if (generation !== this.generation || client !== this.client) throw new AppError('invalid', 'Connector stopped');
     if (!('phoneCodeHash' in code)) {
       // The real sentCodeSuccess helper has already notified SDK authorization in this captured client.
