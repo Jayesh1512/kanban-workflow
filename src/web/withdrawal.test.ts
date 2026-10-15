@@ -15,6 +15,27 @@ test('R31 actual HTTP only deletes after exact human confirmation/session/Origin
   assert.match(page, /ALL connected accounts/);
   assert.match(page, /does not delete Telegram messages/);
   assert.match(page, /Shared human values are retained/);
+  const confirmation = page.match(
+    /<details><summary>Withdraw chat and delete imported data<\/summary>([\s\S]*?)<\/details>/,
+  )?.[1];
+  assert.ok(confirmation);
+  assert.match(confirmation, /App-wide cleanup: across OTHER chats too/);
+  assert.match(
+    confirmation,
+    /saved agent decisions, movement audits, reviews, pending mentions, generated action history and human explanations for moves and reviews/,
+  );
+  assert.match(
+    confirmation,
+    /Generated card titles, summaries and contact roles are also cleared wherever they used this chat or their source is unknown/,
+  );
+  assert.match(confirmation, /Other chats keep their messages, and retained cards keep their lane and stage/);
+  assert.match(confirmation, /current human-written card text, contact roles and company values/);
+  assert.match(confirmation, new RegExp(`aria-describedby="withdraw-help-${f.chatId} withdraw-global-${f.chatId}"`));
+  assert.match(
+    confirmation,
+    /required>I confirm withdrawal, deletion of this chat’s imported app data, and the app-wide cleanup across other chats described above/,
+  );
+  assert.match(confirmation, /You will need a new agreement/);
   assert.doesNotMatch(page, /withdrawal is unavailable/);
   for (const fields of [{}, { confirm: 'on' }, { confirm: 'withdraw', unexpected: 'value' }] as Record<
     string,

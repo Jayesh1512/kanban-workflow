@@ -171,3 +171,25 @@ export function forgetMessages(
     return { removedContactIds, resetContactIds, removedCompanyIds };
   });
 }
+
+/** Purge-only cleanup of dependent/unknown current generated role copies, also
+ * outside the selected chat. Company retention remains the normal Graph rule. */
+export function resetGeneratedRoles(ctx: Ctx, contactIds: Id[], messageIds: Id[]): Id[] {
+  return ctx.db.tx(() => {
+    const reset: Id[] = [];
+    for (const id of contactIds) {
+      if (!ctx.db.get("SELECT id FROM contact WHERE id=? AND role_set_by='agent'", id)) continue;
+      ctx.db.run("UPDATE contact SET role_category='unknown',deals_about='' WHERE id=?", id);
+      ctx.db.run("DELETE FROM evidence WHERE contact_id=? AND kind='contact_role'", id);
+      record(ctx, {
+        action: 'contact.set_role',
+        subjectKind: 'contact',
+        subjectId: id,
+        after: { category: 'unknown', dealsAbout: '' },
+        messageIds,
+      });
+      reset.push(id);
+    }
+    return reset;
+  });
+}

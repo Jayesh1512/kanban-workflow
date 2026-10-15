@@ -15,13 +15,32 @@ deleted.** Agreement and withdrawal history retain actor, time, and identifiers.
 Reinclusion requires a fresh agreement, even with the global agreement setting
 off. Other account owners see who withdrew the shared chat and when.
 
-Cards with remaining messages keep their lane and stage. Generated text on an
-affected shared card becomes `(title removed)` with an empty summary. The same
+Cards with remaining messages keep their lane and stage. Generated text on a
+dependent or unknown-source card, including cards linked only to other chats,
+becomes `(title removed)` with an empty summary. The same
 next actual pipeline attachment supplies fresh title and summary; a manual text
 edit also clears the refill flag. Withdrawal starts no inference. Human card
 text and retained human contact/company values survive. Graph retention keeps
 companies with remaining evidence or references and deletes eligible sole-chat
 companies and aliases.
+
+The confirmation beside the button explicitly discloses **app-wide cleanup across
+other chats**: saved agent decisions, movement audits, reviews, pending mentions,
+generated action history and human explanations for moves and reviews are lost.
+Generated card titles/summaries and contact roles are cleared wherever they used
+the withdrawn chat or their source is unknown. This applies even without a direct
+message attachment or citation. Current human-written card text, contact roles
+and company values remain protected. The checkbox confirms this broader cleanup.
+
+Before deleting decision/review provenance, the coordinator discovers current
+outputs. The current spine stores host-written, content-free input/context IDs
+and actual output-write log IDs in its existing private decision JSON. It carries
+transitive generated-input context and marks missing legacy context as unknown;
+attachments and role citations never establish complete input coverage. Board
+clears discovered generated text with `needs_text`; Graph resets discovered agent
+roles, including outside this chat. Complete genuinely unrelated output support
+is retained as content-free provenance, while raw model/reason payloads disappear.
+Company retention follows the existing explicit Graph rules.
 
 The current pipeline has incomplete durable context provenance for legacy raw
 decisions, movement audits, pending mentions, and mixed/settled reviews. A

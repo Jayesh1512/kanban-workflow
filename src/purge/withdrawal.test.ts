@@ -257,16 +257,55 @@ test('invalid actor/account/chat is inert, and an empty included chat still eras
 });
 
 test('full purge retains exact other-chat role/company evidence, then human contact/card/company values and agreement history', async (t) => {
-  const f = await withdrawalFixture(t);
+  const f = await withdrawalFixture(t, {
+    name: 'Synthetic proven unrelated role',
+    endpointHost: null,
+    blocked: null,
+    async decide(input) {
+      assert.equal(input.cards.length, 0);
+      assert.equal(input.proposals.length, 0);
+      const person = input.participants.find((p) => p.userKey === 'outside');
+      assert.ok(person);
+      return {
+        disposition: 'none',
+        cardId: null,
+        proposalId: null,
+        laneId: null,
+        title: null,
+        summary: null,
+        cardCompanyId: null,
+        cardCompanyName: null,
+        confidence: 1,
+        reason: 'Synthetic unrelated input',
+        move: null,
+        contacts: [
+          {
+            contactId: person.contactId,
+            companyId: null,
+            companyName: null,
+            companyConfidence: 0,
+            roleCategory: 'technical',
+            dealsAbout: 'RETAIN exact remaining role',
+            roleConfidence: 1,
+            evidenceMessageIds: [input.message.id],
+          },
+        ],
+        mentions: [],
+      };
+    },
+  });
   const contact = f.h.db.get<{ id: number }>("SELECT contact_id AS id FROM identity WHERE user_key='outside'")?.id;
   assert.ok(contact);
+  // Citation overlap alone was the F1 bug. Strengthen this retained-value fixture:
+  // generate the role through the real pipeline with NO mixed card/review input.
+  // Restore those unrelated objects afterward; every retention assertion stays.
+  f.h.db.run('UPDATE card SET archived_at=?', f.ctx.now().toISOString());
+  f.h.db.run("UPDATE review_item SET status='dismissed'");
+  f.h.db.run('UPDATE message SET version=2 WHERE id=?', f.other);
+  assert.equal(await f.h.app.pipeline.processNext(), f.other);
+  f.h.db.run('UPDATE card SET archived_at=NULL');
+  f.h.db.run("UPDATE review_item SET status='open'");
   const evidence = [f.selected[1] as number, f.other];
-  setContactRole(
-    f.agent,
-    contact,
-    { category: 'technical', dealsAbout: 'RETAIN exact remaining role', evidenceMessageIds: evidence },
-    { setBy: 'agent' },
-  );
   setContactCompany(
     f.agent,
     contact,

@@ -16,6 +16,7 @@ import type {
 } from '../contracts/index.ts';
 import { AppError, ModelDecisionSchema, MovementResultSchema, ReviewProposalSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
+import { bindOutputContext, captureOutputContext } from './forget.ts';
 import { spineActions } from './spine-actions.ts';
 import { spineInput } from './spine-input.ts';
 
@@ -537,6 +538,7 @@ export function createPipeline(deps: {
               current.withdrawn_at !== null
             )
               return null;
+            const outputContext = captureOutputContext(ctx, input, dependencies.scope);
             const decisionId = db.run(
               "INSERT INTO decision(message_id,message_version,outcome,disposition,confidence,reason,lane_versions,model,raw,decided_at) VALUES (?,?,'none',?,?,?,?,?,?,?)",
               next.id,
@@ -550,6 +552,7 @@ export function createPipeline(deps: {
               now().toISOString(),
             ).lastInsertRowid;
             const outcome = spineActions(ctx, spineInput(ctx, next.id), d, decisionId);
+            bindOutputContext(ctx, decisionId, outputContext);
             db.run('UPDATE decision SET outcome=? WHERE id=?', outcome, decisionId);
             db.run('UPDATE message SET processed_version=? WHERE id=?', next.version, next.id);
             return next.id;

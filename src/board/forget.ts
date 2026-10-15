@@ -56,3 +56,18 @@ export function forgetMessages(ctx: Ctx, messageIds: Id[]): { removedCardIds: Id
     return { removedCardIds, clearedCardIds };
   });
 }
+
+/** Purge-only current-output cleanup, discovered before Agent provenance loss.
+ * Does not change retained messages, card placement, company or human text. */
+export function clearGeneratedText(ctx: Ctx, cardIds: Id[], messageIds: Id[]): Id[] {
+  return ctx.db.tx(() => {
+    const cleared: Id[] = [];
+    for (const id of cardIds) {
+      if (!ctx.db.get("SELECT id FROM card WHERE id=? AND text_set_by='agent'", id)) continue;
+      ctx.db.run("UPDATE card SET title='(title removed)',summary='',needs_text=1 WHERE id=?", id);
+      record(ctx, { action: 'card.update', subjectKind: 'card', subjectId: id, after: { cleared: true }, messageIds });
+      cleared.push(id);
+    }
+    return cleared;
+  });
+}

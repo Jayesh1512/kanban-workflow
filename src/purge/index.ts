@@ -1,7 +1,10 @@
+import { discoverGeneratedOutputs } from '../agent/forget.ts';
 import { forgetMessages as forgetAgent } from '../agent/index.ts';
+import { clearGeneratedText } from '../board/forget.ts';
 import { forgetMessages as forgetBoard } from '../board/index.ts';
 import type { Ctx, Host, Id } from '../contracts/index.ts';
 import { AppError, IdSchema } from '../contracts/index.ts';
+import { resetGeneratedRoles } from '../graph/forget.ts';
 import { forgetMessages as forgetGraph } from '../graph/index.ts';
 import { deleteMessages } from '../ingest/index.ts';
 import { record, redact, redactUnscopedMovementFeedback } from '../log/index.ts';
@@ -28,15 +31,18 @@ export function withdrawChat(ctx: Ctx, host: Host, accountId: Id, chatId: Id): v
   ctx.db.tx(() => {
     ctx.db.run('PRAGMA defer_foreign_keys=ON');
     const messageIds = host.markWithdrawn(ctx, accountId, chatId);
+    const outputs = discoverGeneratedOutputs(ctx, messageIds);
     const agent = forgetAgent(ctx, messageIds);
     const board = forgetBoard(ctx, messageIds);
+    const clearedCardIds = clearGeneratedText(ctx, outputs.cardIds, messageIds);
     const graph = forgetGraph(ctx, { messageIds, chatId });
+    const resetContactIds = resetGeneratedRoles(ctx, outputs.contactIds, messageIds);
     redact(ctx, {
       messageIds,
       decisionIds: agent.decisionIds,
-      cardIds: [...board.removedCardIds, ...board.clearedCardIds],
+      cardIds: [...board.removedCardIds, ...board.clearedCardIds, ...clearedCardIds],
       reviewItemIds: agent.reviewItemIds,
-      contactIds: [...graph.removedContactIds, ...graph.resetContactIds],
+      contactIds: [...graph.removedContactIds, ...graph.resetContactIds, ...resetContactIds],
       companyIds: graph.removedCompanyIds,
     });
     // This authorized global boundary also runs for a legitimately empty chat.
