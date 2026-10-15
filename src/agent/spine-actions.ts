@@ -1,5 +1,5 @@
 import { getSetting } from '../auth/index.ts';
-import { attachMessage, createCard, moveCard } from '../board/index.ts';
+import { attachMessage, createCard, moveCard, updateCard } from '../board/index.ts';
 import type { Ctx, DecideInput, Id, ModelDecision, ReviewProposal, WriteOpts } from '../contracts/index.ts';
 import { AppError, ReviewProposalSchema } from '../contracts/index.ts';
 import { setContactCompany, setContactRole } from '../graph/index.ts';
@@ -120,10 +120,18 @@ export function spineActions(
   } else if (d.disposition === 'attach') {
     if (d.cardId === null || !input.cards.some((c) => c.id === d.cardId))
       throw new AppError('invalid', 'Card is outside spine chat');
-    if (d.title !== null || d.summary !== null || d.cardCompanyName !== null || d.cardCompanyId !== null)
+    const needsText = input.cards.find((c) => c.id === d.cardId)?.needsText;
+    if (
+      (!needsText && (d.title !== null || d.summary !== null)) ||
+      d.cardCompanyName !== null ||
+      d.cardCompanyId !== null
+    )
       throw new AppError('invalid', 'not built: processNext');
+    if (needsText && (!d.title?.trim() || !d.summary?.trim()))
+      throw new AppError('invalid', 'A cleared card needs a fresh title and summary');
     if (d.confidence > threshold) {
       attachMessage(ctx, input.message.id, d.cardId, o);
+      if (needsText) updateCard(ctx, d.cardId, { title: d.title as string, summary: d.summary as string }, o);
       cardId = d.cardId;
       applied++;
       dispositionApplied = true;

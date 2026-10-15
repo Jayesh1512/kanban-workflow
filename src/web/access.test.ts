@@ -151,7 +151,7 @@ test('R13 early checkpoint review unavailability differs from zero queue; direct
   );
   assert.equal((await h.post('/review/1/dismiss', {}, { cookie })).status, 503);
   assert.equal((await h.post('/review/1/accept', {}, { cookie })).status, 404);
-  assert.equal((await h.post('/settings/accounts/1/chats/1/withdraw', {}, { cookie })).status, 422);
+  assert.equal((await h.post('/settings/accounts/1/chats/1/withdraw', {}, { cookie })).status, 403);
   assert.equal(h.db.get<{ n: number }>('SELECT count(*) AS n FROM review_item')?.n, 0);
 });
 
