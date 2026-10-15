@@ -74,7 +74,7 @@ test('existing Host enforces notice2 before creation and phone/code/password, an
   assert.equal((ack.after as { noticeVersion: number }).noticeVersion, 2);
   const code = await host.continueLogin(ctx, accountId, { phone: '+10000000000' });
   assert.ok(code.kind === 'need_input' && code.fields[0]?.name === 'code');
-  const password = await host.continueLogin(ctx, accountId, { code: 'synthetic-code' });
+  const password = await host.continueLogin(ctx, accountId, { code: '12345' });
   assert.ok(password.kind === 'need_input' && password.fields[0]?.name === 'password');
   assert.equal((await host.continueLogin(ctx, accountId, { password: 'synthetic-password' })).kind, 'done');
   const row = h.db.get<{ session_sealed: Uint8Array }>(

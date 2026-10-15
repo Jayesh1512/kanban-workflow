@@ -90,20 +90,25 @@ for (const mode of ['custom', 'tdl'] as const) {
     const state = offlineContext();
     state.ctx.config = mode === 'custom' ? custom : preset;
     let connects = 0;
-    const client = createMtcuteClient(state.ctx, {
+    const transport = {
       packetCodec: () => new IntermediatePacketCodec(),
       async connect() {
         connects++;
         throw new Error('No transport allowed');
       },
-    });
+    };
+    const client = createMtcuteClient(state.ctx, transport);
     assert.ok(client.sdk instanceof TelegramClient);
     const base = client.sdk._client;
     assert.ok(base instanceof BaseTelegramClient);
-    const restored = createMtcuteClient(state.ctx, blockedTransport);
+    const restored = createMtcuteClient(state.ctx, transport);
+    assert.ok(restored.sdk instanceof TelegramClient);
+    const restoredBase = restored.sdk._client;
+    assert.ok(restoredBase instanceof BaseTelegramClient);
     t.after(async () => {
       await client.sdk.stopUpdatesLoop();
       await client.sdk.destroy();
+      await restored.sdk.stopUpdatesLoop();
       await restored.sdk.destroy();
     });
     // Synthetic transport-created key; no account session or user credential is imported.
@@ -145,8 +150,6 @@ for (const mode of ['custom', 'tdl'] as const) {
           return { _: 'updates.state', pts: 1, qts: 0, date: 1800000000, seq: 1, unreadCount: 0 };
         case 'updates.getDifference':
           return { _: 'updates.differenceEmpty', date: 1800000000, seq: 1 };
-        case 'auth.logOut':
-          return { _: 'auth.loggedOut' };
         default:
           assert.fail(`Unexpected lower RPC ${request._}`);
       }
@@ -158,8 +161,7 @@ for (const mode of ['custom', 'tdl'] as const) {
     });
     let constructed = 0;
     const api = new MtcuteApi(state.ctx, () => {
-      constructed++;
-      return client;
+      return constructed++ === 0 ? client : restored;
     });
     const connector = createTelegramFactory(() => api).create(state.ctx);
     const phone = await connector.login(null);
@@ -183,10 +185,17 @@ for (const mode of ['custom', 'tdl'] as const) {
     await restored.sdk.importSession(saved.sdkSession as string);
     assert.equal(await restored.sdk.exportSession(), saved.sdkSession);
     assert.equal(saved.keys.size, 0);
+    t.mock.method(restoredBase.mt.network, 'getPrimaryDcId', () => 2);
+    t.mock.method(restoredBase, 'call', async (request: tl.RpcMethod) => {
+      calls.push(request._);
+      assert.equal(request._, 'auth.logOut');
+      assert.deepEqual(Buffer.from((await restored.storage.authKeys.get(2)) ?? []), Buffer.alloc(256, 7));
+      return { _: 'auth.loggedOut' };
+    });
     await connector.logout();
     assert.equal(state.saved.at(-1), null);
     assert.equal(connects, 0);
-    assert.equal(constructed, 1);
+    assert.equal(constructed, 2);
     assert.equal(calls.filter((c) => c === 'auth.logOut').length, 1);
     const publicOutput = JSON.stringify({ logs: state.logs, events: state.events, phone, code, password });
     for (const secret of ['private-', custom.API_HASH, '10000000000']) assert.ok(!publicOutput.includes(secret));
