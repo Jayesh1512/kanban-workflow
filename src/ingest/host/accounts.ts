@@ -13,6 +13,7 @@ import { assertAccountOrigins } from './sync-origin.ts';
 
 export function createAccounts(s: State, scheduler: Scheduler) {
   let stopping: Promise<void> | null = null;
+  let started = false;
   async function refresh(a: Account, rt: Runtime, generation: number): Promise<void> {
     await refreshListing(s, a, rt, () => !s.stopped && rt.epoch === generation && rt.accepting);
     if (!s.stopped && rt.epoch === generation && rt.accepting && s.active(a.id)) {
@@ -64,8 +65,16 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       throw new AppError('invalid', 'Account connection failed');
     }
     const runtime = rt;
+    const epoch = runtime.epoch;
     return s.lifecycle(runtime, async () => {
-      if (s.stopped || !s.active(a.id)) return;
+      if (
+        s.stopped ||
+        !s.active(a.id) ||
+        s.account(a.id).state === 'login' ||
+        s.live.get(a.id) !== runtime ||
+        runtime.epoch !== epoch
+      )
+        return;
       if (runtime.accepting) return;
       const generation = ++runtime.epoch;
       runtime.saving = true;
@@ -155,7 +164,8 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       s.status(a.id, 'disconnected');
       throw new AppError('invalid', 'Account login failed');
     }
-    return s.lifecycle(rt, async () => {
+    let completedEpoch: number | null = null;
+    const step = await s.lifecycle<LoginStep>(rt, async () => {
       s.owner(ctx, a.id);
       const generation = rt.epoch;
       try {
@@ -207,6 +217,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
             s.db.run("UPDATE channel_account SET self_identity_id=?,state='connected' WHERE id=?", identityId, a.id);
             record(ctx, { action: 'account.connect', subjectKind: 'account', subjectId: a.id, after: { identityId } });
           });
+          completedEpoch = generation;
         }
         return step.kind === 'failed'
           ? { kind: 'failed', message: 'Account login failed', retryable: step.retryable }
@@ -233,6 +244,20 @@ export function createAccounts(s: State, scheduler: Scheduler) {
         throw new AppError('invalid', 'Account login failed');
       }
     });
+    if (step.kind === 'done') {
+      s.owner(ctx, a.id);
+      if (rt.epoch !== completedEpoch || !rt.saving || rt.fault || s.live.get(a.id) !== rt)
+        throw new AppError('invalid', 'Account login cancelled');
+      // Startup queues on the same lifecycle lane; enter only AFTER login releases it.
+      // Before the Host's initial startAll, normal startup still owns activation.
+      if (started && !s.stopped) {
+        await startAccount(a);
+        s.owner(ctx, a.id);
+        if (s.stopped || s.live.get(a.id) !== rt || !rt.accepting || rt.fault)
+          throw new AppError('invalid', 'Account login cancelled');
+      }
+    }
+    return step;
   }
   async function disconnect(ctx: Ctx, accountId: Id) {
     const deadline = s.now().getTime() + 50000;
@@ -285,6 +310,7 @@ export function createAccounts(s: State, scheduler: Scheduler) {
       // Validate the WHOLE restored set before changing status, connector state, or hold.
       for (const a of s.db.all<Account>('SELECT * FROM channel_account ORDER BY id')) assertAccountOrigins(s.db, a.id);
       s.stopped = false;
+      started = true;
       const results = await Promise.allSettled(
         s.db
           .all<Account>(
