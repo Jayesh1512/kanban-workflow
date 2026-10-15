@@ -349,7 +349,12 @@ for (const fault of ['none', 'Board output', 'Graph output'] as const)
     assert.equal(await f.h.app.pipeline.processNext(), controlMessage);
     assert.equal(calls, 3);
     assert.deepEqual(
-      { ...f.h.db.get('SELECT title,summary,needs_text,lane_id,stage_id FROM card WHERE id=?', produced.id) },
+      {
+        ...f.h.db.get<{ title: string; summary: string; needs_text: number; lane_id: number; stage_id: number }>(
+          'SELECT title,summary,needs_text,lane_id,stage_id FROM card WHERE id=?',
+          produced.id,
+        ),
+      },
       {
         title: 'Fresh B-only title',
         summary: 'Fresh B-only summary',
