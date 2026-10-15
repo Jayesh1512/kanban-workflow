@@ -108,6 +108,7 @@ export function redact(
 ): number {
   for (const ids of Object.values(sel))
     if (ids.some((id) => !IdSchema.safeParse(id).success)) throw new AppError('invalid', 'Invalid redaction id');
+  if (Object.values(sel).every((ids) => ids.length === 0)) return 0;
   return ctx.db.tx(() => {
     const subjects: Partial<Record<SubjectKind, Id[]>> = {
       card: sel.cardIds,
@@ -133,6 +134,36 @@ export function redact(
         ).changes;
       }
     }
-    return count;
+    return count + redactCorrections(ctx);
+  });
+}
+
+function redactCorrections(ctx: Ctx): number {
+  // Corrections can copy the original before/after or explanation without
+  // repeating its message/decision selectors. Follow the actual stored links.
+  return ctx.db.run(
+    `WITH RECURSIVE copied(id) AS (
+       SELECT id FROM action_log WHERE redacted=1
+       UNION SELECT a.id FROM action_log a JOIN copied c ON a.corrects_id=c.id
+     ) UPDATE action_log SET redacted=1,before=NULL,after=NULL,reason='',message_ids='[]'
+       WHERE redacted=0 AND id IN (SELECT id FROM copied)`,
+  ).changes;
+}
+
+/** Authorized purge boundary, deliberately separate from empty selector redact.
+ * Legacy movement/review human feedback has no complete support scope. Erase
+ * all of those payloads, including unreferenced quotes. Current agent history
+ * can also copy arbitrary input context; human card/contact/company values and
+ * their provably unrelated non-movement history retain their normal selectors.
+ * No future feedback schema/epoch/producers are asserted by this callback. */
+export function redactUnscopedMovementFeedback(ctx: Ctx): number {
+  return ctx.db.tx(() => {
+    const count = ctx.db.run(
+      `UPDATE action_log SET redacted=1,before=NULL,after=NULL,reason='',message_ids='[]'
+     WHERE redacted=0 AND (actor_kind='agent' OR decision_id IS NOT NULL
+       OR subject_kind='review' OR action='card.move' OR action LIKE '%movement%'
+       OR action LIKE 'review.%')`,
+    ).changes;
+    return count + redactCorrections(ctx);
   });
 }

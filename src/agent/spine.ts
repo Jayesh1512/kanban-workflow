@@ -16,6 +16,7 @@ import type {
 } from '../contracts/index.ts';
 import { AppError, ModelDecisionSchema, MovementResultSchema, ReviewProposalSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
+import { bindOutputContext, captureOutputContext } from './forget.ts';
 import { spineActions } from './spine-actions.ts';
 import { spineInput } from './spine-input.ts';
 
@@ -412,6 +413,9 @@ export function createPipeline(deps: {
         const inputHash = digest(input);
         const dependencies = provenance(input);
         if (!dependencies || !selectedEligible(next.id, next.version)) return null;
+        // Freeze the producing support at the same time as the actual supplied
+        // input, before either provider can yield and owner history can change.
+        const outputContext = captureOutputContext(ctx, input, dependencies.scope);
         const captured = newAttempt();
         attempt = captured;
         function fresh(): boolean {
@@ -550,6 +554,7 @@ export function createPipeline(deps: {
               now().toISOString(),
             ).lastInsertRowid;
             const outcome = spineActions(ctx, spineInput(ctx, next.id), d, decisionId);
+            bindOutputContext(ctx, decisionId, outputContext);
             db.run('UPDATE decision SET outcome=? WHERE id=?', outcome, decisionId);
             db.run('UPDATE message SET processed_version=? WHERE id=?', next.version, next.id);
             return next.id;
