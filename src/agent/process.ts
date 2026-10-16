@@ -124,7 +124,11 @@ export function commitDecision(
   }
   for (const o of outcomes) outcome(o);
   if (genericCrossLane) outcome({ do: 'refuse', why: 'invalid_move' });
-  if (d.disposition === 'join' && d.proposalId !== null && !outcomes.some((o) => o.do === 'refuse')) {
+  // This refusal only rejects optional company text, after judge's shared
+  // identifier/evidence checks. It must not discard a valid disposition. Every
+  // other refusal still fences the join, including unoffered contacts and moves.
+  const joinBlocked = outcomes.some((o) => o.do === 'refuse' && o.why !== 'invalid_company_name');
+  if (d.disposition === 'join' && d.proposalId !== null && !joinBlocked) {
     const row = ctx.db.get<{ status: string; proposal: string; result_card_id: Id | null }>(
       'SELECT status,proposal,result_card_id FROM review_item WHERE id=?',
       d.proposalId,

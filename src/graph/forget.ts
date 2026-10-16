@@ -279,12 +279,13 @@ export function eraseGeneratedCompanies(
       const retained = alias || survives(ctx, id, -1);
       // Human choices can retain an identity without retaining its unsafe name.
       // A human alias is already independently authored; otherwise use an ID-only
-      // placeholder, including a unique norm, never a hash of the erased text.
+      // placeholder, never a hash of the erased text. Public normalization strips
+      // colons, so this reserved ID-only norm cannot equal a human name or alias.
       if (retained)
         ctx.db.run(
           'UPDATE company SET name=?,name_norm=? WHERE id=?',
           alias?.alias ?? '(name removed)',
-          alias?.alias_norm ?? `withdrawn company ${id}`,
+          alias?.alias_norm ?? `:withdrawn-company:${id}`,
           id,
         );
       else {

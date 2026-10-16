@@ -265,7 +265,7 @@ for (const route of ['participant', 'card', 'named', 'alias'] as const)
         );
       } else {
         assert.equal(retainedCompany?.name, '(name removed)', 'human-linked identity must not retain unsafe text');
-        assert.equal(retainedCompany?.name_norm, `withdrawn company ${company}`);
+        assert.equal(retainedCompany?.name_norm, `:withdrawn-company:${company}`);
       }
       assert.ok(f.h.db.get('SELECT id FROM message WHERE id=?', second));
       assert.equal(
