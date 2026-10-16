@@ -54,8 +54,6 @@ services:
   backend:
     build: .
     stop_grace_period: 30s
-    # Intermediate M1 harness only. PM removes this override after wiring canonical main.
-    command: ["node", "dist/platform/standalone.js"]
     environment:
       HOST: 0.0.0.0
       PORT: "3000"

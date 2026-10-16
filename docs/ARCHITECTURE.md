@@ -57,7 +57,7 @@ export async function createWorkflowModule(
 
 ## Startup composition and integration sequence
 
-M0 `createModules()` returns an empty array. PM replaces only that function as milestones land:
+The original M0 `createModules()` returned an empty array. M1 now composes the platform module through the canonical entrypoint. PM adds workflow when its bounded implementation handoff lands:
 
 ```ts
 const config = await loadRuntimeConfig();
