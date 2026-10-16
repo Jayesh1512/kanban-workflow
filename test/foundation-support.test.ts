@@ -56,7 +56,7 @@ test('F1 auth uses scrypt/hash-only credentials, expiring sessions and authentic
   );
   assert.throws(() => signIn(h.db, 'alice', 'wrong-password', h.clock.now()), /Invalid sign-in/);
   const token = h.tokenFor({ name: 'auth reader', scopeMessages: true });
-  assert.deepEqual(credentialForToken(h.db, token), { id: 1, scopeMessages: true });
+  assert.deepEqual(credentialForToken(h.db, token), { id: 1, scopeMessages: true, scopeWrite: false });
   assert.equal(credentialForToken(h.db, `${token}bad`), null);
   assert.ok(!JSON.stringify(h.db.all('SELECT * FROM teammate')).includes('synthetic-password'));
   assert.ok(!JSON.stringify(h.db.all('SELECT * FROM credential')).includes(token.split('_').slice(2).join('_')));

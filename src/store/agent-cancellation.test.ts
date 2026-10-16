@@ -477,7 +477,7 @@ for(const close of ['pre','post']) {
   const o=observers(db,native);deny(native,['COMMIT','ROLLBACK']);
   const primary=thrown(()=>db.tx(()=>{db.run("INSERT INTO setting VALUES ('data','1')");db.invalidateAgentWork({chatIds:[1],messageIds:[]});}));
   assert.ok(primary instanceof Error);assert.notEqual(primary,preClose);assert.notEqual(primary,postClose);
-  assert.equal(native.commits,5); // four real migration commits plus ONE denied outer COMMIT.
+  assert.equal(native.commits,7); // six real migration commits plus ONE denied outer COMMIT.
   assert.equal(native.rollbacks,1);assert.equal(native.closeCalls,1);
   fenceAll(db,native);
   if(close==='pre') {
@@ -804,7 +804,7 @@ test('C1 §2.1 committed-production native fault linkage, mechanism ONLY', () =>
       try {
         assert.equal(db.get("SELECT * FROM setting WHERE key IN ('data','escaped')"), undefined);
         assert.equal(db.get<{ n: number }>("SELECT count(*) AS n FROM action_log WHERE action='test'")?.n, 0);
-        assert.equal(db.all('SELECT * FROM schema_migration').length, 4);
+        assert.equal(db.all('SELECT * FROM schema_migration').length, 6);
         const effect = effects.find((effect) => effect.path === path);
         if (effect) {
           assert.equal(

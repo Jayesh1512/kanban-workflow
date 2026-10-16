@@ -17,7 +17,7 @@ import {
 function assertInstalled(db: Db): void {
   assert.deepEqual(
     db.all<{ name: string }>('SELECT name FROM schema_migration ORDER BY name').map((r) => r.name),
-    [...oldMigrations, h1Migration],
+    [...oldMigrations, h1Migration, '0005_workflow.sql', '0006_workflow_provenance.sql'],
   );
   for (const table of ['message_sighting', 'account_chat', 'chat_gap']) {
     assert.equal(db.get<{ strict: number }>('SELECT strict FROM pragma_table_list WHERE name=?', table)?.strict, 1);

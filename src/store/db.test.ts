@@ -11,7 +11,14 @@ test('F0 complete migrations enforce STRICT, foreign keys, FTS and secure deleti
   try {
     assert.deepEqual(
       db.all<{ name: string }>('SELECT name FROM schema_migration ORDER BY name').map((r) => r.name),
-      ['0001_init.sql', '0002_movement.sql', '0003_log_redaction_guard.sql', '0004_h1_durability.sql'],
+      [
+        '0001_init.sql',
+        '0002_movement.sql',
+        '0003_log_redaction_guard.sql',
+        '0004_h1_durability.sql',
+        '0005_workflow.sql',
+        '0006_workflow_provenance.sql',
+      ],
     );
     assert.equal(db.get<{ foreign_keys: number }>('PRAGMA foreign_keys')?.foreign_keys, 1);
     assert.equal(db.get<{ secure_delete: number }>('PRAGMA secure_delete')?.secure_delete, 1);
@@ -94,7 +101,7 @@ test('F0 named migrations run once across reopening a WAL database', () => {
     first.close();
     const second = openDb(path);
     assert.equal(second.get<{ journal_mode: string }>('PRAGMA journal_mode')?.journal_mode, 'wal');
-    assert.equal(second.all('SELECT * FROM schema_migration').length, 4);
+    assert.equal(second.all('SELECT * FROM schema_migration').length, 6);
     assert.equal(second.all('SELECT * FROM setting').length, 1);
     second.close();
   } finally {
