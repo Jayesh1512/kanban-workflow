@@ -221,7 +221,16 @@ function applyProposal(ctx: Ctx, id: Id, p: ReviewProposal): Id | null {
       );
       return null;
     case 'is_work':
-      for (const m of ids) attachMessage(ctx, m, null, { setBy: 'human' });
+      for (const m of ids) {
+        const movementOnly =
+          p.kind === 'model_failed' &&
+          ctx.db.get(
+            'SELECT md.decision_id FROM movement_decision md JOIN review_message rm ON rm.decision_id=md.decision_id WHERE rm.review_item_id=? AND rm.message_id=?',
+            id,
+            m,
+          );
+        if (!movementOnly) attachMessage(ctx, m, null, { setBy: 'human' });
+      }
       return null;
     case 'contact_company':
       setContactCompany(ctx, p.contactId, { company: p.company, evidenceMessageIds: ids }, { setBy: 'human' });
@@ -362,7 +371,16 @@ export function dismissReview(ctx: Ctx, id: Id): void {
     const p = ReviewProposalSchema.parse(JSON.parse(r.proposal)),
       ids = liveEvidence(ctx, id).map((m) => m.id);
     if (['new_card', 'attach', 'is_work', 'model_failed'].includes(p.kind))
-      for (const m of ids) attachMessage(ctx, m, null, { setBy: 'human' });
+      for (const m of ids) {
+        const movementOnly =
+          p.kind === 'model_failed' &&
+          ctx.db.get(
+            'SELECT md.decision_id FROM movement_decision md JOIN review_message rm ON rm.decision_id=md.decision_id WHERE rm.review_item_id=? AND rm.message_id=?',
+            id,
+            m,
+          );
+        if (!movementOnly) attachMessage(ctx, m, null, { setBy: 'human' });
+      }
     if (p.kind === 'attach' && r.why === 'cross_chat' && r.chat_id !== null) dismissCardOffer(ctx, p.cardId, r.chat_id);
     if (p.kind === 'name_company' && r.why === 'similar_name') {
       markNotSame(ctx, p.name, p.companyId);
