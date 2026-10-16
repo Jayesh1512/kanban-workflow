@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { DatabaseSync } from 'node:sqlite';
 import { openDb } from './db.ts';
-import { h1Migration, seedH1 } from './h1-test-fixture.ts';
+import { oldMigrations, seedH1 } from './h1-test-fixture.ts';
 
 const [mode, path] = process.argv.slice(2);
 assert.ok(path);
@@ -12,7 +12,7 @@ if (mode === 'old') {
   const readDirectory = fs.readdirSync;
   fs.readdirSync = ((directory: fs.PathLike) => {
     const names = readDirectory(directory);
-    return names.filter((name) => name !== h1Migration);
+    return names.filter((name) => oldMigrations.includes(name));
   }) as typeof fs.readdirSync;
   syncBuiltinESMExports();
   try {
