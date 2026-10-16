@@ -67,9 +67,9 @@ export async function writeContactTx(tx: SqlExecutor, input: ContactWrite, id?: 
 }
 
 export async function factRow(tx: SqlExecutor, r: Row): Promise<BusinessFact> {
-  const children = (await tx.query('SELECT * FROM facts WHERE parent_fact_id=$1 ORDER BY id', [r.id])).rows;
+  const children = (await tx.query('SELECT facts.*,local_date::text AS local_date FROM facts WHERE parent_fact_id=$1 ORDER BY id', [r.id])).rows;
   const dates: DateFact[] = await Promise.all(children.map(async (d) => ({ kind: d.kind as DateFact['kind'], originalText: String(d.text), relativeTo: iso(d.relative_to), timezone: String(d.timezone),
-    resolvedAt: nullableIso(d.resolved_at), localDate: d.local_date == null ? null : (d.local_date instanceof Date ? d.local_date.toISOString().slice(0, 10) : String(d.local_date).slice(0, 10)),
+    resolvedAt: nullableIso(d.resolved_at), localDate: d.local_date == null ? null : String(d.local_date),
     precision: d.date_precision as DateFact['precision'], ambiguous: Boolean(d.ambiguous), evidenceIds: await evidenceFor(tx, 'fact_evidence', 'fact_id', String(d.id)) })));
   return { id: String(r.id), kind: r.kind as BusinessFact['kind'], text: String(r.text), actor: { party: r.actor_party as BusinessFact['actor']['party'], contactId: r.actor_contact_id as string | null, displayName: r.actor_display_name as string | null },
     state: r.state as BusinessFact['state'], answersFactId: r.answers_fact_id as string | null, dates, evidenceIds: await evidenceFor(tx, 'fact_evidence', 'fact_id', String(r.id)), version: Number(r.version), source: r.source as BusinessFact['source'] };
