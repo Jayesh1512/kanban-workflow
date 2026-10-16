@@ -13,7 +13,7 @@ import {
 import { getMessages } from '../ingest/index.ts';
 import { record } from '../log/index.ts';
 import { validateSettlement } from './movement/audit.ts';
-import { validateReviewState } from './review-state.ts';
+import { validateCompanyProposal, validateReviewState } from './review-state.ts';
 import { eligibleChat } from './selection.ts';
 
 interface ReviewRow {
@@ -85,7 +85,7 @@ function changes(p: ReviewProposal): ReviewChange['to'][] {
     case 'contact_role':
       return ['role'];
     case 'name_company':
-      return [];
+      return ['company'];
   }
 }
 export function getReview(ctx: Ctx, id: Id): ReviewItemView {
@@ -332,15 +332,29 @@ export function changeReview(ctx: Ctx, id: Id, change: ReviewChange): void {
         if (old.kind !== 'move') throw new AppError('invalid', 'Move review required');
         moveCard(ctx, old.cardId, { stageId: change.stageId, evidenceMessageIds: ids }, { setBy: 'human' });
         break;
-      case 'company':
-        if (old.kind !== 'contact_company') throw new AppError('invalid', 'Company review required');
-        setContactCompany(
-          ctx,
-          old.contactId,
-          { company: { name: change.company }, evidenceMessageIds: ids },
-          { setBy: 'human' },
-        );
+      case 'company': {
+        if (old.kind === 'contact_company')
+          setContactCompany(
+            ctx,
+            old.contactId,
+            { company: { name: change.company }, evidenceMessageIds: ids },
+            { setBy: 'human' },
+          );
+        else if (old.kind === 'name_company') {
+          const companyId = ensureCompany(ctx, change.company);
+          for (const use of old.held) {
+            if (use.use === 'contact_company')
+              setContactCompany(
+                ctx,
+                use.contactId,
+                { company: { id: companyId }, evidenceMessageIds: use.evidenceMessageIds },
+                { setBy: 'human' },
+              );
+            else reference(ctx, use.messageId, companyId);
+          }
+        } else throw new AppError('invalid', 'Company review required');
         break;
+      }
       case 'role':
         if (old.kind !== 'contact_role') throw new AppError('invalid', 'Role review required');
         setContactRole(
@@ -361,17 +375,22 @@ export function dismissReview(ctx: Ctx, id: Id): void {
     if (r.status !== 'open') throw new AppError('conflict', 'Review already settled');
     const p = ReviewProposalSchema.parse(JSON.parse(r.proposal)),
       ids = liveEvidence(ctx, id).map((m) => m.id);
-    if (['new_card', 'attach', 'is_work', 'model_failed'].includes(p.kind))
-      for (const m of ids) {
-        const movementOnly =
-          p.kind === 'model_failed' &&
-          ctx.db.get(
-            'SELECT md.decision_id FROM movement_decision md JOIN review_message rm ON rm.decision_id=md.decision_id WHERE rm.review_item_id=? AND rm.message_id=?',
-            id,
-            m,
+    if (p.kind === 'name_company') validateCompanyProposal(p);
+    const extractionOnly = p.kind === 'model_failed' && r.reason === 'invalid_company_name';
+    const settledIds =
+      extractionOnly || !['new_card', 'attach', 'is_work', 'model_failed'].includes(p.kind)
+        ? []
+        : ids.filter(
+            (messageId) =>
+              p.kind !== 'model_failed' ||
+              !ctx.db.get(
+                'SELECT md.decision_id FROM movement_decision md JOIN review_message rm ON rm.decision_id=md.decision_id WHERE rm.review_item_id=? AND rm.message_id=?',
+                id,
+                messageId,
+              ),
           );
-        if (!movementOnly) attachMessage(ctx, m, null, { setBy: 'human' });
-      }
+    if (settledIds.length) validateReviewState(ctx, id, p, true);
+    for (const messageId of settledIds) attachMessage(ctx, messageId, null, { setBy: 'human' });
     if (p.kind === 'attach' && r.why === 'cross_chat' && r.chat_id !== null) dismissCardOffer(ctx, p.cardId, r.chat_id);
     if (p.kind === 'name_company' && r.why === 'similar_name') {
       markNotSame(ctx, p.name, p.companyId);

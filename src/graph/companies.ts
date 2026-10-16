@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Ctx, Id } from '../contracts/index.ts';
+import type { Ctx, Id, WriteOpts } from '../contracts/index.ts';
 import { AppError, IdSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
 import { by, human, validate } from './helpers.ts';
@@ -17,7 +17,7 @@ function company(ctx: Ctx, id: Id): { id: Id; name: string } {
   if (!c) throw new AppError('not_found', 'Company not found');
   return c;
 }
-function ensure(ctx: Ctx, name: string): Id {
+function ensure(ctx: Ctx, name: string, o?: WriteOpts): Id {
   by(ctx);
   const norm = normalized(name);
   return ctx.db.tx(() => {
@@ -32,7 +32,14 @@ function ensure(ctx: Ctx, name: string): Id {
       ctx.actor.kind,
       ctx.now().toISOString(),
     ).lastInsertRowid;
-    record(ctx, { action: 'company.create', subjectKind: 'company', subjectId: id, after: { name } });
+    record(ctx, {
+      action: 'company.create',
+      subjectKind: 'company',
+      subjectId: id,
+      after: { name },
+      decisionId: o?.decisionId,
+      reason: o?.reason,
+    });
     return id;
   });
 }
@@ -42,8 +49,8 @@ export function ensureCompany(ctx: Ctx, name: string): Id {
   if (ctx.actor.kind === 'agent') throw new AppError('forbidden', 'Agent company creation requires participant link');
   return ensure(ctx, name);
 }
-export function ensureParticipantCompany(ctx: Ctx, name: string): Id {
-  return ensure(ctx, name);
+export function ensureParticipantCompany(ctx: Ctx, name: string, o?: WriteOpts): Id {
+  return ensure(ctx, name, o);
 }
 
 export function renameCompany(ctx: Ctx, companyId: Id, name: string): void {

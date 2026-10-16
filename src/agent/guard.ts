@@ -165,6 +165,8 @@ export function judge(decision: ModelDecision, facts: GuardFacts): Outcome[] {
     const e = [...new Set(ids.filter((id) => facts.validEvidenceIds.includes(id)))];
     return e.length ? e : [facts.message.id];
   };
+  const invalidCompany = (name: string | null) => name !== null && !normalizeCompanyName(name);
+  if (invalidCompany(d.cardCompanyName)) out.push({ do: 'refuse', why: 'invalid_company_name' });
   const match = (name: string) => facts.matches.find((m) => m.name === name)?.match;
   let disposition = d.disposition,
     cardId = d.cardId,
@@ -248,7 +250,15 @@ export function judge(decision: ModelDecision, facts: GuardFacts): Outcome[] {
     const ids = evidence(c.evidenceMessageIds);
     if (c.companyId !== null || c.companyName !== null) {
       const m = c.companyName === null ? undefined : match(c.companyName);
-      if (c.companyName !== null && m?.match === 'similar' && m.companyId !== null)
+      if (invalidCompany(c.companyName)) {
+        review(
+          { kind: 'contact_company', contactId: c.contactId, company: { name: c.companyName ?? '' } },
+          `contact:${c.contactId}`,
+          0,
+          'model_failed',
+        );
+        out.push({ do: 'refuse', why: 'invalid_company_name' });
+      } else if (c.companyName !== null && m?.match === 'similar' && m.companyId !== null)
         review(
           {
             kind: 'name_company',
@@ -301,6 +311,10 @@ export function judge(decision: ModelDecision, facts: GuardFacts): Outcome[] {
     }
   }
   for (const mention of d.mentions) {
+    if (invalidCompany(mention.name)) {
+      out.push({ do: 'refuse', why: 'invalid_company_name' });
+      continue;
+    }
     const m = match(mention.name),
       id = mention.companyId ?? m?.companyId ?? null;
     if (id !== null && facts.removedReferenceCompanyIds.includes(id)) continue;

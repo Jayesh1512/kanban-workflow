@@ -245,6 +245,7 @@ export function commitFailure(ctx: Ctx, input: DecideInput, code: string, model:
     id,
     code,
   );
+  bindReviewState(ctx, id, []);
   record(ctx, {
     action: 'agent.refused',
     subjectKind: 'message',

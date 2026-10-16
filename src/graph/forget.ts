@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { updateCard } from '../board/index.ts';
 import type { Ctx, Id, ReviewProposal, SetBy } from '../contracts/index.ts';
 import { AppError, IdSchema, ReviewProposalSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
@@ -153,6 +154,10 @@ export function forgetMessages(
       if (
         !c ||
         !(c.created_by_kind === 'agent' || (id === chat.named_company_id && c.created_at >= chat.created_at)) ||
+        ctx.db.get(
+          "SELECT id FROM action_log WHERE subject_kind='company' AND subject_id=? AND action='company.update' AND actor_kind IN ('teammate','credential')",
+          id,
+        ) ||
         survives(ctx, id, i.chatId)
       )
         continue;
@@ -191,5 +196,117 @@ export function resetGeneratedRoles(ctx: Ctx, contactIds: Id[], messageIds: Id[]
       reset.push(id);
     }
     return reset;
+  });
+}
+
+/** The coordinator discovers producing-context dependencies before deleting any
+ * decision/review JSON. Citations are not proof of generated-name independence.
+ * Human links/aliases retain identity, but do not adopt an earlier agent name. */
+export function eraseGeneratedCompanies(
+  ctx: Ctx,
+  outputs: {
+    companyIds: Id[];
+    companyHistoryIds: Id[];
+    companyLinks: { contactId: Id; companyId: Id }[];
+    cardCompanyIds: Id[];
+    referenceIds: Id[];
+  },
+  messageIds: Id[],
+): { companyIds: Id[]; contactIds: Id[]; cardIds: Id[] } {
+  return ctx.db.tx(() => {
+    const contactIds = new Set<Id>(),
+      cardIds = new Set<Id>();
+    const unsafeNames = new Set(outputs.companyIds);
+    for (const link of ctx.db.all<{ contactId: Id; companyId: Id; set_by: SetBy }>(
+      'SELECT contact_id AS contactId,company_id AS companyId,set_by FROM contact_company',
+    )) {
+      if (
+        link.set_by !== 'agent' ||
+        (!unsafeNames.has(link.companyId) &&
+          !outputs.companyLinks.some((o) => o.contactId === link.contactId && o.companyId === link.companyId))
+      )
+        continue;
+      ctx.db.run('DELETE FROM contact_company WHERE contact_id=? AND company_id=?', link.contactId, link.companyId);
+      ctx.db.run(
+        "DELETE FROM evidence WHERE kind='contact_company' AND contact_id=? AND company_id=?",
+        link.contactId,
+        link.companyId,
+      );
+      record(ctx, {
+        action: 'contact.remove_company',
+        subjectKind: 'contact',
+        subjectId: link.contactId,
+        after: { companyId: link.companyId },
+        messageIds,
+      });
+      contactIds.add(link.contactId);
+    }
+    for (const card of ctx.db.all<{ id: Id; company_id: Id }>(
+      "SELECT id,company_id FROM card WHERE company_set_by='agent' AND company_id IS NOT NULL",
+    )) {
+      if (!unsafeNames.has(card.company_id) && !outputs.cardCompanyIds.includes(card.id)) continue;
+      updateCard(ctx, card.id, { companyId: null }, { setBy: 'agent' });
+      cardIds.add(card.id);
+    }
+    for (const r of ctx.db.all<{ id: Id; from_company_id: Id | null; to_company_id: Id }>(
+      'SELECT id,from_company_id,to_company_id FROM company_reference',
+    )) {
+      if (
+        !outputs.referenceIds.includes(r.id) &&
+        !unsafeNames.has(r.to_company_id) &&
+        (r.from_company_id === null || !unsafeNames.has(r.from_company_id))
+      )
+        continue;
+      if (
+        ctx.db.get(
+          "SELECT id FROM action_log WHERE subject_kind='reference' AND subject_id=? AND actor_kind IN ('teammate','credential')",
+          r.id,
+        )
+      )
+        continue;
+      ctx.db.run('DELETE FROM company_reference WHERE id=?', r.id);
+      record(
+        { ...ctx, actor: { kind: 'system' } },
+        { action: 'reference.remove', subjectKind: 'reference', subjectId: r.id, after: { removed: true }, messageIds },
+      );
+    }
+    for (const id of outputs.companyIds) {
+      if (!ctx.db.get('SELECT id FROM company WHERE id=?', id)) continue;
+      const alias = ctx.db.get<{ alias: string; alias_norm: string }>(
+        'SELECT alias,alias_norm FROM company_alias WHERE company_id=? ORDER BY alias_norm LIMIT 1',
+        id,
+      );
+      const retained = alias || survives(ctx, id, -1);
+      // Human choices can retain an identity without retaining its unsafe name.
+      // A human alias is already independently authored; otherwise use an ID-only
+      // placeholder, including a unique norm, never a hash of the erased text.
+      if (retained)
+        ctx.db.run(
+          'UPDATE company SET name=?,name_norm=? WHERE id=?',
+          alias?.alias ?? '(name removed)',
+          alias?.alias_norm ?? `withdrawn company ${id}`,
+          id,
+        );
+      else {
+        ctx.db.run('DELETE FROM company_alias WHERE company_id=?', id);
+        ctx.db.run('DELETE FROM company_not_same WHERE company_id=?', id);
+        ctx.db.run('DELETE FROM company WHERE id=?', id);
+      }
+      record(
+        { ...ctx, actor: { kind: 'system' } },
+        {
+          action: 'company.update',
+          subjectKind: 'company',
+          subjectId: id,
+          after: { removed: !retained },
+          messageIds,
+        },
+      );
+    }
+    return {
+      companyIds: [...new Set([...outputs.companyIds, ...outputs.companyHistoryIds])],
+      contactIds: [...contactIds],
+      cardIds: [...cardIds],
+    };
   });
 }

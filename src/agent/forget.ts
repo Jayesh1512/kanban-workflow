@@ -14,6 +14,10 @@ const contextSchema = z.strictObject({
   unknown: z.boolean(),
   cards: z.array(output),
   roles: z.array(output),
+  companies: z.array(output).default([]),
+  companyLinks: z.array(output.extend({ companyId: IdSchema })).default([]),
+  cardCompanies: z.array(output.extend({ companyId: IdSchema })).default([]),
+  references: z.array(output).default([]),
 });
 type OutputContext = z.infer<typeof contextSchema>;
 function storedContext(raw: string): OutputContext | null {
@@ -64,8 +68,8 @@ function currentContext(ctx: Ctx, kind: 'card' | 'contact', id: Id): OutputConte
 // actual, still-readable owner write when it matches; redacted/missing writes
 // remain unknown. Never infer support from a current citation alone.
 function relationshipContext(ctx: Ctx, kind: 'card' | 'contact', id: Id, companyId: Id): OutputContext | null {
-  for (const row of ctx.db.all<{ after: string | null; raw: string | null }>(
-    `SELECT a.after,d.raw FROM action_log a LEFT JOIN decision d ON d.id=a.decision_id
+  for (const row of ctx.db.all<{ id: Id; after: string | null; raw: string | null }>(
+    `SELECT a.id,a.after,d.raw FROM action_log a LEFT JOIN decision d ON d.id=a.decision_id
      WHERE a.subject_kind=? AND a.subject_id=? AND
        ((?='card' AND a.action IN ('card.create','card.update')) OR
         (?='contact' AND a.action IN ('contact.set_company','contact.remove_company')))
@@ -75,15 +79,76 @@ function relationshipContext(ctx: Ctx, kind: 'card' | 'contact', id: Id, company
     kind,
     kind,
   )) {
-    if (row.after === null) return null;
+    if (row.after === null) {
+      const context = row.raw === null ? null : storedContext(row.raw);
+      if (
+        context?.[kind === 'card' ? 'cardCompanies' : 'companyLinks'].some(
+          (o) => o.id === id && o.logId === row.id && o.companyId === companyId,
+        )
+      )
+        return context;
+      if (kind === 'contact' && context?.companyLinks.some((o) => o.id === id && o.logId === row.id)) continue;
+      return null;
+    }
     const value: unknown = JSON.parse(row.after);
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
     const after = value as Record<string, unknown>;
     if (!('companyId' in after)) continue;
     if (kind === 'contact' && after.companyId !== companyId) continue;
-    return after.companyId === companyId && row.raw !== null ? storedContext(row.raw) : null;
+    const context = row.raw === null ? null : storedContext(row.raw);
+    return after.companyId === companyId &&
+      context?.[kind === 'card' ? 'cardCompanies' : 'companyLinks'].some(
+        (o) => o.id === id && o.logId === row.id && o.companyId === companyId,
+      )
+      ? context
+      : null;
   }
   return null;
+}
+
+function companyContext(ctx: Ctx, id: Id, creationOnly = false): OutputContext | null {
+  const row = ctx.db.get<{ id: Id; after: string | null; raw: string | null }>(
+    "SELECT a.id,a.after,d.raw FROM action_log a LEFT JOIN decision d ON d.id=a.decision_id WHERE a.subject_kind='company' AND a.subject_id=? AND a.action IN ('company.create','company.update') AND (?=0 OR a.action='company.create') ORDER BY a.id DESC LIMIT 1",
+    id,
+    Number(creationOnly),
+  );
+  const context = row?.raw ? storedContext(row.raw) : null;
+  const current = ctx.db.get<{ name: string }>('SELECT name FROM company WHERE id=?', id);
+  return row &&
+    (creationOnly || row.after === null || JSON.parse(row.after).name === current?.name) &&
+    context?.companies.some((o) => o.id === id && o.logId === row.id)
+    ? context
+    : null;
+}
+function humanCompanyName(ctx: Ctx, id: Id): boolean {
+  const row = ctx.db.get<{ actor_kind: string }>(
+    "SELECT actor_kind FROM action_log WHERE subject_kind='company' AND subject_id=? AND action IN ('company.create','company.update') ORDER BY id DESC LIMIT 1",
+    id,
+  );
+  // Owner log identity survives payload redaction. Purge cleanup records itself
+  // as system, so it cannot accidentally adopt an earlier unsafe agent name.
+  return row?.actor_kind === 'teammate' || row?.actor_kind === 'credential';
+}
+function referenceContext(ctx: Ctx, id: Id): OutputContext | null {
+  const row = ctx.db.get<{ id: Id; raw: string | null }>(
+    "SELECT a.id,d.raw FROM action_log a LEFT JOIN decision d ON d.id=a.decision_id WHERE a.subject_kind='reference' AND a.subject_id=? AND a.action='reference.record' ORDER BY a.id DESC LIMIT 1",
+    id,
+  );
+  const context = row?.raw ? storedContext(row.raw) : null;
+  return context?.references.some((o) => o.id === id && o.logId === row?.id) ? context : null;
+}
+
+function directHumanCompanyLink(ctx: Ctx, contactId: Id, companyId: Id): boolean {
+  if (!ctx.db.get("SELECT id FROM company WHERE id=? AND created_by_kind IN ('teammate','credential')", companyId))
+    return false;
+  for (const row of ctx.db.all<{ after: string | null; decision_id: Id | null }>(
+    "SELECT after,decision_id FROM action_log WHERE subject_kind='contact' AND subject_id=? AND action='contact.set_company' ORDER BY id DESC",
+    contactId,
+  )) {
+    if (row.after === null) return false;
+    if (JSON.parse(row.after).companyId === companyId) return row.decision_id === null;
+  }
+  return false;
 }
 
 /** Capture transitive context BEFORE applying the new output. Unknown legacy
@@ -132,24 +197,30 @@ export function captureOutputContext(ctx: Ctx, input: DecideInput, scope: AgentW
       'SELECT created_by_kind FROM company WHERE id=?',
       company.id,
     );
-    // Actual Graph company.create has NO decision_id, so neither current links
-    // nor even a later complete contact.set_company proves how its name arose.
+    // A current name needs its own actual company.create owner pointer. Legacy
+    // creation without one cannot be certified by later links or citations.
     // Aliases are human-only Graph writes; they do not certify a generated name.
     // This covers participant, card and named-chat suppliers uniformly.
     // Human/credential company producers are the protected non-agent values.
-    if (current?.created_by_kind !== 'teammate' && current?.created_by_kind !== 'credential') unknown = true;
+    if (
+      current?.created_by_kind !== 'teammate' &&
+      current?.created_by_kind !== 'credential' &&
+      !humanCompanyName(ctx, company.id)
+    )
+      inherit(companyContext(ctx, company.id));
     // References are not supplied as payloads, but contribute support IDs to
-    // the spine scope. The current spine cannot produce them (mentions reject).
+    // the spine scope. Their owner pointer carries the full producing context.
     // A legacy generated reference can itself be transitive; its citation alone
     // is insufficient. Human references remain protected current Graph values.
-    for (const reference of ctx.db.all<{ actor_kind: string | null }>(
-      `SELECT (SELECT actor_kind FROM action_log WHERE subject_kind='reference'
+    for (const reference of ctx.db.all<{ id: Id; actor_kind: string | null }>(
+      `SELECT r.id,(SELECT actor_kind FROM action_log WHERE subject_kind='reference'
          AND subject_id=r.id AND action='reference.record' ORDER BY id DESC LIMIT 1) AS actor_kind
        FROM company_reference r WHERE removed=0 AND (from_company_id=? OR to_company_id=?)`,
       company.id,
       company.id,
     ))
-      if (reference.actor_kind !== 'teammate' && reference.actor_kind !== 'credential') unknown = true;
+      if (reference.actor_kind !== 'teammate' && reference.actor_kind !== 'credential')
+        inherit(referenceContext(ctx, reference.id));
   }
   return {
     version: 2,
@@ -158,6 +229,10 @@ export function captureOutputContext(ctx: Ctx, input: DecideInput, scope: AgentW
     unknown,
     cards: [],
     roles: [],
+    companies: [],
+    companyLinks: [],
+    cardCompanies: [],
+    references: [],
   };
 }
 
@@ -174,6 +249,12 @@ export function bindOutputContext(ctx: Ctx, decisionId: Id, context: OutputConte
     if ((row.action === 'card.create' || row.action === 'card.update') && 'title' in after && 'summary' in after)
       context.cards.push({ id: row.subject_id, logId: row.id });
     if (row.action === 'contact.set_role') context.roles.push({ id: row.subject_id, logId: row.id });
+    if (row.action === 'company.create') context.companies.push({ id: row.subject_id, logId: row.id });
+    if (row.action === 'contact.set_company' && typeof after.companyId === 'number')
+      context.companyLinks.push({ id: row.subject_id, logId: row.id, companyId: after.companyId });
+    if (['card.create', 'card.update'].includes(row.action) && typeof after.companyId === 'number')
+      context.cardCompanies.push({ id: row.subject_id, logId: row.id, companyId: after.companyId });
+    if (row.action === 'reference.record') context.references.push({ id: row.subject_id, logId: row.id });
   }
   const row = ctx.db.get<{ raw: string }>('SELECT raw FROM decision WHERE id=?', decisionId);
   ctx.db.run(
@@ -185,8 +266,17 @@ export function bindOutputContext(ctx: Ctx, decisionId: Id, context: OutputConte
 
 /** Discover ALL live generated outputs before any raw/review/log provenance is
  * destroyed. Unknown legacy values are unsafe regardless of their citations. */
-export function discoverGeneratedOutputs(ctx: Ctx, messageIds: Id[]): { cardIds: Id[]; contactIds: Id[] } {
-  if (!messageIds.length) return { cardIds: [], contactIds: [] };
+export function discoverGeneratedOutputs(ctx: Ctx, messageIds: Id[]) {
+  if (!messageIds.length)
+    return {
+      cardIds: [],
+      contactIds: [],
+      companyIds: [],
+      companyHistoryIds: [],
+      companyLinks: [],
+      cardCompanyIds: [],
+      referenceIds: [],
+    };
   const chats = new Set(
     ctx.db
       .all<{ chat_id: Id }>(
@@ -196,7 +286,9 @@ export function discoverGeneratedOutputs(ctx: Ctx, messageIds: Id[]): { cardIds:
       .map((r) => r.chat_id),
   );
   function unsafe(kind: 'card' | 'contact', id: Id): boolean {
-    const context = currentContext(ctx, kind, id);
+    return affected(currentContext(ctx, kind, id));
+  }
+  function affected(context: OutputContext | null): boolean {
     return (
       !context ||
       context.unknown ||
@@ -205,6 +297,35 @@ export function discoverGeneratedOutputs(ctx: Ctx, messageIds: Id[]): { cardIds:
     );
   }
   return {
+    companyHistoryIds: ctx.db
+      .all<{ id: Id }>("SELECT id FROM company WHERE created_by_kind='agent'")
+      .filter((r) => affected(companyContext(ctx, r.id, true)))
+      .map((r) => r.id),
+    companyIds: ctx.db
+      .all<{ id: Id }>("SELECT id FROM company WHERE created_by_kind='agent'")
+      .filter((r) => !humanCompanyName(ctx, r.id) && affected(companyContext(ctx, r.id)))
+      .map((r) => r.id),
+    companyLinks: ctx.db
+      .all<{ contactId: Id; companyId: Id }>(
+        "SELECT contact_id AS contactId,company_id AS companyId FROM contact_company WHERE set_by='agent'",
+      )
+      .filter(
+        (r) =>
+          affected(relationshipContext(ctx, 'contact', r.contactId, r.companyId)) &&
+          !directHumanCompanyLink(ctx, r.contactId, r.companyId),
+      ),
+    cardCompanyIds: ctx.db
+      .all<{ id: Id; company_id: Id }>(
+        "SELECT id,company_id FROM card WHERE company_set_by='agent' AND company_id IS NOT NULL",
+      )
+      .filter((r) => affected(relationshipContext(ctx, 'card', r.id, r.company_id)))
+      .map((r) => r.id),
+    referenceIds: ctx.db
+      .all<{ id: Id }>(
+        "SELECT r.id FROM company_reference r WHERE NOT EXISTS (SELECT 1 FROM action_log a WHERE a.subject_kind='reference' AND a.subject_id=r.id AND a.actor_kind IN ('teammate','credential'))",
+      )
+      .filter((r) => affected(referenceContext(ctx, r.id)))
+      .map((r) => r.id),
     cardIds: ctx.db
       .all<{ id: Id }>("SELECT id FROM card WHERE text_set_by='agent' ORDER BY id")
       .filter((r) => unsafe('card', r.id))

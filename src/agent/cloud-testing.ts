@@ -85,7 +85,7 @@ export function jevAnswer(body: WireRequest, selected = 'stay', confidence = 1, 
   );
   return { model: 'jev-1.13.0', answers, usage: { input_tokens: 300, output_tokens: 30 } };
 }
-export function recording(text = 'Synthetic integration request'): FixtureLine[] {
+export function recording(text = 'Synthetic integration request', otherText = text): FixtureLine[] {
   return [
     { t: 'account', account: 'alice', self: { userKey: 'self', displayName: 'Alice', handle: null } },
     ...['work', 'other'].map(
@@ -108,7 +108,7 @@ export function recording(text = 'Synthetic integration request'): FixtureLine[]
           cursor: String(i + 1),
           sender: { userKey: 'outside', displayName: 'Outside', handle: null },
           sentAt: `2026-09-01T10:00:0${i + 1}.000Z`,
-          text,
+          text: key === 'other' ? otherText : text,
           media: null,
           replyToNativeId: null,
           editedAt: null,
@@ -127,6 +127,8 @@ export async function cloudFixture(
     threshold?: number;
     otherLane?: boolean;
     text?: string;
+    otherText?: string;
+    extraLines?: FixtureLine[];
     missingModel?: boolean;
     missingModelId?: boolean;
     missingMovement?: boolean;
@@ -159,7 +161,9 @@ export async function cloudFixture(
     AI_GATEWAY_API_KEY: options.missingMovement ? undefined : 'synthetic-gateway-secret',
     JEV_MAX_ATTEMPTS: String(options.movementAttempts ?? 1),
   });
-  const fixture = createFixtureConnector({ lines: recording(options.text) });
+  const fixture = createFixtureConnector({
+    lines: [...recording(options.text, options.otherText), ...(options.extraLines ?? [])],
+  });
   const ctx: Ctx = { db, actor: { kind: 'system' }, canReadText: true, now };
   const id = addTeammate(ctx, { username: 'alice', displayName: 'Alice', password: 'synthetic-password' });
   ctx.actor = { kind: 'teammate', id };

@@ -45,7 +45,7 @@ export function setContactCompany(
       ctx.db.get("SELECT company_id FROM contact_company WHERE contact_id=? AND set_by='human'", contactId)
     )
       throw new AppError('forbidden', 'Human company links are locked');
-    const companyId = 'id' in i.company ? i.company.id : ensureParticipantCompany(ctx, i.company.name);
+    const companyId = 'id' in i.company ? i.company.id : ensureParticipantCompany(ctx, i.company.name, o);
     if (!ctx.db.get('SELECT id FROM company WHERE id=?', companyId))
       throw new AppError('not_found', 'Company not found');
     const old = ctx.db.get<{ set_by: SetBy; removed: number }>(
