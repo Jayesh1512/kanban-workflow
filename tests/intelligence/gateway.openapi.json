@@ -1,0 +1,16 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "AntSeed Gateway entitlement fixture", "version": "1.0.0", "description": "Synthetic replay of the sanitized real Vercel 403 recorded in docs/INTELLIGENCE_RESEARCH.md; no live credentials or successful inference are represented." },
+  "paths": {
+    "/typesafe/v1/systemone": {
+      "post": {
+        "responses": {
+          "403": {
+            "description": "Known account entitlement failure",
+            "content": { "application/json": { "example": { "error": { "type": "no_providers_available", "message": "Free tier users do not have access to this model.", "param": { "name": "RestrictedModelsError", "statusCode": 403 } } } } }
+          }
+        }
+      }
+    }
+  }
+}
