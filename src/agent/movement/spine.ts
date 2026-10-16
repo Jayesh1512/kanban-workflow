@@ -9,6 +9,8 @@ import type {
   OpLog,
 } from '../../contracts/index.ts';
 import { AppError, MovementReplayLineSchema } from '../../contracts/index.ts';
+import { jevProvider } from './jev.ts';
+import { boundRequest, parseWire } from './wire.ts';
 
 export async function createMovementProvider(
   cfg: MovementConfig,
@@ -21,7 +23,11 @@ export async function createMovementProvider(
     replayLines?: MovementReplayLine[];
   },
 ): Promise<MovementDecisionProvider> {
-  if (cfg.provider === 'jev') throw new AppError('invalid', 'not built: createMovementProvider');
+  if (cfg.provider === 'jev') {
+    if (deps.replayLines !== undefined || cfg.replayPath !== null)
+      throw new AppError('invalid', 'Hosted movement cannot use replay');
+    return jevProvider(cfg, deps);
+  }
   if (cfg.provider === null) {
     if (deps.replayLines !== undefined || cfg.replayPath !== null)
       throw new AppError('invalid', 'Disabled movement cannot use replay');
@@ -114,7 +120,13 @@ export async function createMovementProvider(
         (l) =>
           l.messageKey === request.message.key && l.version === request.message.version && l.subjectKey === subjectKey,
       );
-      if (line && 'raw' in line) throw new AppError('invalid', 'not built: movementParser');
+      if (line && 'raw' in line) {
+        try {
+          return parseWire(line.raw, boundRequest(request), 'replay', null, null);
+        } catch {
+          return { ...base, kind: 'failed', code: 'invalid_response' };
+        }
+      }
       if (line && 'failure' in line) return { ...base, kind: 'failed', code: line.failure };
       const answer = line?.answer ?? {
         destination: 'stay' as const,

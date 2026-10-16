@@ -10,6 +10,7 @@ import type {
   ScriptLine,
 } from '../../contracts/index.ts';
 import { AppError, ScriptLineSchema } from '../../contracts/index.ts';
+import { openAIModel } from './openai.ts';
 
 export async function createModel(
   cfg: ModelConfig,
@@ -21,10 +22,10 @@ export async function createModel(
       endpointHost: null,
       blocked: 'no_model',
       async decide() {
-        throw new AppError('invalid', 'not built: decide');
+        throw new AppError('invalid', 'Model is disabled');
       },
     };
-  if (cfg.provider !== 'scripted') throw new AppError('invalid', 'not built: createModel');
+  if (cfg.provider === 'openai') return openAIModel({ ...cfg }, deps.db, deps.openai);
   if (
     deps.openai !== undefined ||
     (deps.scriptLines !== undefined && cfg.scriptPath !== null) ||

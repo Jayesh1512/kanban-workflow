@@ -26,7 +26,7 @@ export function spineInput(ctx: Ctx, messageId: Id): DecideInput {
   const board = getBoard(ctx);
   const proposals = db
     .all<{ id: Id; proposal: string; openedByMessageKey: string; messageCount: number }>(
-      "SELECT r.id,r.proposal,(SELECT m.message_key FROM review_message rm JOIN message m ON m.id=rm.message_id WHERE rm.review_item_id=r.id ORDER BY m.sent_at,m.id LIMIT 1) AS openedByMessageKey,(SELECT count(*) FROM review_message WHERE review_item_id=r.id) AS messageCount FROM review_item r WHERE r.chat_id=? AND r.kind='new_card' AND r.status='open' ORDER BY r.id",
+      "SELECT r.id,r.proposal,(SELECT m.message_key FROM review_message rm JOIN message m ON m.id=rm.message_id WHERE rm.review_item_id=r.id ORDER BY m.sent_at,m.id LIMIT 1) AS openedByMessageKey,(SELECT count(*) FROM review_message WHERE review_item_id=r.id) AS messageCount FROM review_item r WHERE r.chat_id=? AND r.kind='new_card' AND (r.status='open' OR (r.status IN ('accepted','changed') AND r.result_card_id IS NOT NULL)) ORDER BY r.id",
       m.chat_id,
     )
     .map((r) => {
