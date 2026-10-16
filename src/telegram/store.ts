@@ -18,6 +18,7 @@ function canonical(value: unknown): unknown {
   return value;
 }
 export const digest = (v: unknown): string => createHash('sha256').update(JSON.stringify(canonical(v))).digest('hex');
+const canonicalForward = (value: TelegramMessageInput['forward']) => ({ ...value, originDate: iso(value.originDate) });
 const allowed = (chat: Chat) => chat.inclusion === 'included' && !chat.isControl;
 
 export class TelegramStore implements IngestionStore, ChatService {
@@ -157,13 +158,13 @@ export class TelegramStore implements IngestionStore, ChatService {
     if (old?.['deleted_at']) return { changed: false, inserted: false };
     const tombstone = (await tx.query(`SELECT min(observed_at) AS observed_at FROM message_tombstones WHERE message_id=$2 AND (chat_id=$1 OR (chat_id IS NULL AND $3::boolean))`, [chat.id, message.id, ['user', 'group'].includes(chat.kind)])).rows[0]?.['observed_at'];
     if (old && new Date(message.editedAt ?? message.sentAt).getTime() < new Date((old['edited_at'] ?? old['sent_at']) as Date).getTime()) return { changed: false, inserted: false };
-    const incoming = { text: message.text, sentAt: message.sentAt, editedAt: message.editedAt, senderId: message.senderId, sender: message.sender, peer: message.peer, forward: message.forward, replyToId: message.replyToId, sourceUrl: message.sourceUrl };
-    const prior = old ? { text: old['text'], sentAt: iso(old['sent_at']), editedAt: iso(old['edited_at']), senderId: old['sender_id'] == null ? null : String(old['sender_id']), sender: old['sender_snapshot'], peer: old['peer_snapshot'], forward: old['forward_metadata'], replyToId: old['reply_to_id'], sourceUrl: old['source_url'] } : null;
+    const incoming = { text: message.text, sentAt: iso(message.sentAt), editedAt: iso(message.editedAt), senderId: message.senderId, sender: message.sender, peer: message.peer, forward: canonicalForward(message.forward), replyToId: message.replyToId, sourceUrl: message.sourceUrl };
+    const prior = old ? { text: old['text'], sentAt: iso(old['sent_at']), editedAt: iso(old['edited_at']), senderId: old['sender_id'] == null ? null : String(old['sender_id']), sender: old['sender_snapshot'], peer: old['peer_snapshot'], forward: canonicalForward(old['forward_metadata'] as TelegramMessageInput['forward']), replyToId: old['reply_to_id'], sourceUrl: old['source_url'] } : null;
     if (old && !tombstone && digest(incoming) === digest(prior)) return { changed: false, inserted: false };
     if (old) await this.invalidateMessage(tx, chat.id, message.id);
     await tx.query(`INSERT INTO messages(chat_id,id,sender_id,sent_at,edited_at,deleted_at,text,reply_to_id,source_url,sender_snapshot,peer_snapshot,forward_metadata)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(chat_id,id) DO UPDATE SET sender_id=$3,sent_at=$4,edited_at=$5,deleted_at=$6,text=$7,reply_to_id=$8,source_url=$9,sender_snapshot=$10,peer_snapshot=$11,forward_metadata=$12,version=messages.version+1`,
-    [chat.id, message.id, message.senderId, message.sentAt, message.editedAt, tombstone ?? null, tombstone ? '' : message.text, message.replyToId, message.sourceUrl, JSON.stringify(message.sender), JSON.stringify(message.peer), JSON.stringify(message.forward)]);
+    [chat.id, message.id, message.senderId, incoming.sentAt, incoming.editedAt, tombstone ?? null, tombstone ? '' : message.text, message.replyToId, message.sourceUrl, JSON.stringify(message.sender), JSON.stringify(message.peer), JSON.stringify(incoming.forward)]);
     return { changed: true, inserted: !old };
   }
   private async enqueue(tx: SqlExecutor, chat: Chat): Promise<void> {
