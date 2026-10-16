@@ -44,7 +44,7 @@ export function validateDate(value: DateFact, input: AnalysisInput): DateFact {
   if (!phrase || !sources.some((e) => e.excerpt.toLowerCase().includes(phrase))) throw new Error('Date phrase absent from cited source');
   if (/^(kal|कल)[.! ]*$/.test(phrase) && (d.precision !== 'unresolved' || !d.ambiguous)) throw new Error('Ambiguous kal requires unresolved precision');
   let delta: number | null = null;
-  if (/\btomorrow\b|कल.*(?:करेंगे|भेजेंगे)|\bkal\b.*\b(?:dunga|karenge|bhejunga)\b/.test(phrase)) delta = 1;
+  if (/\btomorrow\b|कल.*(?:करेंगे|भेजेंगे|भेजूँगा|भेजूंगा|भेजेगा|करूँगा|करूंगा|दूँगा|दूंगा)|\bkal\b.*\b(?:dunga|karenge|bhejunga)\b/.test(phrase)) delta = 1;
   else if (/\byesterday\b|\bkal\b.*\b(?:tha|kiya|diya)\b/.test(phrase)) delta = -1;
   else if (/\btoday\b|\baaj\b|आज/.test(phrase)) delta = 0;
   const expectedDay = delta === null ? null : addDays(localDay(d.relativeTo, d.timezone), delta);
@@ -61,9 +61,15 @@ export function validateDate(value: DateFact, input: AnalysisInput): DateFact {
       // the actual date phrase, then verify its local wall time independently.
       const clock = /\b(\d{1,2})(?::(\d{2})(?::(\d{2}))?\s*(am|pm)?|\s*(am|pm))\b/i.exec(phrase);
       const named = /\b(noon|midnight)\b/.exec(phrase);
-      if (!clock && !named) throw new Error('Instant precision requires an explicit sourced time');
-      let hour = clock ? Number(clock[1]) : named![1] === 'noon' ? 12 : 0;
-      const meridiem = clock?.[4] ?? clock?.[5];
+      const spoken = /(?:^|\s)(\d{1,2})\s*(?:baje|बजे)(?=\s|$|[.!।])/iu.exec(phrase);
+      const hindiHours: Record<string, number> = { एक: 1, दो: 2, तीन: 3, चार: 4, पाँच: 5, पांच: 5, छह: 6, सात: 7, आठ: 8, नौ: 9, दस: 10, ग्यारह: 11, बारह: 12 };
+      const hindi = /(एक|दो|तीन|चार|पाँच|पांच|छह|सात|आठ|नौ|दस|ग्यारह|बारह)\s*बजे/u.exec(phrase);
+      if (!clock && !named && !spoken && !hindi) throw new Error('Instant precision requires an explicit sourced time');
+      let hour = clock ? Number(clock[1]) : spoken ? Number(spoken[1]) : hindi ? hindiHours[hindi[1]!]! : named![1] === 'noon' ? 12 : 0;
+      const morning = /\bsubah\b|सुबह/u.test(phrase), evening = /\b(?:shaam|sham|dopahar)\b|शाम|दोपहर/u.test(phrase), night = /\braat\b|रात/u.test(phrase);
+      if (Number(morning) + Number(evening) + Number(night) > 1) throw new Error('Ambiguous sourced clock qualifier');
+      const meridiem = clock?.[4] ?? clock?.[5] ?? (spoken || hindi ? morning || (night && hour === 12) ? 'am' : evening || night ? 'pm' : null : null);
+      if ((spoken || hindi) && !meridiem && hour <= 12) throw new Error('Ambiguous spoken clock requires unresolved precision');
       if (meridiem) { if (hour < 1 || hour > 12) throw new Error('Invalid sourced clock'); hour = hour % 12 + (meridiem.toLowerCase() === 'pm' ? 12 : 0); }
       const minute = Number(clock?.[2] ?? 0), second = Number(clock?.[3] ?? 0);
       if (hour > 23 || minute > 59 || second > 59) throw new Error('Invalid sourced clock');
