@@ -37,6 +37,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   const directory = new URL('../../db/migrations/', import.meta.url);
   const names = (await readdir(directory)).filter((name) => /^\d[\w.-]*\.sql$/.test(name));
   const expectedMigrations = new Map(await Promise.all(names.map(async (name) => [name, createHash('sha256').update(await readFile(new URL(name, directory))).digest('hex')] as const)));
+  let stopping: Promise<void> | null = null;
   let started = false, stopped = false, timer: ReturnType<typeof setTimeout> | null = null, task: Promise<void> | null = null;
   let transports: ReturnType<typeof registerTransports> | null = null;
   let unsubscribe: (() => void) | null = null; const replies = new Set<Promise<void>>(); const abort = new AbortController();
@@ -87,10 +88,26 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
     if (stopped) return;
     task = tick().finally(() => { task = null; if (!stopped) { timer = setTimeout(schedule, 1000); timer.unref(); } });
   }
+  function stop(): Promise<void> {
+    if (stopping) return stopping;
+    stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer);
+    const errors: unknown[] = [];
+    try { unsubscribe?.(); } catch (error) { errors.push(error); } finally { unsubscribe = null; }
+    // Publish one shutdown promise for preClose, root onClose and direct callers.
+    // All captured work drains even if an earlier cleanup action fails.
+    stopping = Promise.allSettled([transports?.close(), task, ...replies]).then((results) => {
+      for (const result of results) if (result.status === 'rejected') errors.push(result.reason);
+      if (errors.length) throw new AggregateError(errors, 'Workflow shutdown failed');
+    });
+    return stopping;
+  }
   return {
     name: 'workflow',
     async register(app) {
       if (unsubscribe || stopped) return;
+      // Fastify onClose runs after active HTTP drains. Begin workflow stop in
+      // preClose so SDK sockets cannot block the cleanup that closes them.
+      app.addHook('preClose', stop);
       transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis }, requireDatabaseReady);
       registerStatus(app, async () => {
         const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
@@ -109,7 +126,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       });
     },
     async start() { if (started || stopped) return; started = true; schedule(); },
-    async stop() { if (stopped) return; stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer); unsubscribe?.(); unsubscribe = null; await transports?.close(); await task; await Promise.allSettled([...replies]); },
+    stop,
     async status() { return { ...state }; },
   };
 }
