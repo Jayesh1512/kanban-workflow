@@ -18,7 +18,8 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. M0-P2 draft review complete; no product edits. M1/M2 pending corrected baseline.
 - M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. M0-I2 draft review complete; no product edits. M3/M4 pending corrected baseline.
 - M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
-- M0-Q2 independent multilingual conversation corpus — assigned to QA; tests/fixtures/relationship-cases.json and fixture documentation only, no product/package edits.
+- M0-Q2 independent multilingual conversation corpus — complete and integrated from `7155e1c`; 35 cases / 38 source revisions. PM independently reran the embedded validator successfully (18 English, 9 Hindi, 8 Hinglish) and diff whitespace check. Fixture validation is not a product/live test.
+- M0-Q3 additional critical draft-contract review — assigned to QA read-only while architect corrects previously reported gaps; executable M0 review follows committed baseline.
 
 ## PM progression protocol
 
