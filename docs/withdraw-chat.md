@@ -12,8 +12,10 @@ Withdrawal stops the shared chat through every connected account. It removes
 imported app messages and their versions, sightings, pending replies, request
 and gap state, search entries, and derived copies. **Telegram messages are not
 deleted.** Agreement and withdrawal history retain actor, time, and identifiers.
-Reinclusion requires a fresh agreement, even with the global agreement setting
-off. Other account owners see who withdrew the shared chat and when.
+Reinclusion requires the account owner to explicitly select Include chat again.
+No participant-agreement statement or checkbox is required, and inclusion does
+not create a participant confirmation record. Other account owners see who
+withdrew the shared chat and when.
 
 Cards with remaining messages keep their lane and stage. Generated text on a
 dependent or unknown-source card, including cards linked only to other chats,
