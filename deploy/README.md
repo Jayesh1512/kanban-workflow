@@ -88,8 +88,15 @@ label and ordinary task collections still use standard v2 pagination.
 
 ## Telegram onboarding and M2 operations
 
-Set `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` in the read-only runtime file or
-process environment. Blank optional Compose values preserve mounted credentials.
+Fresh onboarding defaults to the published `tdl` AppBuiltin application profile,
+reused from the designated reference source (iyear/tdl v0.20.4, not AppDesktop).
+`TELEGRAM_APPLICATION_PROFILE=tdl|custom` can be set in the read-only runtime file
+or process environment. A complete explicit `TELEGRAM_API_ID`/`TELEGRAM_API_HASH`
+pair overrides either profile. Partial pairs are rejected; custom without a pair
+stays unconfigured. Blank optional Compose fields preserve mounted configuration.
+No APP_OWNER, app-registration ownership check or permission/consent gate is added.
+This is public application configuration, not a copied account/session. No existing
+app session, sealed store, account database, key file or history is read or copied.
 Use the local page to request a code, enter it, and enter 2FA when requested.
 The page clears the submitted field; status never returns codes/passwords/hash or
 session contents. An existing session resumes automatically. The actual self ID

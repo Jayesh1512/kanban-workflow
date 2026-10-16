@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { parse } from 'dotenv';
+import { telegramApplication } from './telegram-profile.js';
 import type { RuntimeConfig } from '../shared/ports.js';
 
 const metadata = new WeakMap<RuntimeConfig, { aiEnvReadable: boolean }>();
@@ -21,7 +22,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   const ai = await readEnv(aiEnvPath);
   const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...env };
   // Compose's optional blank fields must not erase mounted Telegram credentials.
-  for (const key of ['TELEGRAM_API_ID', 'TELEGRAM_API_HASH']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
+  for (const key of ['TELEGRAM_APPLICATION_PROFILE', 'TELEGRAM_API_ID', 'TELEGRAM_API_HASH']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
   const str = (key: string, fallback: string) => nonblank(values[key]) ?? fallback;
   const int = (key: string, fallback: number, max = 2_147_483_647) => {
     const raw = nonblank(values[key]);
@@ -47,8 +48,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     databaseUrl: url('DATABASE_URL', 'postgresql://antseed:antseed@127.0.0.1:5432/antseed', ['postgres:', 'postgresql:']),
     timezone, aiEnvPath,
     telegram: {
-      apiId: nonblank(values['TELEGRAM_API_ID']) ? int('TELEGRAM_API_ID', 1) : null,
-      apiHash: nonblank(values['TELEGRAM_API_HASH']), sessionPath: str('TELEGRAM_SESSION_PATH', '/data/telegram/client.session'),
+      ...telegramApplication(values), sessionPath: str('TELEGRAM_SESSION_PATH', '/data/telegram/client.session'),
       historyBatchSize: int('TELEGRAM_HISTORY_BATCH_SIZE', 100, 100), historyMaxBatches: int('TELEGRAM_HISTORY_MAX_BATCHES', 10, 10_000),
     },
     vikunja: {
