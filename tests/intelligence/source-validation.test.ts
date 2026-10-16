@@ -26,6 +26,12 @@ describe('independent identity and precision regressions (no providers)', () => 
     const id = '00000000-0000-4000-8000-000000000008'; input.evidence.push({ ...input.evidence[0]!, id, messageId: 2, excerpt: next.text });
     const value = extractionFixture(); value.contacts[0]!.evidenceIds.push(id); value.contacts[0]!.names = ['Bob']; expect(() => validateExtraction(value, input)).toThrow();
   });
+  it('accepts a target-profile-bound authored company introduction without a redundant company object', () => {
+    const input = forwarded(); input.messages[0]!.forward.originPeer!.names = ['Noor Mehta']; input.messages[0]!.forward.originPeer!.usernames = ['noor']; text(input, 'Noor from Cedar here. We are reviewing commercial terms in this group.');
+    const value = extractionFixture(); value.companies = []; value.companyCandidates = []; value.facts = []; value.contacts[0]!.names = ['Noor Mehta']; value.contacts[0]!.usernames = ['noor']; value.contacts[0]!.roles = []; value.contacts[0]!.phones = ['+11111111111'];
+    expect(validateExtraction(value, input).contacts[0]!.affiliation).toBe('external');
+    value.contacts[0]!.affiliation = 'internal'; expect(() => validateExtraction(value, input)).toThrow();
+  });
   it('retains unknown hidden-forward identity without borrowing outer profile attributes', () => {
     const input = forwarded(); input.messages[0]!.forward.originPeer = null; input.messages[0]!.forward.originName = null;
     expect(() => validateExtraction(extractionFixture(), input)).toThrow('Contact identity');
