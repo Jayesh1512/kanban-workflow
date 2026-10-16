@@ -9,6 +9,7 @@ This is the project-manager checkout. The user explicitly authorized architectur
 - Builder A — Platform & Telegram: `mcp:b09bccca-9a2a-45ad-8ac4-b2539566c557`, branch `antseed/builder-platform`.
 - Builder B — Intelligence & Hermes: `mcp:b8112e15-d80a-4a32-97bb-c3e32184de07`, branch `antseed/builder-intelligence`.
 - QA — Integration & Acceptance: `mcp:82337154-d4c0-4457-a433-cd2d6f210695`, branch `antseed/qa`.
+- Telegram integration reference/contact (user-designated existing thread): `66cc9b30-4836-4f8d-8c6c-b0831923b62c`. Builder A has been told to consult it for targeted Telegram questions; it is not an additional project worker.
 
 These are ordinary top-level T3 chats requested by the user, not delegate_task children. Continue them using t3_thread_send (stable clientRequestId for each assignment), inspect with t3_thread_read, and retain all IDs. Each worker reports completed commits back to the PM using t3_thread_send, which wakes the PM. Do not duplicate work or launch monitors.
 

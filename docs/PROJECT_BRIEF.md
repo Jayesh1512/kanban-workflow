@@ -4,6 +4,8 @@
 
 The user authorized implementation on 2026-10-17 after requesting a plan only earlier. This thread is the project manager. Four separate T3 conversations cover architecture, Builder A (platform/Telegram/Vikunja), Builder B (intelligence/approvals/Hermes), and QA. Work milestone by milestone. The project manager integrates committed work onto main; workers must not modify other checkouts or main. Use reasonable assumptions and continue independent work when credentials or decisions are unavailable. Report limitations accurately.
 
+For Telegram integration questions, the user explicitly designated T3 thread `66cc9b30-4836-4f8d-8c6c-b0831923b62c`. Read it or send targeted questions through the T3 thread tools as needed; this is an existing reference/contact conversation, not a new worker or project thread. Do not share secret values in handoffs.
+
 ## Product requirements
 
 - This is a personal tool for team **AntSeed**. The agent is **Nous Research's Hermes Agent**, not a bespoke Hermis service.
