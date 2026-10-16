@@ -37,6 +37,10 @@ export function messages(list: MessageView[], actions: CardSummary[] | false = f
 }
 function activityLabel(action: string): string {
   const labels: Record<string, string> = {
+    'workflow.configure': 'Partnership workflow configured',
+    'workflow.create': 'Workflow ticket created',
+    'workflow.update': 'Workflow fields corrected',
+    'workflow.move': 'Workflow ticket moved',
     'card.create': 'Deal created',
     'card.update': 'Deal corrected',
     'card.move': 'Deal moved',

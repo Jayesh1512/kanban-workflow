@@ -10,6 +10,8 @@ import {
   createLane,
   getBoard,
   getCard,
+  getWorkflowBoard,
+  getWorkflowTicket,
   listLanes,
   moveCard,
   searchCards,
@@ -36,6 +38,8 @@ import {
   textField,
 } from './shared.ts';
 import { providerReason, providerStatus } from './status.ts';
+import { registerWorkflow, workflowFragment, workflowPage } from './workflow.ts';
+import { workflowControls, workflowSetup } from './workflow-render.ts';
 
 const stagesSchema = z
   .array(z.strictObject({ id: formId.optional(), name: textField, criteria: z.string().max(20000) }))
@@ -79,9 +83,18 @@ function parseLane(body: Record<string, string>) {
   return parsed;
 }
 
+function requireGenericCard(c: WebContext, cardId: number): void {
+  const ctx = c.get('ctx');
+  if (getWorkflowBoard(ctx).lane?.id === getCard(ctx, cardId).laneId)
+    throw new AppError('invalid', 'Open the workflow ticket and use its versioned move or restore form.');
+}
+
 export function registerBoard(app: WebApp, deps: WebDeps): void {
+  registerWorkflow(app);
   const boardPage = (c: WebContext) => {
     const ctx = c.get('ctx');
+    const workflow = getWorkflowBoard(ctx);
+    if (workflow.lane) return workflowPage(c, deps, workflow);
     const board = getBoard(ctx);
     const accounts = deps.host
       .listAccounts(ctx)
@@ -104,18 +117,23 @@ export function registerBoard(app: WebApp, deps: WebDeps): void {
       <header id="status" class="status-strip" data-automatic-off="${Number(threshold >= 1)}" data-pipeline-state="${pipeline.state}" data-pipeline-reason="${pipeline.reason ?? ''}" data-open-review="${board.openReviewCount}" data-movement-state="${pipeline.movement.state}" data-movement-reason="${pipeline.movement.reason ?? ''}"><div><strong>${threshold >= 1 ? 'You approve suggestions before they change the pipeline.' : 'Automatic actions above the review threshold are enabled.'}</strong>${pipeline.pending > 0 ? html`<p>${pipeline.pending} messages awaiting analysis.</p>` : ''}<p><a class="review-link" href="/review">${board.openReviewCount} ${board.openReviewCount === 1 ? 'suggestion to review' : 'suggestions to review'}</a></p>${pipeline.reason || deps.model.blocked ? html`<p class="warning-text">General analysis: ${providerReason(deps.model.blocked ?? pipeline.reason)}. <a href="/settings#ai-status">Check AI settings</a></p>` : pipeline.modelFailure ? html`<p class="warning-text">Last analysis: ${providerReason(pipeline.modelFailure)}. <a href="/review">Review available suggestions</a></p>` : ''}${pipeline.movement.reason ? html`<p class="warning-text">Cross-lane suggestions: ${providerReason(pipeline.movement.reason)}. Manual moves remain available.</p>` : ''}<details><summary>AI status &amp; approval policy</summary><p>${threshold >= 1 ? 'Automatic actions are off.' : ''} ${threshold >= 1 ? 'Decisions wait for human review.' : 'Every cross-lane move still needs human review.'} Threshold: ${threshold}. <a href="/review">${board.openReviewCount} stored review items${reviewAvailable ? '' : ' · queue unavailable'}</a></p><p>To change automatic behavior, adjust the <a href="/settings#review-threshold">review threshold in Settings</a>. Confidence has not been measured. Cross-lane moves always need human approval; lowering the threshold does not configure providers.</p>${providerStatus(deps)}</details></div></header>
       ${counts === null ? '' : html`<aside id="my-chats" class="chat-summary" data-connected="${Number(counts.connected)}" data-undecided="${counts.undecidedRecent ?? ''}" data-out-of-date="${counts.agreementOutOfDate}"><strong>Your chat choices</strong><span>${counts.undecidedRecent === null ? 'Undecided chat count is unknown.' : `${counts.undecidedRecent} recent undecided chats.`} ${counts.agreementOutOfDate} confirmations out of date.</span>${accounts.map((a) => html`<a href="/settings/accounts/${a.id}/chats">${a.label}: choose chats</a>`)}</aside>`}
       ${board.lanes.every((l) => l.cards.length === 0) ? html`<section class="empty-state"><h2>No active deals yet</h2>${board.openReviewCount > 0 ? html`<p>Review the waiting suggestions to decide what belongs on your pipeline.</p><a class="button" href="/review">Review suggestions</a>` : !accounts.length ? html`<p>Connect your account, then choose which chats to include. Relevant conversations can become deal suggestions for your review.</p><a class="button" href="/settings/accounts">Connect an account</a>` : counts && !counts.connected ? html`<p>Your account is disconnected. Reconnect to receive new messages, or create a deal manually.</p><a class="button" href="/settings/accounts">Check your connection</a>` : counts?.undecidedRecent ? html`<p>You have chats waiting for a choice. Include only the conversations you want to share; relevant messages can lead to deal suggestions.</p><a class="button" href="/settings/accounts">Choose included chats</a>` : html`<p>No suggestions are waiting. Relevant new messages from included chats can lead to deal suggestions. You can also create a deal manually.</p><a class="button" href="/settings/accounts">Review included chats</a>`}</section>` : ''}
-      <main id="board" data-version="${board.version}">${boardLanes(board)}</main>
+      <main id="board" data-version="${board.version}">${boardLanes(board)}</main>${workflowSetup()}
       <details id="create-card" class="form-section disclosure"><summary>Create a deal manually</summary><p class="muted">Use this when you already know the deal. You can attach supporting messages from its detail page.</p>${lanes.length ? html`<form method="post" action="/cards" class="stack-form"><label>Title<input name="title" required></label><label>Lane<select name="laneId" required>${lanes.map((l) => html`<option value="${l.id}">${l.name}</option>`)}</select></label><p class="muted">Starts in the selected lane's first stage. You can move it from the detail page.</p><label>Summary<textarea name="summary" rows="3"></textarea></label><label>Company<select name="companyId"><option value="">Unknown</option>${searchCompanies(ctx, { limit: Number.MAX_SAFE_INTEGER }).map((co) => html`<option value="${co.id}">${co.name}</option>`)}</select></label><button>Create deal</button></form>` : html`<p><a href="/lanes">Create a lane first</a> with its SOP and stages.</p>`}</details>`,
       ),
     );
   };
   app.get('/', boardPage);
   app.get('/board', boardPage);
-  app.get('/board/fragment', (c) => c.html(boardLanes(getBoard(c.get('ctx')))));
+  app.get('/board/fragment', (c) => {
+    const workflow = getWorkflowBoard(c.get('ctx'));
+    return c.html(workflow.lane ? workflowFragment(c, workflow) : boardLanes(getBoard(c.get('ctx'))));
+  });
   app.get('/board/version', (c) => c.json({ version: boardVersion(c.get('ctx').db) }));
   app.get('/cards/:id', (c) => {
     const ctx = c.get('ctx');
     const card = getCard(ctx, id(c));
+    const workflow = getWorkflowBoard(ctx);
+    const ticket = workflow.lane?.id === card.laneId ? getWorkflowTicket(ctx, card.id) : null;
     const lanes = listLanes(ctx);
     const lane = listLanes(ctx, { includeArchived: true }).find((l) => l.id === card.laneId);
     return c.html(
@@ -123,8 +141,8 @@ export function registerBoard(app: WebApp, deps: WebDeps): void {
         card.title,
         html`<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/board">Pipeline</a><span>${lane?.name ?? 'Unknown lane'} / ${lane?.stages.find((s) => s.id === card.stageId)?.name ?? 'Unknown stage'}</span></nav>${pageHeading(card.title, card.archived ? 'Archived deal' : 'Deal details')}
       <main class="detail-layout"><div class="evidence-column"><section><h2>Summary</h2><p class="prose">${card.summary || 'No summary recorded.'}</p>${card.hasGap ? html`<p class="notice">This card has a history gap. Its linked messages may be incomplete.</p>` : ''}</section><section><h2>Linked messages <span class="count">${card.messages.length}</span></h2><p class="muted">In time order, from the stored conversations.</p>${messages(card.messages, searchCards(ctx, { limit: Number.MAX_SAFE_INTEGER }).cards)}</section><details class="disclosure"><summary>Known-company references</summary>${references(card.references)}</details><details class="disclosure"><summary>History &amp; human corrections</summary>${logEntries(card.history)}</details></div>
-      <aside class="detail-sidebar"><section><h2>Context</h2>${cardMetadata(card)}</section><details class="disclosure" id="edit-deal"><summary>Edit deal</summary><form method="post" action="/cards/${card.id}"><label>Title<input name="title" value="${card.title}" required></label><label>Summary<textarea name="summary" rows="4">${card.summary}</textarea></label><label>Company<select name="companyId"><option value="">Unknown</option>${searchCompanies(ctx, { limit: Number.MAX_SAFE_INTEGER }).map((co) => html`<option value="${co.id}" ${co.id === card.company?.id ? html`selected` : ''}>${co.name}</option>`)}</select></label><label>Correction reason<input name="reason" required></label><button>Save correction</button></form></details>
-      ${!card.archived ? html`<details class="disclosure"><summary>Move deal</summary><form method="post" action="/cards/${card.id}/move"><label>Lane / stage<select name="stageId">${lanes.map((l) => html`<optgroup label="${l.name}">${l.stages.map((s) => html`<option value="${s.id}" ${s.id === card.stageId ? html`selected` : ''}>${s.name}</option>`)}</optgroup>`)}</select></label><label>Reason<input name="reason" required></label><button>Move deal</button></form></details>` : ''}<details class="disclosure"><summary>Archive &amp; restore</summary><form method="post" action="/cards/${card.id}/${card.archived ? 'unarchive' : 'archive'}"><p class="muted">${card.archived ? 'Restore the card to its lane.' : 'Archive keeps the card and its evidence available.'}</p><button class="secondary">${card.archived ? 'Restore deal' : 'Archive deal'}</button></form></details></aside></main>`,
+      <aside class="detail-sidebar">${ticket ? workflowControls(ticket, workflow) : ''}<section><h2>Context</h2>${cardMetadata(card)}</section><details class="disclosure" id="edit-deal"><summary>Edit deal</summary><form method="post" action="/cards/${card.id}">${ticket ? hidden('version', ticket.version) : ''}<label>Title<input name="title" value="${card.title}" required></label><label>Summary<textarea name="summary" rows="4">${card.summary}</textarea></label><label>Company<select name="companyId"><option value="">Unknown</option>${searchCompanies(ctx, { limit: Number.MAX_SAFE_INTEGER }).map((co) => html`<option value="${co.id}" ${co.id === card.company?.id ? html`selected` : ''}>${co.name}</option>`)}</select></label><label>Correction reason<input name="reason" required></label><button>Save correction</button></form></details>
+      ${!ticket && !card.archived ? html`<details class="disclosure"><summary>Move deal</summary><form method="post" action="/cards/${card.id}/move"><label>Lane / stage<select name="stageId">${lanes.map((l) => html`<optgroup label="${l.name}">${l.stages.map((s) => html`<option value="${s.id}" ${s.id === card.stageId ? html`selected` : ''}>${s.name}</option>`)}</optgroup>`)}</select></label><label>Reason<input name="reason" required></label><button>Move deal</button></form></details>` : ''}${!ticket ? html`<details class="disclosure"><summary>Archive &amp; restore</summary><form method="post" action="/cards/${card.id}/${card.archived ? 'unarchive' : 'archive'}"><p class="muted">${card.archived ? 'Restore the card to its lane.' : 'Archive keeps the card and its evidence available.'}</p><button class="secondary">${card.archived ? 'Restore deal' : 'Archive deal'}</button></form></details>` : ''}</aside></main>`,
       ),
     );
   });
@@ -138,21 +156,30 @@ export function registerBoard(app: WebApp, deps: WebDeps): void {
   });
   app.post('/cards/:id', async (c) => {
     const p = parse(
-      z.strictObject({ title: textField, summary: z.string().max(50000), companyId: optionalId, reason: textField }),
+      z.strictObject({
+        title: textField,
+        summary: z.string().max(50000),
+        companyId: optionalId,
+        reason: textField,
+        version: formId.optional(),
+      }),
       await form(c),
     );
     const cardId = id(c);
-    updateCard(
-      c.get('ctx'),
-      cardId,
-      { title: p.title, summary: p.summary, companyId: p.companyId },
-      { reason: p.reason },
-    );
+    const ctx = c.get('ctx');
+    ctx.db.tx(() => {
+      if (getWorkflowBoard(ctx).lane?.id === getCard(ctx, cardId).laneId) {
+        if (getWorkflowTicket(ctx, cardId).version !== p.version)
+          throw new AppError('conflict', 'Stale ticket version. Reopen the ticket before saving a correction.');
+      }
+      updateCard(ctx, cardId, { title: p.title, summary: p.summary, companyId: p.companyId }, { reason: p.reason });
+    });
     return c.redirect(`/cards/${cardId}`, 303);
   });
   app.post('/cards/:id/move', async (c) => {
     const p = parse(z.strictObject({ stageId: formId, reason: textField }), await form(c));
     const cardId = id(c);
+    requireGenericCard(c, cardId);
     moveCard(c.get('ctx'), cardId, { stageId: p.stageId }, { reason: p.reason });
     return c.redirect(`/cards/${cardId}`, 303);
   });
@@ -163,6 +190,7 @@ export function registerBoard(app: WebApp, deps: WebDeps): void {
     app.post(`/cards/:id/${action}`, async (c) => {
       parse(z.strictObject({}), await form(c));
       const cardId = id(c);
+      requireGenericCard(c, cardId);
       fn(c.get('ctx'), cardId);
       return c.redirect(`/cards/${cardId}`, 303);
     });

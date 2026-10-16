@@ -55,7 +55,16 @@ export function createWeb(deps: WebDeps): {
     return c.html(
       shell(
         'Request could not be completed',
-        html`<main class="error-page"><h1>Request could not be completed</h1><p role="alert">${message}</p><p>Nothing was confirmed by this response. Reopen the latest page and check its current state before trying again.</p><p><a href="/review">Review current suggestions</a> · <a href="/settings/accounts">Manage connections</a></p><a href="${c.req.path === '/login' ? '/login' : '/board'}">${c.req.path === '/login' ? 'Return to sign in' : 'Return to board'}</a></main>`,
+        html`<main class="error-page"><h1>Request could not be completed</h1><p role="alert">${message}</p><p>Nothing was confirmed by this response. Reopen the latest page and check its current state before trying again.</p><p>${
+          expected &&
+          error.code === 'conflict' &&
+          /^\/(?:workflow\/tickets|cards)\/[1-9]\d*(?:\/move)?$/.test(c.req.path)
+            ? html`<a href="/cards/${c.req.path
+                .split('/')
+                .filter(Boolean)
+                .at(c.req.path.startsWith('/workflow/') ? 2 : 1)}">Reload current ticket before retrying</a>`
+            : ''
+        }</p><p><a href="/review">Review current suggestions</a> · <a href="/settings/accounts">Manage connections</a></p><a href="${c.req.path === '/login' ? '/login' : '/board'}">${c.req.path === '/login' ? 'Return to sign in' : 'Return to board'}</a></main>`,
         '/board',
         Boolean(c.get('ctx')),
       ),
