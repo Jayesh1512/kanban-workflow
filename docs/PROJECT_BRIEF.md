@@ -40,6 +40,8 @@ The user authorized implementation on 2026-10-17 after requesting a plan only ea
 - Create backend Dockerfile (including mtcute native SQLite runtime compatibility) and appropriate Vikunja setup image/wrapper only as needed. Persistent volumes for database, Telegram session and Vikunja files. Repeatable migrations/bootstrap; restarting never duplicates projects/buckets/tasks.
 - Runtime AI configuration source: `/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env`. Do not print/commit/bake key values into images. Allow portable path override.
 - Known config: MODEL_PROVIDER=openai, OPENAI_MODEL=gpt-6.1-sol, MOVEMENT_PROVIDER=jev, JEV_MODEL=typesafe-ai/jev, JEV_ENDPOINT=https://ai-gateway.vercel.sh/typesafe/v1/systemone. Keys and timeout/retry settings exist in that file; validity not yet tested.
+- User explicitly requires **Vercel AI Gateway for Jev**. Use the configured Gateway endpoint/credential contract; do not substitute direct TypeSafe hosting. Verify with a bounded synthetic live probe and preserve provider-specific errors accurately.
+- Pin the mtcute dependency closure with the lockfile/compatible package overrides as needed: @mtcute/node 0.32.4 has caret dependencies that could otherwise resolve later core/parser versions.
 - Host has Docker Engine 29.4.0 available, Node 26.4.0, npm 11.17.0. Choose a pinned compatible container runtime, not necessarily host Node.
 - Avoid new frontend frameworks or a polished dashboard. Existing Vikunja UI plus minimal backend-served onboarding/operations pages and Telegram controls.
 - No public deployment or PR required. Commit bounded milestones on your own branch for PM integration.

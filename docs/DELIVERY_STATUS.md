@@ -43,3 +43,5 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - Initial requirements committed as `bf76f1b`.
 - Docker Engine 29.4.0 responds on host; Node 26.4.0 and npm 11.17.0 available.
 - AI configuration exists at the private path in PROJECT_BRIEF.md; keys were not printed or copied into the repository.
+- User explicitly reaffirmed the supplied AI env file and mandated Vercel AI Gateway for Jev. Requirement sent to all four chats.
+- Builder A reports live registry verification of vikunja/vikunja:2.7.0 for amd64/arm64 and identified caret dependencies beneath @mtcute/node 0.32.4; exact native/API probes remain underway.
