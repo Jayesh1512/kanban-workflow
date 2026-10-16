@@ -8,9 +8,13 @@ import { ensureTicketTx, getCompanyTx, getContactTx, refreshInferredActions, rep
 
 export function inputHash(input: AnalysisInput): string { return hash({ ...input, jobId: null, schemaVersion: EXTRACTION_VERSION }); }
 const idFrom = (value: unknown) => { const h = hash(value); return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`; };
+export interface AnalysisHooks {
+  onDecision?: (tx: SqlExecutor, input: { jobId: string; ticketId: string; expectedStageVersion: number; decision: JevDecision }) => Promise<void>;
+  onReplay?: (tx: SqlExecutor) => Promise<void>;
+}
 
 export class SqlAnalysisQueue implements AnalysisQueue {
-  constructor(readonly db: Database, readonly clock: Clock = { now: () => new Date() }, readonly timezone = 'Asia/Kolkata') {}
+  constructor(readonly db: Database, readonly clock: Clock = { now: () => new Date() }, readonly timezone = 'Asia/Kolkata', readonly hooks: AnalysisHooks = {}) {}
   async claim(input: { workerId: string; leaseMs: number }): Promise<AnalysisJob | null> {
     assert(input.workerId.length > 0 && Number.isFinite(input.leaseMs) && input.leaseMs > 0 && input.leaseMs <= 3_600_000, 'validation', 'Invalid analysis lease');
     const now = this.clock.now(); const token = randomUUID();
@@ -177,6 +181,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
         const latest = extraction.substantive ? input.messages.filter((m) => evidenceIds.some((id) => input.evidence.some((e) => e.id === id && e.messageId === m.id))).map((m) => m.sentAt).sort().at(-1) ?? null : null;
         await tx.query(`UPDATE tickets SET summary=$2,workstream=COALESCE($3,workstream),latest_substantive_at=GREATEST(latest_substantive_at,$4::timestamptz),updated_at=now() WHERE id=$1`, [ticket.id, extraction.summary, decision.workstream, latest]);
         await refreshInferredActions(tx, ticket.id);
+        if (this.hooks.onDecision) await this.hooks.onDecision(tx, { jobId, ticketId: ticket.id, expectedStageVersion: input.ticket?.stageVersion ?? 0, decision });
       } else if (!manual) {
         await tx.query('DELETE FROM mapping_candidate_evidence WHERE candidate_id IN(SELECT id FROM mapping_candidates WHERE chat_id=$1)', [input.chat.id]);
         await tx.query('DELETE FROM mapping_candidates WHERE chat_id=$1', [input.chat.id]);
@@ -186,7 +191,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
           await links(tx, 'mapping_candidate_evidence', 'candidate_id', row.id, candidate.evidenceIds);
         }
       }
-      // Decision is durable evidence only. M3.2 will consume it through the proposal service.
+      // Proposal intent (when configured) and decision commit atomically; neither authorizes a move.
       await this.fenced(tx, jobId, claimToken);
       const updated = await tx.query(`UPDATE analysis_jobs SET decision=$2::jsonb,jev_provenance=$3::jsonb,jev_diagnostics=$4::jsonb,status='completed',lease_until=NULL,worker_id=NULL,last_error=NULL,updated_at=$5
         WHERE id=$1 AND worker_id=$6 AND status='running' AND lease_until>$5 RETURNING id`, [jobId, JSON.stringify(decision), JSON.stringify(provenance), JSON.stringify(decision.diagnostics), this.clock.now(), claimToken]);
@@ -207,6 +212,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
   }
   async replayUnavailable(input: { idempotencyKey: string; chatId?: string }): Promise<{ queued: number }> {
     return command(this.db, 'analysis:replay', input.idempotencyKey, input, async (tx) => {
+      await this.hooks.onReplay?.(tx);
       // Changed mappings/policies are never revived under obsolete job snapshots.
       const result = await tx.query(`UPDATE analysis_jobs j SET status='pending',retry_at=NULL,last_error=NULL WHERE j.status='provider_unavailable'
         AND ($1::bigint IS NULL OR j.chat_id=$1) AND EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND c.inclusion='included' AND NOT c.is_control
