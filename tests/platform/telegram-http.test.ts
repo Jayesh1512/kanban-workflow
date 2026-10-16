@@ -6,7 +6,7 @@ import { createPlatformModule } from '../../src/platform/module.js';
 
 describe('platform onboarding construction before readiness', () => {
   it('registers canonical chat routes without SQL/native/network side effects; requests report unavailable', async () => {
-    const config = await loadRuntimeConfig({ AI_ENV_PATH: '/nonexistent-antseed-m2.env', DATABASE_URL: 'postgresql://unused:unused@127.0.0.1:1/unused' });
+    const config = await loadRuntimeConfig({ AI_ENV_PATH: '/nonexistent-antseed-m2.env', TELEGRAM_APPLICATION_PROFILE: 'custom', DATABASE_URL: 'postgresql://unused:unused@127.0.0.1:1/unused' });
     const module = await createPlatformModule(config), query = vi.spyOn(module.services.db, 'query');
     const app = await buildApp({ modules: [{ ...module, start: async () => {} }] });
     try {
