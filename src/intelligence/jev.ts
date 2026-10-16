@@ -53,6 +53,7 @@ export function validateAnswers(raw: unknown, request: ReturnType<typeof buildJe
     if (Object.keys(a.probabilities).length !== expected.length || expected.some((k) => a.probabilities[k] === undefined)) throw new Error('Unavailable or invalid native distribution');
     if (Math.abs(Object.values(a.probabilities).reduce((sum, p) => sum + p, 0) - 1) > 0.015) throw new Error('Distribution not normalized');
     if (a.type === 'choice' && (!expected.includes(a.choice) || a.probabilities[a.choice]! + 0.001 < Math.max(...Object.values(a.probabilities)))) throw new Error('Invalid selected choice');
+    if (a.type === 'score' && Math.abs(a.score - Object.entries(a.probabilities).reduce((sum, [level, probability]) => sum + Number(level) * probability, 0)) > 0.02) throw new Error('Score disagrees with native weighted distribution');
     if (a.type === 'score' && (a.score < 0 || a.score > expected.length - 1 || expected.some((k) => a.legend[k] !== (q.type === 'score' ? q.criteria[Number(k)] : undefined)))) throw new Error('Invalid score scale');
   }
   return result;

@@ -120,3 +120,11 @@ describe('semantic validation beyond provider schemas', () => {
     expect(() => validateAnswers(raw, buildJevRequest({ ...inputFixture(), extraction: extractionFixture() }, jevConfig.model))).toThrow();
   });
 });
+
+// The native score contract defines score as the probability-weighted level mean.
+it('rejects contradictory native urgency scores while allowing small numeric rounding', () => {
+  const input = inputFixture(), extraction = extractionFixture(); const request = buildJevRequest({ ...input, extraction }, jevConfig.model); const raw = responseFixture(input, extraction);
+  raw.answers.urgency!.score = 3; expect(() => validateAnswers(raw, request)).toThrow('weighted distribution');
+  raw.answers.urgency!.probabilities = { '0': 0, '1': 0.5, '2': 0.5, '3': 0 }; raw.answers.urgency!.score = 1.5; expect(validateAnswers(raw, request).answers.urgency).toMatchObject({ score: 1.5 });
+  raw.answers.urgency!.score = 1.501; expect(() => validateAnswers(raw, request)).not.toThrow();
+});
