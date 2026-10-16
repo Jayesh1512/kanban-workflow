@@ -15,8 +15,8 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 ## Current assignments
 
 - M0 architecture/contracts/foundation — Architecture Builder, running.
-- M0-P verify mtcute/Vikunja deployment and actual APIs — Builder A, running; docs/PLATFORM_RESEARCH.md only.
-- M0-I verify Jev/OpenAI/Hermes contracts — Builder B, running; docs/INTELLIGENCE_RESEARCH.md only. Start confirmed.
+- M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. Builder A assigned bounded read-only review of architect draft before M1/M2.
+- M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. Builder B assigned bounded read-only review of architect draft before M3/M4.
 - M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
 - M0-Q2 independent multilingual conversation corpus — assigned to QA; tests/fixtures/relationship-cases.json and fixture documentation only, no product/package edits.
 
@@ -48,3 +48,4 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - Builder A reports live registry verification of vikunja/vikunja:2.7.0 for amd64/arm64 and identified caret dependencies beneath @mtcute/node 0.32.4; exact native/API probes remain underway.
 - Builder B reports a successful synthetic OpenAI gpt-6.1-sol strict-schema Responses API request (HTTP 200), but Vercel Gateway Jev returned HTTP 403 `no_providers_available` / `RestrictedModelsError`, saying paid Gateway credits are required; no provider call was attempted. A final private configured-credential selection check is assigned. No direct TypeSafe fallback is authorized. Implementation/QA continue independently, preserving queued analysis and exposing provider unavailability honestly.
 - Credential selection check complete: JEV_API_KEY is empty; AI_GATEWAY_API_KEY is populated and was correctly used. No alternate nonempty key or second entitlement request. Ensure configuration ignores blank values. Live Jev success is externally blocked by the Gateway credit restriction; it is not a code permission check.
+- Both research documents reviewed by PM and integrated. Platform research includes actual Vikunja CLI/API reconciliation/task/label/readback and ARM64 native SQLite persistence probes; PostgreSQL Compose/restarts and live Telegram still unverified. Intelligence research confirms local Nous Hermes v0.21.3 availability; actual MCP/Hermes end-to-end remains pending implementation.
