@@ -35,7 +35,7 @@ test('R31 actual HTTP only deletes after exact human confirmation/session/Origin
     confirmation,
     /required>I confirm withdrawal, deletion of this chat’s imported app data, and the app-wide cleanup across other chats described above/,
   );
-  assert.match(confirmation, /You will need a new agreement/);
+  assert.match(confirmation, /You can include the chat again/);
   assert.doesNotMatch(page, /withdrawal is unavailable/);
   for (const fields of [{}, { confirm: 'on' }, { confirm: 'withdraw', unexpected: 'value' }] as Record<
     string,
@@ -94,17 +94,14 @@ test('R31 actual HTTP only deletes after exact human confirmation/session/Origin
   for (const markup of [ownPage, otherPage]) {
     assert.match(markup, /withdrawn/);
     assert.match(markup, /Withdrawn by alice/);
-    assert.match(markup, /Agreement records/);
+    assert.doesNotMatch(markup, /Agreement records/);
   }
   setSetting(f.ctx, 'require_agreement', false);
   const reinclude = `/settings/accounts/${f.alice}/chats/include`;
   assert.equal(
-    (await h.post(reinclude, { chatKey: 'selected', company: '', agreedWordingVersion: '' }, { cookie })).status,
+    (await h.post(reinclude, { chatKey: 'selected', company: '', agreedWordingVersion: '999' }, { cookie })).status,
     422,
   );
-  assert.equal(
-    (await h.post(reinclude, { chatKey: 'selected', company: '', agreedWordingVersion: '1' }, { cookie })).status,
-    303,
-  );
+  assert.equal((await h.post(reinclude, { chatKey: 'selected', company: '' }, { cookie })).status, 303);
   await h.app.host.settle();
 });

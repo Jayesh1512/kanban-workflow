@@ -88,7 +88,7 @@ test('R31 callback only: withdraw all accounts, retain message IDs/company/agree
   assert.equal(listing[0]?.withdrawnBy, 'alice');
   setSetting(r.ctx(), 'require_agreement', false);
   assert.throws(
-    () => r.host.includeChat(r.ctx('bob'), bob, 'shared', { agreedWordingVersion: null, company: null }),
+    () => r.host.includeChat(r.ctx('bob'), bob, 'shared', { agreedWordingVersion: 999, company: null }),
     /agreement/,
   );
   assert.equal(r.h.db.get<{ n: number }>("SELECT count(*) AS n FROM action_log WHERE action='chat.withdraw'")?.n, 0); // D1 owns the single final log.

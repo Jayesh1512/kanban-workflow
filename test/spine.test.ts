@@ -54,7 +54,7 @@ test('F1 twelve-message empty-DB threshold1 proposal -> named HTTP acceptance ->
   const listing = await h.app.host.listChats(ctx, account);
   assert.equal(listing.length, 2);
   assert.throws(
-    () => h.app.host.includeChat(ctx, account, 'client', { agreedWordingVersion: null, company: null }),
+    () => h.app.host.includeChat(ctx, account, 'client', { agreedWordingVersion: 999, company: null }),
     /agreement/,
   );
   h.app.host.includeChat(ctx, account, 'client', { agreedWordingVersion: 1, company: null });

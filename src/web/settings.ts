@@ -28,7 +28,7 @@ export function registerSettings(app: WebApp, deps: WebDeps): void {
     return c.html(
       shell(
         'Settings',
-        html`${pageHeading('Settings', 'Manage your connections, check AI status, and adjust team settings.')}<nav class="section-nav" aria-label="Settings"><a href="/settings/accounts">Your connections &amp; included chats</a><a href="/settings/teammates">Teammates</a><a href="/settings/credentials">Agent access (MCP)</a></nav><main><section class="setup-summary"><h2>Start with your conversations</h2><p>Connect your Telegram account and choose the chats to include. Connection alone does not include any chat.</p><a href="/settings/accounts">Manage your connections</a></section>${providerDetails(deps, Boolean(getWorkflowBoard(ctx).lane))}<details class="disclosure settings-advanced" id="team-settings"><summary>Advanced team settings</summary><section><h2>Review &amp; data policy</h2><form method="post" action="/settings"><label for="review-threshold">Review threshold<input id="review-threshold" type="number" name="review_threshold" min="0" max="1" step="0.01" value="${getSetting<number>(ctx.db, 'review_threshold')}" required></label><p class="muted">At 1, every decision waits for review. Lowering it permits automatic actions whose model score is strictly above the threshold. Cross-lane moves always need human approval. Model confidence has not been measured.</p><label class="check"><input type="checkbox" name="require_agreement" ${getSetting<boolean>(ctx.db, 'require_agreement') ? html`checked` : ''}>Require a statement of agreement for each included chat</label><label class="check"><input type="checkbox" name="keep_deleted_text" ${getSetting<boolean>(ctx.db, 'keep_deleted_text') ? html`checked` : ''}>Keep the text of messages marked deleted</label><label>Role categories (one per line)<textarea name="role_categories" rows="8" required>${getSetting<string[]>(ctx.db, 'role_categories').join('\n')}</textarea></label><p class="muted">Include “unknown”. Categories must be unique.</p><button>Save settings</button></form><section><h2>Access from other machines</h2><p class="prose">Passwords and MCP credentials travel unencrypted unless a TLS proxy is placed in front of this server. Configure TLS before exposing it to other machines.</p></section></section></details></main>`,
+        html`${pageHeading('Settings', 'Manage your connections, check AI status, and adjust team settings.')}<nav class="section-nav" aria-label="Settings"><a href="/settings/accounts">Your connections &amp; included chats</a><a href="/settings/teammates">Teammates</a><a href="/settings/credentials">Agent access (MCP)</a></nav><main><section class="setup-summary"><h2>Start with your conversations</h2><p>Connect your Telegram account and choose the chats to include. Connection alone does not include any chat.</p><a href="/settings/accounts">Manage your connections</a></section>${providerDetails(deps, Boolean(getWorkflowBoard(ctx).lane))}<details class="disclosure settings-advanced" id="team-settings"><summary>Advanced team settings</summary><section><h2>Review &amp; data policy</h2><form method="post" action="/settings"><label for="review-threshold">Review threshold<input id="review-threshold" type="number" name="review_threshold" min="0" max="1" step="0.01" value="${getSetting<number>(ctx.db, 'review_threshold')}" required></label><p class="muted">At 1, every decision waits for review. Lowering it permits automatic actions whose model score is strictly above the threshold. Cross-lane moves always need human approval. Model confidence has not been measured.</p><label class="check"><input type="checkbox" name="keep_deleted_text" ${getSetting<boolean>(ctx.db, 'keep_deleted_text') ? html`checked` : ''}>Keep the text of messages marked deleted</label><label>Role categories (one per line)<textarea name="role_categories" rows="8" required>${getSetting<string[]>(ctx.db, 'role_categories').join('\n')}</textarea></label><p class="muted">Include “unknown”. Categories must be unique.</p><button>Save settings</button></form><section><h2>Access from other machines</h2><p class="prose">Passwords and MCP credentials travel unencrypted unless a TLS proxy is placed in front of this server. Configure TLS before exposing it to other machines.</p></section></section></details></main>`,
         '/settings',
       ),
     );
@@ -37,7 +37,7 @@ export function registerSettings(app: WebApp, deps: WebDeps): void {
     const p = parse(
       z.strictObject({
         review_threshold: z.string().min(1).transform(Number).pipe(z.number().finite().min(0).max(1)),
-        require_agreement: checkField,
+        require_agreement: checkField.optional(),
         keep_deleted_text: checkField,
         role_categories: z
           .string()
@@ -60,7 +60,7 @@ export function registerSettings(app: WebApp, deps: WebDeps): void {
     );
     const ctx = c.get('ctx');
     ctx.db.tx(() => {
-      for (const [key, value] of Object.entries(p)) setSetting(ctx, key, value);
+      for (const [key, value] of Object.entries(p)) if (value !== undefined) setSetting(ctx, key, value);
     });
     return c.redirect('/settings', 303);
   });

@@ -148,7 +148,7 @@ test('R5.4 new event inserts unknown cached chat, owner recent count is honest a
   assert.deepEqual(h.app.host.chatCounts(alice), { connected: false, undecidedRecent: null, agreementOutOfDate: 0 });
 });
 
-test('R5.5/6 statement exact/default-on/off; exclusion keeps durable history; R18.8 first-message human named company and ID-only include log', async (t) => {
+test('legacy explicit statement validation and audit; exclusion keeps durable history; R18.8 first-message human named company and ID-only include log', async (t) => {
   const h = await fixtureApp(setup(['selected']).concat(delivery('alice', 'selected', message(1))));
   t.after(async () => {
     await h.app.stop();
@@ -162,7 +162,7 @@ test('R5.5/6 statement exact/default-on/off; exclusion keeps durable history; R1
     "The people in this chat have agreed that its messages may be stored on my team's board, read by my teammates, and analysed by software. I will withdraw the chat if any of them withdraws that agreement, or if someone joins who has not agreed.",
   );
   assert.throws(
-    () => h.app.host.includeChat(ctx, id, 'selected', { agreedWordingVersion: null, company: 'Named firm' }),
+    () => h.app.host.includeChat(ctx, id, 'selected', { agreedWordingVersion: 999, company: 'Named firm' }),
     /agreement/,
   );
   h.app.host.includeChat(ctx, id, 'selected', { agreedWordingVersion: 1, company: 'Named firm' });

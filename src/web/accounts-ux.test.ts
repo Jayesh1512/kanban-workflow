@@ -185,7 +185,7 @@ test('Accounts native HTML hides enhancement tools, escapes long identities and 
   assert.doesNotMatch(page, /data-chat-row[^>]* hidden/);
   assert.match(page, /<summary>Include chat<\/summary><form method="post"/);
   assert.match(page, /name="company"/);
-  assert.match(page, /name="agreedWordingVersion" value="1" required/);
+  assert.doesNotMatch(page, /name="agreedWordingVersion"|The people in this chat have agreed/);
   assert.equal((await h.get(path, { cookie: h.cookieFor('jordan') })).status, 403);
   assert.equal(
     (await h.post(`${path}/include`, { chatKey: 'excluded', company: '', agreedWordingVersion: '1' }, { cookie }))

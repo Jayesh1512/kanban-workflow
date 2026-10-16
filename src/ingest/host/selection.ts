@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { getSetting } from '../../auth/index.ts';
 import type { Host, Id } from '../../contracts/index.ts';
 import { AppError, IdSchema } from '../../contracts/index.ts';
 import { ensureCompany, setContactCompany } from '../../graph/index.ts';
@@ -60,25 +59,11 @@ export function createSelection(
           chatKey,
         );
         if (previous?.decision === 'included') throw new AppError('conflict', 'Chat already included');
-        const ch = s.db.get<{ withdrawn_at: string | null }>(
-          'SELECT withdrawn_at FROM chat WHERE channel=? AND chat_key=?',
-          a.channel,
-          chatKey,
-        );
-        const last = s.db.get<{ kind: string }>(
-          'SELECT kind FROM chat_agreement WHERE account_id=? AND channel=? AND chat_key=? ORDER BY id DESC LIMIT 1',
-          a.id,
-          a.channel,
-          chatKey,
-        );
-        const required =
-          getSetting<boolean>(s.db, 'require_agreement') ||
-          last?.kind === 'withdrawn' ||
-          previous?.decision === 'withdrawn' ||
-          ch?.withdrawn_at != null;
-        if (required && i.agreedWordingVersion !== agreementWording().version)
-          throw new AppError('invalid', 'Statement of agreement required');
-        if (required) agree(s, a, chatKey);
+        // Inclusion records the owner's selection, not an assertion about participants.
+        // Preserve explicit legacy confirmations without inventing one for the new UI.
+        if (i.agreedWordingVersion !== null && i.agreedWordingVersion !== agreementWording().version)
+          throw new AppError('invalid', 'Unsupported agreement wording version');
+        if (i.agreedWordingVersion !== null) agree(s, a, chatKey);
         const companyId = i.company === null ? null : ensureCompany(ctx, i.company);
         s.db.run(
           'INSERT INTO chat(channel,chat_key,kind,title,named_company_id,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT(channel,chat_key) DO UPDATE SET title=excluded.title,withdrawn_at=NULL,withdrawn_by=NULL,named_company_id=coalesce(excluded.named_company_id,chat.named_company_id)',
@@ -120,7 +105,7 @@ export function createSelection(
           action: 'chat.include',
           subjectKind: 'chat',
           subjectId: id,
-          after: { accountId: a.id, companyId, agreedWordingVersion: required ? agreementWording().version : null },
+          after: { accountId: a.id, companyId, agreedWordingVersion: i.agreedWordingVersion },
         });
         record(ctx, {
           action: 'chat.sync_queue',
@@ -143,7 +128,7 @@ export function createSelection(
           chatKey,
         );
         if (selection?.decision === 'withdrawn')
-          throw new AppError('conflict', 'Chat withdrawn; fresh agreement required');
+          throw new AppError('conflict', 'Chat withdrawn; include it again to resume import');
         if (!ch && !s.cached.get(a.id)?.some((e) => e.chat.key === chatKey))
           throw new AppError('not_found', 'Chat not listed');
         if (ch) s.db.invalidateAgentWork({ chatIds: [ch.id], messageIds: [] });

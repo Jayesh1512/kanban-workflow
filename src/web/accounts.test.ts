@@ -39,7 +39,7 @@ test('R4/R5 HTTP generic account login and owner-only chat inclusion/agreement/e
     (
       await h.post(
         `/settings/accounts/${accountId}/chats/include`,
-        { chatKey: 'client', company: '', agreedWordingVersion: '' },
+        { chatKey: 'client', company: '', agreedWordingVersion: '999' },
         { cookie: alice },
       )
     ).status,
@@ -79,9 +79,9 @@ test('R4/R5 HTTP generic account login and owner-only chat inclusion/agreement/e
   assert.equal(attr(await (await h.get('/board', { cookie: alice })).text(), 'my-chats', 'out-of-date'), '0');
   chats = await h.get(`/settings/accounts/${accountId}/chats`, { cookie: alice });
   const records = await chats.text();
-  assert.match(records, /Agreement records/);
-  assert.match(records, /The people in this chat have agreed/);
-  assert.match(records, /alice · confirmed/);
+  assert.doesNotMatch(records, /Agreement records/);
+  assert.doesNotMatch(records, /The people in this chat have agreed/);
+
   assert.equal(
     (await h.post(`/settings/accounts/${accountId}/chats/exclude`, { chatKey: 'client' }, { cookie: alice })).status,
     303,

@@ -438,10 +438,10 @@ for (const mode of ['GENERAL', 'MOVEMENT'] as const) {
         assert.equal(s.held.signal?.aborted, true);
         assert.equal(await work, null);
         assert.throws(
-          () => s.app.host.includeChat(s.ctx, s.account, 'selected', { agreedWordingVersion: null, company: null }),
+          () => s.app.host.includeChat(s.ctx, s.account, 'selected', { agreedWordingVersion: 999, company: null }),
           /agreement/,
         );
-        s.app.host.includeChat(s.ctx, s.account, 'selected', { agreedWordingVersion: 1, company: null });
+        s.app.host.includeChat(s.ctx, s.account, 'selected', { agreedWordingVersion: null, company: null });
         await s.app.host.settle();
         assert.equal(await s.app.pipeline.processNext(), s.message);
         const successor = snapshot(s);

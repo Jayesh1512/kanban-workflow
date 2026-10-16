@@ -149,7 +149,7 @@ test('R31 real full chain removes synthetic markers from DB/WAL/SHM/FTS, keeps m
   ] as const) {
     await h.app.host.listChats(h.ctxFor(owner), account);
     assert.throws(() =>
-      h.app.host.includeChat(h.ctxFor(owner), account, 'selected', { company: null, agreedWordingVersion: null }),
+      h.app.host.includeChat(h.ctxFor(owner), account, 'selected', { company: null, agreedWordingVersion: 999 }),
     );
   }
   h.app.host.includeChat(ctx, alice, 'selected', { company: null, agreedWordingVersion: 1 });
