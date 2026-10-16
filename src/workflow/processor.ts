@@ -22,7 +22,10 @@ export async function processAnalysisOnce(services: { queue: AnalysisQueue; extr
   } catch (error) {
     // Fenced/stale callbacks never cancel or mutate a newer attempt. The next lease claim can recover.
     if (error instanceof DomainError && ['conflict', 'excluded_chat', 'not_found'].includes(error.code)) return true;
-    try { await services.queue.fail(job.id, { ok: false, code: 'invalid_response', retryable: false, retryAt: null, detail: 'Analysis processing failed validation' }, token); }
+    // Transaction aborts, connection failures and unexpected infrastructure errors
+    // remain recoverable. They are not evidence of a malformed model response.
+    const invalid = error instanceof DomainError && error.code === 'validation';
+    try { await services.queue.fail(job.id, { ok: false, code: invalid ? 'invalid_response' : 'unavailable', retryable: !invalid, retryAt: null, detail: invalid ? 'Analysis processing failed validation' : 'Analysis processing interrupted; durable retry required' }, token); }
     catch (failure) { if (!(failure instanceof DomainError)) throw failure; }
     return true;
   }
