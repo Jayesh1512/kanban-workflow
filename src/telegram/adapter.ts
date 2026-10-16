@@ -1,6 +1,6 @@
 import { mkdir, stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { BaseTelegramClient, Long, TelegramClient, User, tl } from '@mtcute/node';
+import { BaseTelegramClient, Long, TelegramClient, User, tl, toggleChannelIdMark } from '@mtcute/node';
 import { LogManager } from '@mtcute/node/utils.js';
 import type { Message as MtcuteMessage } from '@mtcute/node';
 import { DomainError } from '../shared/api.js';
@@ -26,6 +26,12 @@ export class MtcuteAdapter implements TelegramPort {
   private passwordNeeded = false;
   private stopped = false;
   private started = false;
+  private resumeEnabled = false;
+  private resumeFailures = 0;
+  private resumeRetryAt = 0;
+  private rateLimitedUntil = 0;
+  private resumeTimer: ReturnType<typeof setTimeout> | null = null;
+  private resumeTask: Promise<void> | null = null;
   private readonly factory: ClientFactory;
   private setup: { configure(input: Parameters<TelegramPort['configureControlChat']>[0]): Promise<ControlSetup>; reconcile(key: string): Promise<ControlSetup> } | null = null;
   constructor(private readonly config: RuntimeConfig['telegram'], private readonly store: TelegramStore, factory?: ClientFactory) {
@@ -60,14 +66,17 @@ export class MtcuteAdapter implements TelegramPort {
   }
   subscribe(handler: (event: TelegramEvent) => Promise<void>): () => void { this.listeners.add(handler); return () => { this.listeners.delete(handler); }; }
   private make(mode: 'auth' | 'live'): TelegramClient {
-    return this.factory(mode, (chatId) => this.queue.push({ type: 'replay_required', chatId: decimalId(chatId), reason: 'too_long' }));
+    return this.factory(mode, (chatId) => this.queue.push({ type: 'replay_required', chatId: decimalId(toggleChannelIdMark(chatId)), reason: 'too_long' }));
   }
   private failure(error: unknown): void {
     const rpc = tl.RpcError.is(error) ? error.text : '';
-    const code = /^[A-Z][A-Z0-9_]{0,80}$/.test(rpc) ? rpc : error instanceof DomainError && error.code === 'conflict' ? 'dataset_account_mismatch' : 'telegram_unavailable';
-    const wait = /^FLOOD_WAIT_(\d+)$/.exec(code);
-    const retryAt = wait ? new Date(Date.now() + Number(wait[1]) * 1000).toISOString() : null;
-    const detail = code === 'dataset_account_mismatch' ? 'This Telegram account does not match the dataset; use separate database/session volumes' : wait ? 'Telegram rate limit reached; wait until retryAt' : 'Telegram request failed; check the connection or enter a valid login code/password';
+    // Native 0.32.4 normalizes FLOOD_WAIT_30 to text FLOOD_WAIT_%d + seconds.
+    const flood = /^FLOOD_(?:PREMIUM_)?WAIT_(?:%d|\d+)$/.test(rpc);
+    const seconds = flood ? Number(tl.RpcError.is(error) && 'seconds' in error ? error.seconds : /_(\d+)$/.exec(rpc)?.[1]) : 0;
+    this.rateLimitedUntil = Number.isSafeInteger(seconds) && seconds > 0 && seconds <= 31_536_000 ? Date.now() + seconds * 1000 : 0;
+    const code = flood ? 'FLOOD_WAIT' : /^[A-Z][A-Z0-9_]{0,80}$/.test(rpc) ? rpc : error instanceof DomainError && error.code === 'conflict' ? 'dataset_account_mismatch' : 'telegram_unavailable';
+    const retryAt = this.rateLimitedUntil ? new Date(this.rateLimitedUntil).toISOString() : null;
+    const detail = code === 'dataset_account_mismatch' ? 'This Telegram account does not match the dataset; use separate database/session volumes' : this.rateLimitedUntil ? 'Telegram rate limit reached; wait until retryAt' : 'Telegram request failed; check the connection or enter a valid login code/password';
     this.login = { state: 'error', code, detail, retryAt };
     this.component = status('unavailable', code, detail);
   }
@@ -103,24 +112,75 @@ export class MtcuteAdapter implements TelegramPort {
     try { this.queue.push({ type, message: normalizeMessage(message) }); }
     catch { this.queue.push({ type: 'replay_required', chatId: null, reason: 'queue_failure' }); }
   }
+  private cancelResume(): void {
+    this.resumeEnabled = false; this.resumeRetryAt = 0;
+    if (this.resumeTimer) clearTimeout(this.resumeTimer);
+    this.resumeTimer = null;
+  }
+  private retryableResume(error: unknown): boolean {
+    if (error instanceof DomainError) return error.code === 'upstream_unavailable' && error.retryable;
+    if (tl.RpcError.is(error)) return error.code >= 500 || error.code === 420;
+    return !(error && typeof error === 'object' && 'code' in error && ['EACCES', 'EPERM', 'ENOTDIR'].includes(String(error.code)));
+  }
+  private armResumeRetry(): void {
+    if (this.stopped || !this.resumeEnabled) return;
+    // Long native flood waits use bounded timer slices without early RPC attempts.
+    this.resumeTimer = setTimeout(() => {
+      this.resumeTimer = null;
+      if (Date.now() < this.resumeRetryAt) this.armResumeRetry();
+      else void this.restoreSavedSession().catch(() => {});
+    }, Math.max(1, Math.min(300_000, this.resumeRetryAt - Date.now())));
+    this.resumeTimer.unref();
+  }
+  private restoreSavedSession(): Promise<void> {
+    if (this.resumeTask) return this.resumeTask;
+    if (this.stopped || !this.resumeEnabled || this.busy || this.live) return Promise.resolve();
+    this.busy = true;
+    this.resumeTask = (async () => {
+      try {
+        this.login = { state: 'connecting', detail: 'Restoring the saved Telegram session' };
+        this.auth = this.make('auth');
+        await this.auth.prepare();
+        if (this.stopped) return;
+        const user = await this.auth.getMe();
+        if (this.stopped) return;
+        await this.activate(user);
+        this.resumeFailures = 0; this.cancelResume();
+      } catch (error) {
+        this.failure(error);
+        try { await this.auth?.destroy(); this.auth = null; await this.closeLive(); }
+        catch {
+          this.cancelResume();
+          this.component = status('unavailable', 'session_close_failed', 'Saved session could not close safely; restart before opening another session owner');
+          return;
+        }
+        if (this.stopped || !this.retryableResume(error)) { this.cancelResume(); return; }
+        const delay = Math.min(300_000, 5_000 * 2 ** Math.min(this.resumeFailures++, 6));
+        this.resumeRetryAt = Math.max(Date.now() + delay, this.rateLimitedUntil);
+        const retryAt = new Date(this.resumeRetryAt).toISOString();
+        if (this.login.state === 'error') this.login = { ...this.login, retryAt, detail: 'Saved session temporarily unavailable; automatic restore scheduled at retryAt' };
+        this.component = status('degraded', 'saved_session_retry', `Saved session restore will retry after ${retryAt}`);
+        this.armResumeRetry();
+      } finally { this.busy = false; }
+    })().finally(() => { this.resumeTask = null; });
+    return this.resumeTask;
+  }
   async start(): Promise<void> {
     if (this.started || this.stopped) return; this.started = true;
     if (!this.config.apiId || !this.config.apiHash) return;
     await mkdir(dirname(this.config.sessionPath), { recursive: true, mode: 0o700 });
     const exists = await stat(this.config.sessionPath).then(() => true, () => false);
     if (!exists) return; // A fresh start never sends a code or opens a terminal prompt.
-    this.login = { state: 'connecting', detail: 'Restoring the saved Telegram session' };
-    this.auth = this.make('auth'); this.busy = true;
-    try { await this.auth.prepare(); await this.activate(await this.auth.getMe()); }
-    catch (error) { this.failure(error); await this.auth?.destroy(); this.auth = null; await this.live?.destroy(); this.live = null; this.selfId = null; }
-    finally { this.busy = false; }
+    this.resumeEnabled = true;
+    await this.restoreSavedSession();
   }
   private async closeLive(): Promise<void> { await this.live?.destroy(); this.live = null; this.selfId = null; }
   async submitLogin(input: TelegramLoginInput): Promise<TelegramLoginState> {
     if (!this.config.apiId || !this.config.apiHash) throw new DomainError('not_configured', 'Configure Telegram API credentials');
     if (this.busy || this.live) throw new DomainError('conflict', this.live ? 'Telegram is already connected' : 'A login request is already in progress');
     if (this.stopped) throw new DomainError('upstream_unavailable', 'Telegram adapter is stopped');
-    if (this.login.state === 'error' && this.login.retryAt && Date.parse(this.login.retryAt) > Date.now()) return this.login;
+    if (this.login.state === 'error' && this.login.retryAt && Date.parse(this.login.retryAt) > Date.now() && (!this.resumeEnabled || this.rateLimitedUntil > Date.now())) return this.login;
+    this.cancelResume(); // Explicit onboarding owns this session until it completes.
     this.busy = true;
     try {
       this.auth ??= this.make('auth'); await this.auth.prepare();
@@ -187,7 +247,8 @@ export class MtcuteAdapter implements TelegramPort {
     return { messageId: message.id };
   }
   async stop(): Promise<void> {
-    if (this.stopped) return; this.stopped = true;
+    if (this.stopped) return; this.stopped = true; this.cancelResume();
+    this.stopController.abort(); await this.resumeTask;
     await this.live?.stopUpdatesLoop();
     await this.queue.flush(5_000); this.stopController.abort();
     await this.auth?.destroy(); await this.live?.destroy(); await this.queue.close();
