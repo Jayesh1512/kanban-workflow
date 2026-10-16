@@ -65,6 +65,9 @@ export class VikunjaAdapter implements VikunjaPort {
         await this.login();
       }
       if (!response) throw new Error('No response');
+      // Vikunja v2 returns 304 for an unchanged Merge Patch. Callers still
+      // read back the task and verify its managed lane after this no-op.
+      if (method === 'PATCH' && /^\/tasks\/[1-9]\d*$/.test(path) && response.status === 304) { await response.body?.cancel(); return null; }
       if (response.status === 404 && optional404) { await response.body?.cancel(); return null; }
       if (!response.ok) {
         await response.body?.cancel();
@@ -222,7 +225,7 @@ export class VikunjaAdapter implements VikunjaPort {
       await this.request('PATCH', `/tasks/${input.taskId}`, { title: input.title, description });
       await this.setWorkstream(input.taskId, input.workstream, await this.binding());
       const after = await this.getTask(input.taskId);
-      if (!after || after.bucketId !== before.bucketId) throw new DomainError('conflict', 'Task lane changed during detail projection; reconciliation required');
+      if (!after || after.bucketId !== before.bucketId || after.title !== input.title || after.description !== description) throw new DomainError('conflict', 'Task details or lane changed during detail projection; reconciliation required');
       return after;
     });
   }
