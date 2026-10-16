@@ -22,8 +22,8 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M0-Q2 independent multilingual conversation corpus — complete and integrated from `7155e1c`; 35 cases / 38 source revisions. PM independently reran the embedded validator successfully (18 English, 9 Hindi, 8 Hinglish) and diff whitespace check. Fixture validation is not a product/live test.
 - M0-Q3 additional critical draft-contract review — complete, no edits/commit. QA found forwarding provenance missing from normalized/persisted message and analysis context; PM accepted and assigned a forwarded/source-kind marker plus nullable origin information and a distinguishing contract example. Executable M0 review follows committed baseline.
 - M0-Q4 independent executable baseline review — COMPLETE/PASS on final `e8711ca`, tests/report integrated as `a5a39d0`; PM independently reran check24/24 plus actual native/compiled runtime successfully. QA next tests M1 after committed product handoff, without polling.
-- M1 implementation — Builder A reports isolated Compose boot PASS (its own project/ports), DB/Vikunja ready, truthful Telegram M2pending and AIconfigured-notchecked, persisted generated credentials/service secret/separate DBs/CLI user/native build probe. Five real PG/Vikunja tests running; committed handoff and independent QA still pending.
-- M2 implementation — Builder A explicitly authorized to begin immediately after a distinct green M1 commit/handoff, without waiting on another PM assignment. Keep M2 commits separate while PM integrates/wires canonical composition and QA tests M1. Full MTProto login/discovery/ingestion/replay/exclusion/contact-provenance/control transport/setup scope sent; user-designated Telegram reference thread retained.
+- M1 implementation — complete: original `f9ca60a` integrated as `10ad433`; PM canonical wiring `06374d3` composes platform and removes standalone Compose override. PM check31 pass/5opt-in skipped+TS/build; A reports actual5/5 PostgreSQL/Vikunja integration plus restart/recreate/native/offline passes. QA assigned independent clean canonical Compose acceptance; architect assigned concurrency/lifecycle/adapter review. M1 gate pending independent results.
+- M2 implementation — Builder A started after distinct M1 handoff; real MTProto login/discovery/ingestion/replay/exclusion/contact-provenance/control transport/setup. Migration `db/migrations/202610170001_telegram_operations.sql` RESERVED/APPROVED for A: history request bounds, leased/deduped control inbox, setup request/recovery, drop only tombstone chat FK to retain scoped deletes before discovery. Preserve all other constraints and initial migration; test anti-resurrection and null-scope channel isolation. Targeted Telegram prerequisites question sent to designated reference thread; independent implementation continues.
 - M3.1 implementation — Builder B running on `9b9b823` contracts: records/contact/facts/ticket persistence, real OpenAI/Vercel Jev adapters and durable analysis/checkpoints/replay. M3.2 proposal/apply and M4 HTTP/MCP follow bounded handoff.
 
 ## PM progression protocol
@@ -39,8 +39,8 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 ## Milestone status
 
 - M0: PASS, QA report/regressions integrated and PM rerun24/24+build/typecheck/native/compiled runtime pass.
-- M1: implementation running on committed M0.
-- M2: next for Builder A immediately after green M1 handoff; implementation scope assigned, interfaces committed.
+- M1: integrated/canonical wiring complete, independent QA and architecture code review running.
+- M2: implementation running on Builder A branch; operational migration reserved, live Telegram prerequisites sought from reference thread.
 - M3: M3.1 implementation running in parallel with M1; real Jev success externally blocked by Gateway credits.
 - M4: pending M3 interfaces/implementation handoff.
 - M5: acceptance plan/corpus integrated; independent M0 QA running, product acceptance awaits implementation.
