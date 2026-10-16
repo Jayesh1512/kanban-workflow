@@ -57,6 +57,31 @@ describe('synthetic Telegram events against actual SQL storage (PGlite)', () => 
     expect((await db.query("SELECT * FROM analysis_jobs WHERE status='cancelled'")).rowCount).toBe(1);
     expect((await db.query("SELECT * FROM analysis_jobs WHERE status='pending'")).rowCount).toBe(1);
   });
+  it.each(['sentAt', 'editedAt', 'forward.originDate'] as const)('dedupes equivalent RFC3339 spellings for %s without invalidating evidence or enqueuing another job', async (field) => {
+    await store.upsertDialog(dialog());
+    const m = { ...message(1), sentAt: '2026-10-17T09:00:00.000Z', editedAt: '2026-10-17T10:00:00.000Z',
+      forward: { ...message(1).forward, isForwarded: true, sourceKind: 'forwarded' as const, originDate: '2026-10-17T08:00:00.000Z' } };
+    await store.ingest({ type: 'message', message: m });
+    await db.query("INSERT INTO evidence(id,chat_id,message_id,message_version,excerpt,observed_at) VALUES($1,$2,1,1,'fixture',now())", [randomUUID(), m.chatId]);
+    const variants = field === 'sentAt' ? ['2026-10-17T09:00:00Z', '2026-10-17T14:30:00+05:30']
+      : field === 'editedAt' ? ['2026-10-17T10:00:00Z', '2026-10-17T15:30:00+05:30'] : ['2026-10-17T08:00:00Z', '2026-10-17T13:30:00+05:30'];
+    for (const value of variants) {
+      const replay = field === 'forward.originDate' ? { ...m, forward: { ...m.forward, originDate: value } } : { ...m, [field]: value };
+      await store.ingest({ type: 'message', message: replay });
+    }
+    // Existing JSONB may retain the old noncanonical forward-date spelling.
+    if (field === 'forward.originDate') {
+      await db.query('UPDATE messages SET forward_metadata=$1 WHERE chat_id=$2 AND id=1', [JSON.stringify({ ...m.forward, originDate: variants[1] }), m.chatId]);
+      await store.ingest({ type: 'message', message: m });
+    }
+    expect((await db.query('SELECT version FROM messages')).rows[0]?.['version']).toBe(1);
+    expect((await db.query('SELECT * FROM analysis_jobs')).rowCount).toBe(1);
+    expect((await db.query('SELECT invalidated_at FROM evidence')).rows[0]?.['invalidated_at']).toBeNull();
+    await store.ingest({ type: 'edit', message: { ...m, editedAt: '2026-10-17T10:00:00.001Z' } });
+    expect((await db.query('SELECT version FROM messages')).rows[0]?.['version']).toBe(2);
+    expect((await db.query('SELECT * FROM analysis_jobs')).rowCount).toBe(2);
+    expect((await db.query('SELECT invalidated_at FROM evidence')).rows[0]?.['invalidated_at']).not.toBeNull();
+  });
   it('persists scoped deletion before chat discovery and never resurrects it on later history', async () => {
     await store.ingest({ type: 'delete', chatId: '-10042', messageIds: [7], observedAt: '2026-10-17T02:00:00.000Z' });
     expect((await db.query('SELECT * FROM chats')).rowCount).toBe(0);
