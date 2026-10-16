@@ -14,12 +14,15 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Current assignments
 
-- M0 architecture/contracts/foundation — Architecture Builder, running; PM consolidated both builders' draft contract reviews and assigned pre-freeze corrections.
+- M0 architecture/contracts/foundation — baseline `25d66b8` integrated as `9b9b823`; PM clean install/check PASS (strict TypeScript, 14 tests, production build) and native SQLite open/read/close PASS. Independent QA in progress. Architect assigned a small additive correction so sender/peer snapshots are typed in analysis/context messages and discovery defaults to included.
 - M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. M0-P2 draft review complete; no product edits. M1/M2 pending corrected baseline.
 - M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. M0-I2 draft review complete; no product edits. M3/M4 pending corrected baseline.
 - M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
 - M0-Q2 independent multilingual conversation corpus — complete and integrated from `7155e1c`; 35 cases / 38 source revisions. PM independently reran the embedded validator successfully (18 English, 9 Hindi, 8 Hinglish) and diff whitespace check. Fixture validation is not a product/live test.
 - M0-Q3 additional critical draft-contract review — complete, no edits/commit. QA found forwarding provenance missing from normalized/persisted message and analysis context; PM accepted and assigned a forwarded/source-kind marker plus nullable origin information and a distinguishing contract example. Executable M0 review follows committed baseline.
+- M0-Q4 independent executable baseline review — QA running on integrated `9b9b823`; clean install/check14/native SQL checks pass so far; snapshot-bearing analysis input correction pending.
+- M1 implementation — Builder A running on `9b9b823` contracts: configuration, PostgreSQL migrations, real Vikunja adapter/bootstrap, Docker/Compose, truthful setup/status; M2 Telegram implementation follows.
+- M3.1 implementation — Builder B running on `9b9b823` contracts: records/contact/facts/ticket persistence, real OpenAI/Vercel Jev adapters and durable analysis/checkpoints/replay. M3.2 proposal/apply and M4 HTTP/MCP follow bounded handoff.
 
 ## PM progression protocol
 
@@ -33,12 +36,12 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Milestone status
 
-- M0: running; no architecture baseline delivered yet.
-- M1: pending M0.
-- M2: pending M0/M1 interfaces.
-- M3: pending M0; provider research underway.
-- M4: pending M0/M3 interfaces.
-- M5: acceptance plan underway; integrated implementation not available yet.
+- M0: baseline integrated and PM executable checks pass; independent QA final review and additive snapshot correction pending.
+- M1: implementation running on committed M0.
+- M2: pending M1 handoff; interfaces committed.
+- M3: M3.1 implementation running in parallel with M1; real Jev success externally blocked by Gateway credits.
+- M4: pending M3 interfaces/implementation handoff.
+- M5: acceptance plan/corpus integrated; independent M0 QA running, product acceptance awaits implementation.
 
 ## M0 review disposition
 
