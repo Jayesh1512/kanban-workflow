@@ -53,6 +53,8 @@ export interface Message {
   chatId: TelegramChatId;
   id: TelegramMessageId;
   senderId: TelegramUserId | null;
+  sender: PeerSnapshot;
+  peer: PeerSnapshot;
   sentAt: ISODateTime;
   editedAt: ISODateTime | null;
   deletedAt: ISODateTime | null;

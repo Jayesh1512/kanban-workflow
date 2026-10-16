@@ -4,7 +4,7 @@ import type {
   AnalysisInput, Chat, Company, CompanyCandidate, Contact, ContactCompanyRole, Evidence, Extraction,
   HistoryCursor, ISODateTime, JevDecision, Json, Lane, Message, Mutation, Page, PageInput,
   Priority, Proposal, RemoteId, ServiceStatus, TelegramChatId, TelegramMessageId, TelegramUserId, Ticket, UUID, Workstream,
-  BusinessFact, ContactDetail, ExtractionCheckpoint, LiveCheckpoint, PeerSnapshot, ProviderProvenance,
+  BusinessFact, ContactDetail, ExtractionCheckpoint, LiveCheckpoint, ProviderProvenance,
 } from './domain.js';
 import type { CorrectMappingInput, DecideProposalInput, ProposeLaneInput, SetInclusionInput, UpdateActionsInput, UpdateFactInput } from './schemas.js';
 
@@ -57,7 +57,7 @@ export type TelegramLoginState =
   | { state: 'error'; code: string; detail: string; retryAt: ISODateTime | null };
 export type TelegramLoginInput = { step: 'phone'; phone: string } | { step: 'code'; code: string } | { step: 'password'; password: string };
 export interface TelegramDialog { id: TelegramChatId; kind: Chat['kind']; title: string; username: string | null; archived: boolean }
-export interface TelegramMessageInput extends Omit<Message, 'version' | 'deletedAt'> { sender: PeerSnapshot; peer: PeerSnapshot }
+export type TelegramMessageInput = Omit<Message, 'version' | 'deletedAt'>;
 export type TelegramEvent =
   | { type: 'message' | 'edit'; message: TelegramMessageInput }
   | { type: 'delete'; chatId: TelegramChatId | null; messageIds: TelegramMessageId[]; observedAt: ISODateTime }
@@ -120,7 +120,7 @@ export interface ChatService {
 }
 export interface IngestionStore {
   bindAccount(selfId: TelegramUserId): Promise<void>; // first binding or same self only; mismatch requires new dataset/session volume
-  upsertDialog(dialog: TelegramDialog): Promise<Chat>;
+  upsertDialog(dialog: TelegramDialog): Promise<Chat>; // new discovery explicitly included (control excluded); preserve existing selection
   ingest(event: TelegramEvent): Promise<void>; // persists message/version + analysis job atomically; control chat routed separately
   claimHistory(chatId: TelegramChatId, workerId: string, leaseMs: number): Promise<HistoryCursor | null>;
   commitHistoryBatch(chatId: TelegramChatId, expectedPolicyVersion: number, expectedGeneration: number, batch: HistoryBatch): Promise<HistoryCursor>;

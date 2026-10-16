@@ -1,22 +1,42 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { API_OPERATIONS, MCP_OPERATIONS } from '../src/shared/api.js';
 import { correctMappingSchema, decideProposalSchema, proposeLaneSchema, setInclusionSchema } from '../src/shared/schemas.js';
 import { LANES, WORKSTREAMS } from '../src/shared/domain.js';
-import type { Message } from '../src/shared/domain.js';
-import type { DomainServices } from '../src/shared/ports.js';
+import type { AnalysisInput, Message, PeerSnapshot } from '../src/shared/domain.js';
+import type { DomainServices, ExtractionPort, RecordsService, TelegramMessageInput } from '../src/shared/ports.js';
 
 type ServiceMethod = { [K in keyof DomainServices]: `${K}.${Extract<keyof DomainServices[K], string>}` }[keyof DomainServices];
 const bindings: readonly { service: ServiceMethod }[] = API_OPERATIONS;
 const id = '00000000-0000-4000-8000-000000000001';
+const sender: PeerSnapshot = { id: '123', kind: 'user', names: ['Riya Fixture'], usernames: ['riya_fixture'], visiblePhones: ['+10000000001'], visibleEmails: ['riya@example.invalid'], observedAt: '2026-10-17T00:00:00Z' };
+const peer: PeerSnapshot = { id: '-1001', kind: 'channel', names: ['Fixture company'], usernames: [], visiblePhones: [], visibleEmails: [], observedAt: '2026-10-17T00:00:00Z' };
 
 describe('shared integration contract', () => {
   it('preserves identical own and forwarded bodies with unknown original author', () => {
-    const own: Message = { chatId: '-1001', id: 1, senderId: '123', sentAt: '2026-10-17T00:00:00Z', editedAt: null, deletedAt: null, text: 'We are live', replyToId: null, sourceUrl: null, version: 1, forward: { isForwarded: false, sourceKind: 'own', originPeer: null, originName: null, originDate: null, originMessageId: null } };
+    const own: Message = { chatId: '-1001', id: 1, senderId: '123', sender, peer, sentAt: '2026-10-17T00:00:00Z', editedAt: null, deletedAt: null, text: 'We are live', replyToId: null, sourceUrl: null, version: 1, forward: { isForwarded: false, sourceKind: 'own', originPeer: null, originName: null, originDate: null, originMessageId: null } };
     const forwarded: Message = { ...own, forward: { ...own.forward, isForwarded: true, sourceKind: 'forwarded', originDate: '2026-10-16T00:00:00Z' } };
     expect(own.text).toBe(forwarded.text);
     expect(own.forward).not.toEqual(forwarded.forward);
     expect(forwarded.forward.originPeer).toBeNull();
     expect(forwarded.forward.originName).toBeNull();
+  });
+  it('exposes available sender and peer snapshots to extraction and context without rewriting text', () => {
+    const ingested: TelegramMessageInput = { chatId: '-1001', id: 2, senderId: '123', sender, peer, sentAt: '2026-10-17T00:00:00Z', editedAt: null, text: 'Testing starts today', replyToId: null, sourceUrl: null, forward: { isForwarded: false, sourceKind: 'own', originPeer: null, originName: null, originDate: null, originMessageId: null } };
+    const analysis: Pick<AnalysisInput, 'messages'> = { messages: [{ ...ingested, version: 1, deletedAt: null }] };
+    const context: Pick<Awaited<ReturnType<RecordsService['getContext']>>, 'messages'> = { messages: analysis.messages };
+    type ExtractionMessage = Parameters<ExtractionPort['extract']>[0]['messages'][number];
+    expectTypeOf<ExtractionMessage['sender']>().toEqualTypeOf<PeerSnapshot>();
+    expectTypeOf<ExtractionMessage['peer']>().toEqualTypeOf<PeerSnapshot>();
+    expectTypeOf<(typeof context)['messages'][number]['sender']>().toEqualTypeOf<PeerSnapshot>();
+    for (const messages of [analysis.messages, context.messages]) {
+      expect(messages[0]!.sender).toEqual(sender);
+      expect(messages[0]!.peer).toEqual(peer);
+      expect(messages[0]!.sender.names).toEqual(['Riya Fixture']);
+      expect(messages[0]!.sender.usernames).toEqual(['riya_fixture']);
+      expect(messages[0]!.sender.visiblePhones).toEqual(['+10000000001']);
+      expect(messages[0]!.sender.visibleEmails).toEqual(['riya@example.invalid']);
+      expect(messages[0]!.text).toBe('Testing starts today');
+    }
   });
   it('binds every transport operation to an exported service; Hermes cannot approve', () => {
     expect(bindings.length).toBe(API_OPERATIONS.length);
