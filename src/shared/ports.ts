@@ -15,6 +15,8 @@ export interface SqlExecutor {
 /** Every callback uses ONE checked-out connection; rollback on throw; no network I/O inside. */
 export interface Database extends SqlExecutor {
   transaction<T>(work: (tx: SqlExecutor) => Promise<T>): Promise<T>;
+  /** Same checked-out session across nested query/transaction/lock calls; remote I/O stays outside transactions. */
+  withSessionLock<T>(key: string, work: (session: SqlExecutor, signal: AbortSignal) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 export interface RuntimeConfig {

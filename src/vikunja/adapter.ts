@@ -31,15 +31,21 @@ export class VikunjaAdapter implements VikunjaPort {
   }
   private makeStatus(state: ServiceStatus['state'], code: string | null, detail: string | null): ServiceStatus { return { state, code, detail, checkedAt: new Date().toISOString() }; }
   async status(): Promise<ServiceStatus> { return this.state; }
+  private signal(): AbortSignal {
+    const session = this.db.sessionSignal;
+    return session ? AbortSignal.any([session, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000);
+  }
   private async login(): Promise<void> {
     if (!this.config.password) throw new DomainError('not_configured', 'Configure Vikunja service credentials');
     const response = await fetch(`${this.config.baseUrl}/api/v2/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: this.config.username, password: this.config.password }),
-      signal: AbortSignal.timeout(10_000), redirect: 'error',
+      signal: this.signal(), redirect: 'error',
     });
+    this.db.sessionSignal?.throwIfAborted();
     if (!response.ok) throw new DomainError('upstream_unavailable', `Vikunja login failed (HTTP ${response.status}); check service credentials`, response.status >= 500);
     const result = object(await response.json());
+    this.db.sessionSignal?.throwIfAborted();
     if (typeof result['token'] !== 'string' || !result['token']) throw new DomainError('upstream_unavailable', 'Vikunja login returned no access token');
     this.token = result['token'];
   }
@@ -49,9 +55,10 @@ export class VikunjaAdapter implements VikunjaPort {
       let response: Response | undefined;
       for (let attempt = 0; attempt < 2; attempt++) {
         response = await fetch(`${this.config.baseUrl}/api/v2${path}`, {
-          method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.token}` },
-          ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10_000), redirect: 'error',
+          method, headers: { 'Content-Type': method === 'PATCH' ? 'application/merge-patch+json' : 'application/json', Authorization: `Bearer ${this.token}` },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: this.signal(), redirect: 'error',
         });
+        this.db.sessionSignal?.throwIfAborted();
         if (response.status !== 401 || this.config.apiToken || attempt === 1) break;
         await response.body?.cancel();
         this.token = null;
@@ -63,7 +70,9 @@ export class VikunjaAdapter implements VikunjaPort {
         await response.body?.cancel();
         throw new DomainError('upstream_unavailable', `Vikunja ${method} failed (HTTP ${response.status})`, response.status >= 500 || response.status === 429);
       }
-      return response.status === 204 ? null : await response.json();
+      const result = response.status === 204 ? null : await response.json();
+      this.db.sessionSignal?.throwIfAborted();
+      return result;
     } catch (error) {
       const failure = error instanceof DomainError ? error : new DomainError('upstream_unavailable', 'Vikunja connection failed or timed out; check its URL and health', true);
       this.state = this.makeStatus(failure.code === 'not_configured' ? 'unconfigured' : 'unavailable', failure.code, failure.message);
@@ -194,25 +203,38 @@ export class VikunjaAdapter implements VikunjaPort {
     }
     if (!labels.some((l) => id(l['id']) === board.labels[workstream])) await this.request('POST', `/tasks/${taskId}/labels`, { label_id: wireId(board.labels[workstream]) });
   }
+  private async withTaskLock<T>(taskId: string, work: () => Promise<T>): Promise<T> {
+    const ticket = (await this.db.query<{ id: string }>('SELECT id FROM tickets WHERE vikunja_task_id=$1', [id(taskId)])).rows[0];
+    if (!ticket) throw new DomainError('conflict', 'Task is not linked to a managed ticket');
+    return this.db.withSessionLock(`antseed:ticket:${ticket.id}`, async (sql) => {
+      const linked = await sql.query('SELECT id FROM tickets WHERE id=$1 AND vikunja_task_id=$2', [ticket.id, taskId]);
+      if (!linked.rowCount) throw new DomainError('conflict', 'Ticket projection changed before the write');
+      return work();
+    });
+  }
   async updateTaskDetails(input: Parameters<VikunjaPort['updateTaskDetails']>[0]): Promise<RemoteTask> {
-    const before = await this.getTask(input.taskId);
-    if (!before) throw new DomainError('not_found', 'Vikunja task does not exist');
-    const current = object(await this.request('GET', `/tasks/${input.taskId}`));
-    const marker = before.description.match(/\[antseed-ticket:[\da-f-]+\]/i)?.[0];
-    const description = marker && !input.description.includes(marker) ? `${input.description}\n\n${marker}` : input.description;
-    await this.request('PUT', `/tasks/${input.taskId}`, { ...current, title: input.title, description });
-    await this.setWorkstream(input.taskId, input.workstream, await this.binding());
-    const after = await this.getTask(input.taskId);
-    if (!after || after.bucketId !== before.bucketId) throw new DomainError('conflict', 'Task lane changed during detail projection; reconciliation required');
-    return after;
+    return this.withTaskLock(input.taskId, async () => {
+      const before = await this.getTask(input.taskId);
+      if (!before) throw new DomainError('not_found', 'Vikunja task does not exist');
+      const marker = before.description.match(/\[antseed-ticket:[\da-f-]+\]/i)?.[0];
+      const description = marker && !input.description.includes(marker) ? `${input.description}\n\n${marker}` : input.description;
+      // Real 2.7 v2 Merge Patch: no stale done/bucket/project/other fields in this payload.
+      await this.request('PATCH', `/tasks/${input.taskId}`, { title: input.title, description });
+      await this.setWorkstream(input.taskId, input.workstream, await this.binding());
+      const after = await this.getTask(input.taskId);
+      if (!after || after.bucketId !== before.bucketId) throw new DomainError('conflict', 'Task lane changed during detail projection; reconciliation required');
+      return after;
+    });
   }
   async moveTask(input: Parameters<VikunjaPort['moveTask']>[0]): Promise<void> {
-    const board = await this.binding();
-    if (board.projectId !== input.projectId || board.viewId !== input.viewId || !Object.values(board.buckets).includes(input.targetBucketId)) throw new DomainError('conflict', 'Move is outside the managed board');
-    const task = await this.getTask(input.taskId);
-    if (!task) throw new DomainError('not_found', 'Vikunja task does not exist');
-    if (task.bucketId !== input.targetBucketId) await this.request('PUT', `/projects/${input.projectId}/views/${input.viewId}/buckets/${input.targetBucketId}/tasks`, { task_id: wireId(input.taskId) });
-    if ((await this.getTask(input.taskId))?.bucketId !== input.targetBucketId) throw new DomainError('upstream_unavailable', 'Vikunja move could not be verified', true);
+    return this.withTaskLock(input.taskId, async () => {
+      const board = await this.binding();
+      if (board.projectId !== input.projectId || board.viewId !== input.viewId || !Object.values(board.buckets).includes(input.targetBucketId)) throw new DomainError('conflict', 'Move is outside the managed board');
+      const task = await this.getTask(input.taskId);
+      if (!task) throw new DomainError('not_found', 'Vikunja task does not exist');
+      if (task.bucketId !== input.targetBucketId) await this.request('PUT', `/projects/${input.projectId}/views/${input.viewId}/buckets/${input.targetBucketId}/tasks`, { task_id: wireId(input.taskId) });
+      if ((await this.getTask(input.taskId))?.bucketId !== input.targetBucketId) throw new DomainError('upstream_unavailable', 'Vikunja move could not be verified', true);
+    });
   }
   async check(): Promise<void> {
     const board = await this.binding();

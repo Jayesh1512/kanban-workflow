@@ -55,6 +55,21 @@ export async function createWorkflowModule(
 
 `ApplicationModule` has `name`, `register(app): Promise<void>`, `start(): Promise<void>`, `stop(): Promise<void>`, `status(): Promise<ServiceStatus>`. Factories allocate dependencies but start no update loops or remote bootstrap. A factory that fails must release its own partial allocations. `register` installs routes/subscribers and performs no external actions. `stop` must tolerate never-started/partially-started modules and repeated calls.
 
+The shared database session-lock seam is:
+
+```ts
+withSessionLock<T>(
+  key: string,
+  work: (session: SqlExecutor, signal: AbortSignal) => Promise<T>,
+): Promise<T>;
+```
+
+`PgDatabase` scopes the checked-out connection with AsyncLocalStorage. Nested `db.query`, `db.transaction` and `db.withSessionLock` calls on that **same database instance and asynchronous scope** reuse its session; reentering an already-held key does not acquire a different connection or another lock count. `withLock` remains a concrete compatibility alias. Callers use the scoped executor or `db.transaction` for short atomic SQL sections; transactions finish before remote I/O. Nested transactions and entering a remote-capable session lock from an active `db.transaction` reject. Await all work inside the callback; do not fan out independent operations or retain a scoped executor for later use.
+
+Projection, descriptive/label updates, movement and B's outer apply/reconcile all use **exactly `antseed:ticket:${ticketId}`**. Adapter task writes resolve and recheck the local ticket binding before writing. B must pass the original `PlatformServices.db` instance and invoke the adapter within that outer async scope; never acquire session advisory locks using independent `pool.query` calls or a separate PgDatabase. Other nested lock keys share the same session but callers must use a consistent ordering when more than one resource is needed.
+
+Checked-out session error/end events abort the callback signal, reject with a sanitized upstream-unavailable/unknown-outcome error, and discard the connection. Adapter HTTP combines that signal with its timeout and checks the scope before/after I/O. All later SQL, transactions and lock entries in the lost/closed scope reject permanently; they never obtain a replacement pool client. A distinct caller attempt may enter a fresh scope/token and reconcile remote state. Aborting HTTP cannot undo a write already accepted upstream, so a lost session requires unknown-outcome reconciliation, not blind mutation retry. This is a data consistency mechanism, not an application authorization check.
+
 ## Startup composition and integration sequence
 
 The original M0 `createModules()` returned an empty array. M1 now composes the platform module through the canonical entrypoint. PM adds workflow when its bounded implementation handoff lands:
@@ -128,6 +143,8 @@ Login returns explicit delivery mode/resend deadline, password hint, invalid/exp
 Pin `vikunja/vikunja:2.7.0`. Use its actual **v2** API, JSON collections `{items,total,page,per_page,total_pages}`, POST creates and PUT replaces. Buckets belong to **project view**, not directly to project. Movement is `PUT /api/v2/projects/{project}/views/{view}/buckets/{bucket}/tasks` with `{task_id}`. No invented `PATCH task.stage` API. Page through collections. A's primary-source/live research is recorded separately in `docs/PLATFORM_RESEARCH.md` on the PM branch.
 
 Reconcile/reuse the auto-created Kanban view and To-Do/Doing/Done default buckets into the six exact ordered lanes, setting managed view `default_bucket_id=To be started` and `done_bucket_id=Completed`. Ensure filters include done tasks so Completed stays visible. Archived is just a bucket, never project archival/task deletion. Persist `board_bindings`, `board_buckets`, `board_labels`; acquire application bootstrap lock and search stable identifiers before creating missing objects. A partial bootstrap restarts without duplicates. `ensureTask` uses a durable ticket UUID marker in description and remote readback before retry after unknown create. New tickets enter To be started only. Details/label updates preserve lane/done/view assignments; full PUT semantics must not clear unrelated fields.
+
+Details use the real v2.7.0 `PATCH /api/v2/tasks/{task}` with `Content-Type: application/merge-patch+json` and only `{title,description}`; label associations use their own endpoints within the same ticket lock. No stale `done`, bucket, project or unrelated task fields are echoed in a full PUT. A concurrent direct remote move can make final readback return conflict, but must not be silently overwritten by a descriptive update. Local stage moves serialize with details and projection through the shared ticket session lock. The pinned instance's `/api/v2/openapi.json` and source `pkg/routes/api/v2/tasks.go` document this partial-update operation.
 
 Stock Vikunja image is scratch, UID1000 and contains no shell. Bootstrap uses actual CLI in a shell-capable wrapper/init service, not `sh -c` inside stock image. Reconcile existing CLI user before create or explicitly recognize its known duplicate failure; do not hide all exit-1 failures. Registration may stay disabled. Persist `VIKUNJA_SERVICE_SECRET`, database and writable UID1000 files volume. Bootstrap waiting/error is distinct from ready. Upstream service credentials are necessary connections, not custom app authorization.
 
