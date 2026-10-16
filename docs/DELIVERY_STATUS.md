@@ -44,6 +44,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M3: M3.1 implementation running in parallel with M1; real Jev success externally blocked by Gateway credits.
 - M4: pending M3 interfaces/implementation handoff.
 - M5: acceptance plan/corpus integrated; independent M0 QA running, product acceptance awaits implementation.
+- Final demo video: user requested a polished recording after complete implementation/end-to-end testing. Added to M5 QA deliverables; use synthetic data, readable capture/captions, actual approval-to-board workflow and Hermes, with explicit labels for any simulated/blocked integration. Capture deferred until final working build.
 
 ## M0 review disposition
 
