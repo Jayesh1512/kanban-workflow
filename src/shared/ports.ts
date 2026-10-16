@@ -166,6 +166,7 @@ export interface ExtractionPort { extract(input: AnalysisInput, signal?: AbortSi
 export interface JevPort { decide(input: AnalysisInput & { extraction: Extraction }, signal?: AbortSignal): Promise<ProviderResult<JevDecision>>; status(): Promise<ServiceStatus> }
 export interface AnalysisJob {
   id: UUID;
+  readonly claimToken: string; // immutable per attempt; persisted in analysis_jobs.worker_id
   chatId: TelegramChatId;
   policyVersion: number;
   mappingVersion: number;
@@ -176,12 +177,12 @@ export interface AnalysisJob {
   lastError: string | null;
 }
 export interface AnalysisQueue {
-  claim(input: { workerId: string; leaseMs: number }): Promise<AnalysisJob | null>;
+  claim(input: { workerId: string; leaseMs: number }): Promise<AnalysisJob | null>; // distinct token per claim, including same worker/job reclaim
   loadInput(jobId: UUID): Promise<AnalysisInput>;
   getExtraction(jobId: UUID): Promise<ExtractionCheckpoint | null>;
-  saveExtraction(checkpoint: ExtractionCheckpoint): Promise<void>; // persist before Jev; validate versions/hash
-  complete(jobId: UUID, decision: JevDecision, provenance: ProviderProvenance): Promise<void>; // uses saved extraction; recheck versions
-  fail(jobId: UUID, error: Extract<ProviderResult<never>, { ok: false }>): Promise<void>;
+  saveExtraction(checkpoint: ExtractionCheckpoint, claimToken: string): Promise<void>; // persist before Jev; validate versions/hash and live claim
+  complete(jobId: UUID, decision: JevDecision, provenance: ProviderProvenance, claimToken: string): Promise<void>; // uses saved extraction; recheck versions and live claim
+  fail(jobId: UUID, error: Extract<ProviderResult<never>, { ok: false }>, claimToken: string): Promise<void>;
   replayUnavailable(input: { idempotencyKey: string; chatId?: TelegramChatId }): Promise<{ queued: number }>;
 }
 export interface ProposalService {
