@@ -110,7 +110,16 @@ of batch size; older messages follow the backfill budget. Forward replay continu
 one page per turn until an empty probe. A nonempty short page never proves catch-up.
 Recent persisted messages are reread for edits/missing-message tombstones within
 the same configurable window. Restart/reconnect/TooLong/queue overflow marks replay
-required. mtcute update/session writes and PostgreSQL are not one transaction;
+required. Transient saved-session startup failures retry automatically from five
+seconds up to five minutes; invalid sessions/account mismatch do not retry.
+Native flood waits remain authoritative; manual onboarding or stop cancels resume.
+Known per-chat access failures retain pending coverage and durable sanitized phase
+retry records in `app_settings` (`telegram:sync-retry:<phase>:<chatId>`), with
+30-second exponential backoff capped at five minutes. Unavailable business or
+control chats cannot starve healthy replay; successful coverage only advances on
+successful persistence. Global auth/network/flood/database failures back off the
+whole worker instead. `telegramSync` status shows retained chat/phase/error/retry
+metadata, and successful phase recovery clears its retry record. mtcute update/session writes and PostgreSQL are not one transaction;
 replay reduces this gap but cannot prove Telegram retained arbitrary older missed
 deletions. No claim of complete historical delete recovery is made.
 
