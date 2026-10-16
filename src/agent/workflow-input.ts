@@ -9,6 +9,8 @@ import type {
   WorkflowStage,
   WorkflowValueCandidate,
 } from '../contracts/index.ts';
+import { digest } from './json.ts';
+import { workflowProposalContext } from './workflow-proposals.ts';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export function workflowInputContext(ctx: Ctx, input: DecideInput) {
@@ -44,6 +46,7 @@ export function workflowInputContext(ctx: Ctx, input: DecideInput) {
 }
 export function workflowTarget(ctx: Ctx, input: DecideInput, d: ModelDecision): boolean {
   const config = ctx.db.get<{ lane_id: number }>('SELECT lane_id FROM workflow_config WHERE id=1');
+  if (config && workflowProposalContext(ctx, input, d)) return true;
   if (config && d.cardId !== null) return input.cards.some((c) => c.id === d.cardId && c.laneId === config.lane_id);
   if (config && d.disposition === 'create' && d.laneId !== null) return d.laneId === config.lane_id;
   return (
@@ -108,16 +111,26 @@ export function prepareWorkflowInference(
   d: ModelDecision,
 ): WorkflowInferenceRequest | null {
   if (!workflowTarget(ctx, input, d)) return null;
-  const config = ctx.db.get<{ lane_id: number; time_zone: string }>('SELECT * FROM workflow_config WHERE id=1');
+  const config = ctx.db.get<{ lane_id: number; time_zone: string }>(
+    'SELECT w.* FROM workflow_config w JOIN lane l ON l.id=w.lane_id WHERE w.id=1 AND l.archived_at IS NULL',
+  );
   if (!config) return null;
   const linked = input.cards.filter((c) => c.laneId === config.lane_id);
-  const candidate = linked.find((c) => c.id === d.cardId) ?? (linked.length === 1 ? linked[0] : undefined);
+  const proposal = workflowProposalContext(ctx, input, d);
+  const resolvedId = proposal?.result_card_id ?? d.cardId;
+  const candidate =
+    proposal?.status === 'open'
+      ? undefined
+      : (linked.find((c) => c.id === resolvedId) ??
+        (proposal ? undefined : linked.length === 1 ? linked[0] : undefined));
+  if (proposal && proposal.status !== 'open' && !candidate) return null;
   const current = candidate
     ? ctx.db.get<
         WorkflowFields & { id: number; version: number; stage: WorkflowStage; title: string; summary: string }
       >(
-        `SELECT c.id,c.workflow_version AS version,c.title,c.summary,s.key AS stage,coalesce(w.workstream,'others') AS workstream,w.next_action AS nextAction,w.follow_up_at AS followUpAt,w.blocked_reason AS blockedReason,w.buyer_id AS buyerId FROM card c JOIN workflow_stage s ON s.stage_id=c.stage_id LEFT JOIN workflow_ticket w ON w.card_id=c.id WHERE c.id=? AND c.archived_at IS NULL`,
+        `SELECT c.id,c.workflow_version AS version,c.title,c.summary,s.key AS stage,coalesce(w.workstream,'others') AS workstream,w.next_action AS nextAction,w.follow_up_at AS followUpAt,w.blocked_reason AS blockedReason,w.buyer_id AS buyerId FROM card c JOIN workflow_stage s ON s.stage_id=c.stage_id LEFT JOIN workflow_ticket w ON w.card_id=c.id WHERE c.id=? AND c.archived_at IS NULL AND EXISTS (SELECT 1 FROM card_chat cc WHERE cc.card_id=c.id AND cc.chat_id=?)`,
         candidate.id,
+        input.chat.id,
       )
     : undefined;
   if (candidate && !current) return null;
@@ -140,6 +153,17 @@ export function prepareWorkflowInference(
     chatId: input.chat.id,
     timeZone: config.time_zone,
     ticket: current ?? null,
+    ...(proposal?.status === 'open'
+      ? {
+          proposal: {
+            id: proposal.id,
+            laneId: proposal.proposal.laneId,
+            title: proposal.proposal.title,
+            summary: proposal.proposal.summary,
+            hash: digest(proposal.proposal),
+          },
+        }
+      : {}),
     evidence,
     dates,
     buyerIds: buyerIds.slice(-10),

@@ -14,6 +14,7 @@ import type {
 import { MovementChoiceSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
 import { addReview } from './review-groups.ts';
+import { joinWorkflowProposal } from './workflow-proposals.ts';
 
 export function commitWorkflowInference(
   ctx: Ctx,
@@ -31,6 +32,17 @@ export function commitWorkflowInference(
   if (!config) return;
   const review = (reason: string, confidence = 0) => {
     ctx.db.run("UPDATE decision SET outcome='review' WHERE id=?", decisionId);
+    if (request.proposal) {
+      joinWorkflowProposal(
+        ctx,
+        request,
+        d.summary,
+        decisionId,
+        `Workflow review: ${reason}; no inferred stage without valid Jev support`,
+        confidence,
+      );
+      return;
+    }
     if (
       !request.ticket &&
       d.disposition === 'create' &&
@@ -128,7 +140,11 @@ export function commitWorkflowInference(
   // A later outreach or silence signal never regresses proven engagement.
   if (request.ticket && (rank[stage] ?? -1) < (rank[request.ticket.stage] ?? -1) && stage !== 'blocked')
     stage = request.ticket.stage as Exclude<WorkflowStage, 'archive'>;
-  const target = ctx.db.get<{ stage_id: Id }>('SELECT stage_id FROM workflow_stage WHERE key=?', stage);
+  const target = ctx.db.get<{ stage_id: Id }>(
+    'SELECT w.stage_id FROM workflow_stage w JOIN stage s ON s.id=w.stage_id JOIN lane l ON l.id=s.lane_id WHERE w.key=? AND s.removed_at IS NULL AND l.archived_at IS NULL AND s.lane_id=?',
+    stage,
+    config.lane_id,
+  );
   if (
     !target ||
     !['buyer', 'provider', 'integration', 'others'].includes(values.workstream ?? '') ||
@@ -159,6 +175,7 @@ export function commitWorkflowInference(
   }
   if (
     !request.ticket &&
+    !request.proposal &&
     (d.disposition !== 'create' ||
       d.confidence <= config.confidence_threshold ||
       d.laneId !== config.lane_id ||
@@ -168,7 +185,7 @@ export function commitWorkflowInference(
       values.action === 'outreach' ||
       d.proposalId !== null ||
       ctx.db.get(
-        "SELECT id FROM review_item WHERE chat_id=? AND (kind='new_card' OR status IN ('rejected','changed'))",
+        "SELECT id FROM review_item WHERE chat_id=? AND (kind='new_card' OR status IN ('dismissed','changed'))",
         input.chat.id,
       ))
   ) {
@@ -185,7 +202,7 @@ export function commitWorkflowInference(
   }
   if (
     ctx.db.get(
-      "SELECT r.id FROM review_item r JOIN review_message rm ON rm.review_item_id=r.id WHERE r.status='rejected' AND rm.message_id IN (SELECT value FROM json_each(?))",
+      "SELECT r.id FROM review_item r JOIN review_message rm ON rm.review_item_id=r.id WHERE r.status='dismissed' AND rm.message_id IN (SELECT value FROM json_each(?))",
       JSON.stringify([...ids]),
     )
   ) {
@@ -254,6 +271,25 @@ export function commitWorkflowInference(
     (!effectiveFields.blockedReason || (!effectiveFields.nextAction && !effectiveFields.followUpAt))
   ) {
     review('blocked requires explicit reason and next action or follow-up', confidence);
+    return;
+  }
+  if (request.proposal) {
+    if (stage === 'blocked') {
+      review('new lead needs explicit blocker metadata before a blocked move', confidence);
+      return;
+    }
+    joinWorkflowProposal(
+      ctx,
+      request,
+      d.summary,
+      decisionId,
+      'Jev workflow assessment with retained evidence; operator acceptance required',
+      confidence,
+      stage === 'to_be_started'
+        ? undefined
+        : { id: target.stage_id, messageId: stageEvidence, model: result.configuredModel },
+    );
+    ctx.db.run("UPDATE decision SET outcome='review' WHERE id=?", decisionId);
     return;
   }
   const opts = { setBy: 'agent' as const, decisionId, reason: 'Jev workflow classification with retained evidence' };

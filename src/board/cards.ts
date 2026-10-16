@@ -3,6 +3,7 @@ import type { CardSummary, Ctx, Id, SetBy, WriteOpts } from '../contracts/index.
 import { AppError, IdSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
 import { actor, lane, setBy, summary, validate } from './helpers.ts';
+import { workflowInitialStage } from './workflow-stages.ts';
 
 export function createCard(
   ctx: Ctx,
@@ -36,7 +37,7 @@ export function createCard(
   return ctx.db.tx(() => {
     const l = lane(ctx, i.laneId);
     if (l.archived) throw new AppError('invalid', 'Lane is archived');
-    const stage = l.stages.find((s) => s.id === (i.stageId ?? l.stages[0]?.id));
+    const stage = l.stages.find((s) => s.id === (i.stageId ?? workflowInitialStage(ctx, i.laneId) ?? l.stages[0]?.id));
     if (!stage) throw new AppError('invalid', 'Stage is not in lane');
     if (i.companyId != null && !ctx.db.get('SELECT id FROM company WHERE id=?', i.companyId))
       throw new AppError('not_found', 'Company not found');

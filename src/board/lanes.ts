@@ -3,6 +3,7 @@ import type { Ctx, Id, LaneView } from '../contracts/index.ts';
 import { AppError, IdSchema } from '../contracts/index.ts';
 import { record } from '../log/index.ts';
 import { actor, lane, validate } from './helpers.ts';
+import { validateWorkflowStageEdit } from './workflow-stages.ts';
 
 export function createLane(
   ctx: Ctx,
@@ -75,6 +76,7 @@ export function updateLane(
     if (i.name !== undefined && ctx.db.get('SELECT id FROM lane WHERE name=? AND id<>?', i.name, laneId))
       throw new AppError('conflict', 'Lane name exists');
     if (i.stages) {
+      validateWorkflowStageEdit(ctx, laneId, i.stages);
       const ids = i.stages.flatMap((s) => (s.id === undefined ? [] : [s.id]));
       if (new Set(ids).size !== ids.length) throw new AppError('invalid', 'Duplicate stage ids');
       for (const id of ids)

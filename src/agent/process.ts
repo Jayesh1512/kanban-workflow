@@ -74,6 +74,8 @@ export function commitDecision(
         if (stage?.laneId === p.laneId)
           p = { ...p, move: { toStageId: stage.id, criterion: effective.move.criterion } };
       }
+      if (p.kind === 'new_card' && ctx.db.get('SELECT id FROM workflow_config WHERE lane_id=?', p.laneId))
+        p = { ...p, move: null };
       const id = addReview(
         ctx,
         { ...o, why: p.kind === 'new_card' && gate?.kind === 'target' ? 'cross_lane' : o.why, proposal: p },
@@ -143,6 +145,7 @@ export function commitDecision(
           const stage = facts.stages.find((s) => s.id === d.move?.toStageId);
           if (stage?.laneId === p.laneId) move = { toStageId: stage.id, criterion: d.move.criterion };
         }
+        if (ctx.db.get('SELECT id FROM workflow_config WHERE lane_id=?', p.laneId)) move = null;
         joinProposal(
           ctx,
           d.proposalId,

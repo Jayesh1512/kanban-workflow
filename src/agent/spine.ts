@@ -18,12 +18,13 @@ import { bindOutputContext, captureOutputContext } from './forget.ts';
 import { judge, readGuardFacts } from './guard.ts';
 import { movementRequest } from './movement/subject.ts';
 import { commitDecision, commitFailure } from './process.ts';
+import { addReview } from './review-groups.ts';
 import { bindReviewState, captureReviewSources } from './review-state.ts';
 import { eligibleChat, eligibleMessage } from './selection.ts';
 import { spineInput } from './spine-input.ts';
 import { inputProvenance } from './spine-provenance.ts';
 import { commitWorkflowInference } from './workflow-apply.ts';
-import { prepareWorkflowInference, workflowInputContext } from './workflow-input.ts';
+import { prepareWorkflowInference, workflowInputContext, workflowTarget } from './workflow-input.ts';
 
 export function createPipeline(deps: {
   db: Db;
@@ -311,6 +312,7 @@ export function createPipeline(deps: {
             });
           }
           const original = ModelDecisionSchema.parse(raw);
+          const workflowOwned = workflowTarget(ctx, input, original);
           const workflowRequest = prepareWorkflowInference(ctx, input, original);
           let workflowResult: import('../contracts/index.ts').WorkflowInferenceResult | null = null;
           if (workflowRequest) {
@@ -328,7 +330,7 @@ export function createPipeline(deps: {
           }
           // General extraction retains its own role/company path. Workflow stage,
           // workstream and disposition are committed only from the Jev result.
-          const d = workflowRequest
+          const d = workflowOwned
             ? { ...original, disposition: 'none' as const, cardId: null, proposalId: null, move: null }
             : original;
           const preview = judge(d, readGuardFacts(db, input.message.id, d));
@@ -403,13 +405,31 @@ export function createPipeline(deps: {
               current.withdrawn_at !== null
             )
               return null;
-            commitDecision(ctx, input, raw, d, model.name, request, result, reviewSources, workflowRequest !== null);
+            commitDecision(ctx, input, raw, d, model.name, request, result, reviewSources, workflowOwned);
             const decisionId = db.get<{ id: Id }>(
               'SELECT id FROM decision WHERE message_id=? AND message_version=?',
               next.id,
               next.version,
             )?.id;
             if (decisionId) {
+              if (workflowOwned && !workflowRequest) {
+                db.run("UPDATE decision SET outcome='review' WHERE id=?", decisionId);
+                addReview(
+                  ctx,
+                  {
+                    do: 'review',
+                    kind: 'model_failed',
+                    groupKey: `workflow:chat:${input.chat.id}`,
+                    chatId: input.chat.id,
+                    why: 'model_failed',
+                    confidence: 0,
+                    proposal: { kind: 'model_failed' },
+                  },
+                  [input.message.id],
+                  decisionId,
+                  'Workflow context changed or is unavailable; no generic stage fallback',
+                );
+              }
               if (workflowRequest && workflowResult) {
                 commitWorkflowInference(
                   ctx,
@@ -421,9 +441,9 @@ export function createPipeline(deps: {
                   fullScope,
                   outputContext.unknown,
                 );
-                // Include the workflow reviews created after the general decision.
-                bindReviewState(ctx, decisionId, reviewSources);
               }
+              // Include workflow reviews created after the general decision.
+              if (workflowOwned) bindReviewState(ctx, decisionId, reviewSources);
               bindOutputContext(ctx, decisionId, outputContext);
             }
             modelFailure = null;

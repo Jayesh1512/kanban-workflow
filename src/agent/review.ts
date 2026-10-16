@@ -15,6 +15,7 @@ import { record } from '../log/index.ts';
 import { validateSettlement } from './movement/audit.ts';
 import { validateCompanyProposal, validateReviewState } from './review-state.ts';
 import { eligibleChat } from './selection.ts';
+import { validateWorkflowStageReview } from './workflow-proposals.ts';
 
 interface ReviewRow {
   id: Id;
@@ -98,6 +99,7 @@ export function getReview(ctx: Ctx, id: Id): ReviewItemView {
       liveEvidence(ctx, id);
       validateReviewState(ctx, id, proposal);
       validateSettlement(ctx, id, proposal);
+      validateWorkflowStageReview(ctx, id, proposal);
     } catch {
       canAccept = false;
     }
@@ -294,6 +296,7 @@ export function acceptReview(ctx: Ctx, id: Id): void {
     const p = ReviewProposalSchema.parse(JSON.parse(r.proposal));
     validateReviewState(ctx, id, p);
     validateSettlement(ctx, id, p);
+    validateWorkflowStageReview(ctx, id, p);
     const cardId = applyProposal(ctx, id, p);
     settle(ctx, r, 'accepted', cardId, { cardId });
   });

@@ -20,6 +20,7 @@ export interface WorkflowInferenceRequest {
   messageId: Id;
   chatId: Id;
   timeZone: string;
+  proposal?: { id: Id; laneId: Id; title: string; summary: string; hash: string };
   ticket: (WorkflowFields & { id: Id; version: number; stage: WorkflowStage; title: string; summary: string }) | null;
   evidence: (MovementEvidence & { direction: 'in' | 'out' })[];
   dates: WorkflowValueCandidate[];
