@@ -1,0 +1,94 @@
+services:
+  init:
+    build:
+      context: .
+      dockerfile: deploy/vikunja/Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-antseed}-vikunja-setup:local
+    entrypoint: ["/bin/sh", "/deploy/init.sh"]
+    volumes:
+      - runtime_state:/run/antseed
+      - vikunja_files:/vikunja-files
+      - telegram_sessions:/telegram
+    restart: "no"
+  postgres:
+    image: postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    environment:
+      POSTGRES_USER: antseed
+      POSTGRES_DB: antseed
+      POSTGRES_PASSWORD_FILE: /run/antseed/pg-password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - runtime_state:/run/antseed:ro
+      - ./deploy/postgres/01-databases.sql:/docker-entrypoint-initdb.d/01-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antseed -d antseed"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  vikunja:
+    build:
+      context: .
+      dockerfile: deploy/vikunja/Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-antseed}-vikunja-setup:local
+    user: "1000:1000"
+    environment:
+      VIKUNJA_SERVICE_PUBLICURL: http://localhost:${VIKUNJA_PORT:-3456}/
+    volumes:
+      - runtime_state:/run/antseed:ro
+      - vikunja_files:/app/vikunja/files
+    ports:
+      - "127.0.0.1:${VIKUNJA_PORT:-3456}:3456"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3456/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+  backend:
+    build: .
+    stop_grace_period: 30s
+    # Intermediate M1 harness only. PM removes this override after wiring canonical main.
+    command: ["node", "dist/platform/standalone.js"]
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      RUNTIME_ENV_PATH: /run/antseed/runtime.env
+      AI_ENV_PATH: /run/config/ai.env
+      VIKUNJA_URL: http://vikunja:3456
+      TELEGRAM_SESSION_PATH: /data/telegram/client.session
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TIMEZONE: ${TIMEZONE:-Asia/Kolkata}
+    volumes:
+      - runtime_state:/run/antseed:ro
+      - telegram_sessions:/data/telegram
+      - type: bind
+        source: ${AI_ENV_PATH:-/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env}
+        target: /run/config/ai.env
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
+    healthcheck:
+      # Process health only. /api/status and /health/ready retain upstream/M2 detail.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      vikunja:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  vikunja_files:
+  telegram_sessions:
+  runtime_state:

@@ -1,0 +1,14 @@
+# Allowlist: private .env, local sessions, test artifacts and host modules never enter context.
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.build.json
+!src/
+!src/**
+!db/
+!db/migrations/
+!db/migrations/*.sql
+!deploy/
+!deploy/**
