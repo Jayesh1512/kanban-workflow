@@ -17,7 +17,7 @@ export async function buildApp({ modules = [], logger = false }: AppOptions = {}
     if (domain.code === 'internal') request.log.error({ err: error }, 'Request failed');
     return reply.code(ERROR_HTTP_STATUS[domain.code]).send({ error: { code: domain.code, message: domain.message, retryable: domain.retryable, requestId: request.id } });
   });
-  app.get('/health/live', async () => ({ status: 'ok', service: 'antseed-kanban', milestone: 'M0' }));
+  app.get('/health/live', async () => ({ status: 'ok', service: 'antseed-kanban' }));
   app.get('/health/ready', async (_request, reply) => {
     const states = await Promise.all(modules.map(async (m) => ({ name: m.name, ...await m.status() })));
     const ready = states.length > 0 && states.every((s) => s.state === 'ready');

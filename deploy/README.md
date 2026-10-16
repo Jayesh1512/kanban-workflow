@@ -1,6 +1,6 @@
 # M1 platform deployment and verification
 
-Run `docker compose up --build` from the repository. Backend is loopback
+Run `docker compose up` from the repository (use `--build` when rebuilding after code changes). Backend is loopback
 `http://localhost:3000/`; Vikunja is `http://localhost:3456/`. Override
 `BACKEND_PORT` / `VIKUNJA_PORT` to avoid other projects. PostgreSQL is not exposed.
 `AI_ENV_PATH` selects the host AI config file; its default is the private path
@@ -8,11 +8,9 @@ in PROJECT_BRIEF. It must exist for Compose to bind it; mount an empty env file
 to test with no AI credentials. The mount is read-only. Direct host execution
 also tolerates missing/unreadable AI files and reports their absence.
 
-M1 uses `src/platform/standalone.ts` as its temporary Compose harness while the
-PM-owned composition is empty. **After PM wires createPlatformModule into
-src/composition.ts, remove the backend command override in compose.yaml.** The
-Dockerfile already defaults to canonical `node dist/main.js`. The standalone
-entrypoint is only an intermediate/test harness, not a second production app.
+Compose runs the canonical `node dist/main.js` entrypoint, with the platform
+module wired through `src/composition.ts`. `src/platform/standalone.ts` is
+retained only as an isolated development/test harness.
 
 Startup generates random upstream credentials and a stable Vikunja service
 secret in `runtime_state`. Nothing is baked into images or printed. The init

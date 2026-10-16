@@ -1,6 +1,9 @@
 import type { ApplicationModule } from './shared/ports.js';
+import { loadRuntimeConfig } from './platform/config.js';
+import { createPlatformModule } from './platform/module.js';
 
-/** Architect/PM-owned integration seam. M1/M3 add the two explicit factories here. */
+/** Canonical runtime composition; workflow is added after its bounded implementation handoff. */
 export async function createModules(): Promise<ApplicationModule[]> {
-  return [];
+  const config = await loadRuntimeConfig();
+  return [await createPlatformModule(config)];
 }
