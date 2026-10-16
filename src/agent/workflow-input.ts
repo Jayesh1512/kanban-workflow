@@ -46,7 +46,11 @@ export function workflowInputContext(ctx: Ctx, input: DecideInput) {
 }
 export function workflowTarget(ctx: Ctx, input: DecideInput, d: ModelDecision): boolean {
   const config = ctx.db.get<{ lane_id: number }>('SELECT lane_id FROM workflow_config WHERE id=1');
-  if (config && workflowProposalContext(ctx, input, d)) return true;
+  if (config && d.disposition === 'join')
+    return (
+      !!workflowProposalContext(ctx, input, d) ||
+      input.proposals.some((p) => p.id === d.proposalId && p.laneId === config.lane_id)
+    );
   if (config && d.cardId !== null) return input.cards.some((c) => c.id === d.cardId && c.laneId === config.lane_id);
   if (config && d.disposition === 'create' && d.laneId !== null) return d.laneId === config.lane_id;
   return (
@@ -117,6 +121,7 @@ export function prepareWorkflowInference(
   if (!config) return null;
   const linked = input.cards.filter((c) => c.laneId === config.lane_id);
   const proposal = workflowProposalContext(ctx, input, d);
+  if (d.disposition === 'join' && !proposal) return null;
   const resolvedId = proposal?.result_card_id ?? d.cardId;
   const candidate =
     proposal?.status === 'open'
