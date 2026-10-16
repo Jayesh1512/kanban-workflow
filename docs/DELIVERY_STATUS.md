@@ -14,7 +14,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Current assignments
 
-- M0 architecture/contracts/foundation — baseline `25d66b8` integrated as `9b9b823`; snapshot/default-included patch `b431c44` integrated as `18ea376`, PM check PASS (strict TypeScript, 15 tests, production build) and native SQLite PASS. Independent QA in progress. Architect assigned minimal explicit analysis claim-token seam required to fence reclaimed jobs.
+- M0 architecture/contracts/foundation — baseline `25d66b8` integrated as `9b9b823`; snapshot/default-included patch `b431c44` integrated as `18ea376`; claim-token patch `034bb5` integrated as `e8711ca`. PM check PASS (strict TypeScript, 16 tests, production build), native SQLite PASS. All shared corrections delivered; independent QA final report pending.
 - M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. M0-P2 draft review complete; no product edits. M1/M2 pending corrected baseline.
 - M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. M0-I2 draft review complete; no product edits. M3/M4 pending corrected baseline.
 - M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
@@ -36,7 +36,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Milestone status
 
-- M0: baseline/snapshot correction integrated and PM executable checks pass; independent QA final review and additive claim-token seam pending.
+- M0: baseline and both corrections integrated; PM executable checks16/16 pass. Independent QA final review pending.
 - M1: implementation running on committed M0.
 - M2: pending M1 handoff; interfaces committed.
 - M3: M3.1 implementation running in parallel with M1; real Jev success externally blocked by Gateway credits.
