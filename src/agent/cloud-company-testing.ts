@@ -109,5 +109,12 @@ export async function transitiveCompany(
     h.db.get<{ raw: string }>('SELECT raw FROM decision WHERE id=?', producer.decision_id)?.raw ?? '{}',
   ).__withdrawalContext;
   assert.ok(context.companies.some((o: { id: number }) => o.id === company));
+  const planted = Buffer.concat(
+    [h.path, `${h.path}-wal`, `${h.path}-shm`].filter(existsSync).map((p) => readFileSync(p)),
+  );
+  assert.ok(
+    planted.includes(Buffer.from(JSON.stringify(marker).slice(1, -1))),
+    'actual escaped company bytes present before erasure',
+  );
   return { h, company, contact };
 }

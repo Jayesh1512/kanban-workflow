@@ -14,7 +14,7 @@ import {
 
 for (const human of ['rename', 'link', 'alias', 'card'] as const)
   test(`F1 actual transitive generated company with human ${human} preserves the human value and erases unsafe name`, async (t) => {
-    const marker = 'ERASE_COMPANY_Ünicode_QZX';
+    const marker = 'ERASE_COMPANY_Ünicode_"quoted"_\\QZX';
     const { h, company, contact } = await transitiveCompany(t, marker);
     if (human === 'rename') renameCompany(h.ctx, company, 'Human corrected business');
     if (human === 'link') setContactCompany(h.ctx, contact, { company: { id: company }, evidenceMessageIds: [] });
