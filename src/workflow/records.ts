@@ -150,6 +150,14 @@ export class RecordsRepository implements RecordsService {
   async updateFact(raw: Parameters<RecordsService['updateFact']>[0]) {
     const input = updateFactSchema.parse(raw);
     return command(this.db, `fact:${input.factId}`, input.idempotencyKey, input, async (tx) => {
+      const ref = (await tx.query('SELECT j.chat_id FROM facts f JOIN analysis_jobs j ON j.id=f.job_id WHERE f.id=$1 AND f.parent_fact_id IS NULL', [input.factId])).rows[0];
+      assert(ref, 'not_found', 'Fact not found');
+      // Same order as ingestion/analysis: chat, then ticket, then fact. Read the
+      // current ticket only AFTER the chat lock, since analysis may attach a
+      // previously unassociated fact while this command waits for that lock.
+      await tx.query('SELECT id FROM chats WHERE id=$1 FOR UPDATE', [ref.chat_id]);
+      const current = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.factId])).rows[0]!;
+      if (current.ticket_id) await tx.query('SELECT id FROM tickets WHERE id=$1 FOR UPDATE', [current.ticket_id]);
       await assertEvidence(tx, [...input.evidenceIds, ...input.dates.flatMap((d) => d.evidenceIds)]);
       if (input.answersFactId) { const answered = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.answersFactId])).rows[0]; const current = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.factId])).rows[0]; assert(answered && current && answered.ticket_id === current.ticket_id && input.answersFactId !== input.factId, 'validation', 'Invalid answering fact'); }
       const row = (await tx.query(`UPDATE facts SET actor_party=$1,actor_contact_id=$2,actor_display_name=$3,state=$4,answers_fact_id=$5,source='manual',version=version+1
