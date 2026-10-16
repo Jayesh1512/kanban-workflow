@@ -249,7 +249,24 @@ for (const route of ['participant', 'card', 'named', 'alias'] as const)
         f.h.db.get<{ title: string }>('SELECT title FROM card WHERE id=?', f.human.id)?.title,
         'RETAIN human title',
       );
-      assert.equal(f.h.db.get<{ name: string }>('SELECT name FROM company WHERE id=?', company)?.name, companyName);
+      const retainedCompany = f.h.db.get<{ name: string; name_norm: string }>(
+        'SELECT name,name_norm FROM company WHERE id=?',
+        company,
+      );
+      if (route === 'participant') {
+        assert.equal(retainedCompany, undefined, 'unprotected generated company must be removed');
+        assert.equal(f.h.db.get('SELECT contact_id FROM contact_company WHERE company_id=?', company), undefined);
+      } else if (route === 'alias') {
+        assert.equal(retainedCompany?.name, `Alias ${companyName}`, 'retain the explicit human alias');
+        assert.equal(
+          retainedCompany?.name_norm,
+          f.h.db.get<{ alias_norm: string }>('SELECT alias_norm FROM company_alias WHERE company_id=?', company)
+            ?.alias_norm,
+        );
+      } else {
+        assert.equal(retainedCompany?.name, '(name removed)', 'human-linked identity must not retain unsafe text');
+        assert.equal(retainedCompany?.name_norm, `withdrawn company ${company}`);
+      }
       assert.ok(f.h.db.get('SELECT id FROM message WHERE id=?', second));
       assert.equal(
         f.h.db.get<{ redacted: number }>('SELECT redacted FROM action_log WHERE id=?', copiedLog)?.redacted,
@@ -261,9 +278,10 @@ for (const route of ['participant', 'card', 'named', 'alias'] as const)
           f.h.db.get<{ alias: string }>('SELECT alias FROM company_alias WHERE company_id=?', company)?.alias,
           `Alias ${companyName}`,
         );
-      assert.ok(
-        f.h.db.get('SELECT id FROM company WHERE id=?', company),
-        'explicit normal company retention remains intact',
+      assert.equal(
+        Boolean(f.h.db.get('SELECT id FROM company WHERE id=?', company)),
+        route !== 'participant',
+        'only an explicit human alias, card or named-chat choice retains company identity',
       );
       assert.equal(f.h.db.get<{ busy: number }>('PRAGMA wal_checkpoint(TRUNCATE)')?.busy, 0);
       const files = [database, `${database}-wal`, `${database}-shm`].filter(existsSync).map((path) => ({
@@ -272,6 +290,11 @@ for (const route of ['participant', 'card', 'named', 'alias'] as const)
         outputTitlePresent: readFileSync(path).includes(Buffer.from(before.title)),
       }));
       assert.ok(files.every((r) => !r.outputTitlePresent));
+      if (route !== 'alias')
+        assert.ok(
+          files.every((r) => !readFileSync(r.path).includes(Buffer.from(companyName))),
+          'unsafe generated company name must be physically erased; human aliases are separately protected',
+        );
       assert.equal(
         f.h.db.get<{ deals_about: string }>('SELECT deals_about FROM contact WHERE id=?', human)?.deals_about,
         'RETAIN human role',
