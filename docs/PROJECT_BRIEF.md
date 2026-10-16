@@ -63,6 +63,8 @@ M4 Hermes and operations: actual MCP tools and HTTP routes, priority briefing/ac
 
 M5 QA/release: unit and integration tests, real Docker/Vikunja smoke, API/MCP end-to-end, representative English/Hindi/Hinglish fixtures, repeated start/restart, exclusions, duplicates/stale proposals/retry/crash recovery. Clearly separate real upstream tests from fakes and any Telegram login blockers.
 
+Final user-requested deliverable: after implementation and complete end-to-end testing, record a polished demo video of the working project. Prefer a readable desktop capture around 2–4 minutes, ideally 1080p MP4, with clear captions/callouts and clean pacing. Show setup, Telegram ingestion, company/contact records, proposed movement with board unchanged, explicit approval, actual Vikunja update, and Hermes priorities. Use an isolated synthetic-company dataset and keep credentials/login codes/private chats out of view. Label any replay/simulated or externally blocked integration honestly; do not fabricate successful live Telegram/Jev behavior. Capture only after final fixes; include reproducible demo steps with the artifact.
+
 ## Worker handoff protocol
 
 Stay within assigned worktree/files, do not overwrite others, and do not create more worker chats. Check shared contracts first. When done, commit and send the PM a message using t3_thread_send to thread `675d7f86-acfd-4669-b9af-91caf5a8ee02` with your branch, commit SHAs, milestone, changed files, test commands/results and unresolved issues. Never wait in an idle loop: finish the bounded assignment and report. PM will send the next assignment. Keep all secrets out of reports.
