@@ -25,3 +25,15 @@ it('stop before register/start is safe and never installs a subscriber', async (
   const module = await createWorkflowModule(platform); const app = Fastify(); cleanups.push(() => app.close());
   await module.stop(); await module.register(app); await module.start(); await module.stop(); expect(h.handlers.size).toBe(0);
 });
+
+it('refuses a complete version ledger with wrong checksums before any domain side effect', async () => {
+  const h = await workflowHarness(); cleanups.push(() => h.db.close()); const { readdir } = await import('node:fs/promises');
+  await h.db.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL)');
+  for (const name of (await readdir(new URL('../../db/migrations/', import.meta.url))).filter((name) => /^\d[\w.-]*\.sql$/.test(name))) await h.db.query('INSERT INTO schema_migrations VALUES($1,$2)', [name, 'deliberately-wrong-checksum']);
+  const config = await loadRuntimeConfig({ AI_ENV_PATH: '/tmp/antseed-nonexistent-config-for-module-test', AI_GATEWAY_API_KEY: 'synthetic-not-a-real-key' });
+  const platform = { config, clock: h.clock, db: h.db, vikunja: h.vikunja, control: h.control } as PlatformServices; const module = await createWorkflowModule(platform);
+  await module.start(); const { setTimeout: delay } = await import('node:timers/promises');
+  for (let i = 0; i < 100 && (await module.status()).code === 'not_started'; i++) await delay(10);
+  await module.stop(); expect(await module.status()).toMatchObject({ state: 'unavailable', code: 'migration_drift' });
+  expect(h.tasks.size).toBe(0); expect((await h.db.query("SELECT key FROM app_settings WHERE key LIKE 'workflow:%'")).rows).toHaveLength(0);
+});

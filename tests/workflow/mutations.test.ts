@@ -77,3 +77,21 @@ it('does not redo a confirmed move that an external operator subsequently revers
   await h.mutations.withOwnedTicket(h.ticket.id, async () => { const m = await h.mutations.prepare(h.proposal.id); id = m.id; await h.mutations.confirmRemote(id, m.targetBucketId); });
   expect((await h.service.reconcile(id)).state).toBe('conflict'); expect(h.moves()).toBe(0); expect((await h.records.getTicket(h.ticket.id)).lane).toBe('To be started');
 });
+
+it('does not let terminal stale/no-journal proposals starve a later current approval', async () => {
+  const h = await setup(); await h.db.query("UPDATE proposals SET apply_state='stale' WHERE id=$1", [h.proposal.id]);
+  const { randomUUID } = await import('node:crypto'); const id = randomUUID();
+  await h.db.query("INSERT INTO messages(chat_id,id,sent_at,text) VALUES(-1001,2,now(),'Synthetic fresh supported evidence')");
+  await h.db.query("INSERT INTO evidence(id,chat_id,message_id,message_version,excerpt,observed_at) VALUES($1,-1001,2,1,'Synthetic fresh supported evidence',now())", [id]);
+  const newer = await h.service.propose({ idempotencyKey: 'new-current', ticketId: h.ticket.id, expectedStageVersion: 0, targetLane: 'Work in progress', reason: 'Synthetic current source', nextAction: null, evidenceIds: [id], origin: 'manual' });
+  await h.service.decide({ idempotencyKey: 'new-approve', proposalId: newer.id, decision: 'approve' });
+  expect((await h.service.applyNext())!.state).toBe('committed'); expect(h.moves()).toBe(1); expect((await h.service.get(newer.id)).applyState).toBe('applied');
+});
+it('reads back an unknown accepted effect even after exclusion and reflects it conservatively', async () => {
+  const h = await setup(); h.failMoveResponseOnce(); const unknown = (await h.service.applyNext())!;
+  await h.db.query("UPDATE chats SET inclusion='excluded',policy_version=policy_version+1 WHERE id=-1001"); await h.db.query("UPDATE tickets SET tracking_state='suspended'"); await h.db.query("UPDATE proposals SET apply_state='stale'");
+  let reads = 0; const original = h.vikunja.getTask.bind(h.vikunja); h.vikunja.getTask = async (id) => { reads++; return original(id); };
+  expect((await h.service.reconcile(unknown.id)).state).toBe('conflict'); expect(reads).toBe(1); expect(h.moves()).toBe(1);
+  expect(await h.records.getTicket(h.ticket.id)).toMatchObject({ lane: 'Integrations', stageVersion: 1, trackingState: 'suspended' });
+  expect((await h.service.get(h.proposal.id)).applyState).toBe('stale');
+});

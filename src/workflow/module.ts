@@ -1,4 +1,6 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { DomainError } from '../shared/api.js';
 import type { ApplicationModule, PlatformServices } from '../shared/ports.js';
 import type { ServiceStatus } from '../shared/domain.js';
 import { createOpenAIExtractor } from '../intelligence/openai.js';
@@ -30,22 +32,36 @@ export function createWorkflowServices(platform: PlatformServices) {
 /** Register before platform start; run bounded work only after its complete migration ledger exists. */
 export async function createWorkflowModule(platform: PlatformServices): Promise<ApplicationModule> {
   const services = createWorkflowServices(platform);
-  const expectedMigrations = (await readdir(new URL('../../db/migrations/', import.meta.url))).filter((name) => /^\d[\w.-]*\.sql$/.test(name));
+  const directory = new URL('../../db/migrations/', import.meta.url);
+  const names = (await readdir(directory)).filter((name) => /^\d[\w.-]*\.sql$/.test(name));
+  const expectedMigrations = new Map(await Promise.all(names.map(async (name) => [name, createHash('sha256').update(await readFile(new URL(name, directory))).digest('hex')] as const)));
   let started = false, stopped = false, timer: ReturnType<typeof setTimeout> | null = null, task: Promise<void> | null = null;
   let unsubscribe: (() => void) | null = null; const replies = new Set<Promise<void>>(); const abort = new AbortController();
   let state: ServiceStatus = { state: 'connecting', code: 'not_started', detail: 'Workflow has not started', checkedAt: platform.clock.now().toISOString() };
-  async function migrationsReady(): Promise<boolean> {
+  async function migrationsReady(): Promise<'pending' | 'ready' | 'drift'> {
     return platform.db.transaction(async (tx) => {
-      const lock = (await tx.query<{ ready: boolean }>("SELECT pg_try_advisory_xact_lock(hashtextextended('antseed:migrations',0)) AS ready")).rows[0]; if (!lock?.ready) return false;
-      if (!(await tx.query<{ name: string | null }>("SELECT to_regclass('schema_migrations')::text AS name")).rows[0]?.name) return false;
-      const applied = (await tx.query<{ version: string }>('SELECT version FROM schema_migrations')).rows.map((r) => r.version);
-      return expectedMigrations.every((name) => applied.includes(name));
+      const lock = (await tx.query<{ ready: boolean }>("SELECT pg_try_advisory_xact_lock(hashtextextended('antseed:migrations',0)) AS ready")).rows[0]; if (!lock?.ready) return 'pending';
+      if (!(await tx.query<{ name: string | null }>("SELECT to_regclass('schema_migrations')::text AS name")).rows[0]?.name) return 'pending';
+      const applied = (await tx.query<{ version: string; checksum: string }>('SELECT version,checksum FROM schema_migrations')).rows;
+      if (applied.some((row) => expectedMigrations.get(row.version) !== row.checksum)) return 'drift';
+      return applied.length === expectedMigrations.size ? 'ready' : 'pending';
     });
+  }
+  async function requireDatabaseReady(): Promise<void> {
+    try {
+      const result = await migrationsReady();
+      if (result === 'ready') return;
+      throw new DomainError('upstream_unavailable', result === 'drift' ? 'Applied migration checksum differs from disk; business work is paused' : 'Waiting for checksum-validated database migrations', true);
+    } catch (error) {
+      if (error instanceof DomainError) throw error;
+      throw new DomainError('upstream_unavailable', 'Database readiness unavailable; business work is paused', true);
+    }
   }
   async function tick(): Promise<void> {
     if (abort.signal.aborted) return;
     try {
-      if (!await migrationsReady()) { state = { state: 'connecting', code: 'database_pending', detail: 'Waiting for platform migrations', checkedAt: platform.clock.now().toISOString() }; return; }
+      const readiness = await migrationsReady();
+      if (readiness !== 'ready') { state = { state: readiness === 'drift' ? 'unavailable' : 'connecting', code: readiness === 'drift' ? 'migration_drift' : 'database_pending', detail: readiness === 'drift' ? 'Applied migration checksum differs from disk; workflow remains stopped' : 'Waiting for checksum-validated platform migrations', checkedAt: platform.clock.now().toISOString() }; return; }
       abort.signal.throwIfAborted();
       await seedKnownJevRestriction(platform.db, platform.config, platform.clock);
       let phaseFailed = false;
@@ -74,7 +90,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       if (unsubscribe || stopped) return;
       unsubscribe = platform.control.subscribe(async (message) => {
         if (stopped) throw new Error('Workflow stopping; retain inbox reply');
-        const reply = services.proposals.handleControlReply(message); replies.add(reply);
+        const reply = requireDatabaseReady().then(() => services.proposals.handleControlReply(message)); replies.add(reply);
         try { await reply; } finally { replies.delete(reply); }
       });
     },

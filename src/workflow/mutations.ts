@@ -13,6 +13,9 @@ export function mutationRow(row: Row): Mutation { return { id: String(row.id), p
 
 /** Local observation of an actual remote lane. It never sends a remote write. */
 export async function observeRemoteTx(tx: SqlExecutor, ticketId: string, actualBucket: string): Promise<boolean> {
+  // Serialize with operator exclusion/correction before taking any child locks.
+  await tx.query('SELECT c.id FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [ticketId]);
+  await tx.query('SELECT id FROM tickets WHERE id=$1 FOR UPDATE', [ticketId]);
   const bucket = (await tx.query<{ lane: Lane }>('SELECT lane FROM board_buckets WHERE bucket_id=$1', [actualBucket])).rows[0]; if (!bucket) return false;
   await tx.query(`UPDATE tickets SET previous_active_lane=CASE WHEN $2='Blocked' AND lane IN ('To be started','Work in progress','Integrations') THEN lane ELSE previous_active_lane END,
     lane=$2,stage_version=stage_version+1,updated_at=now() WHERE id=$1 AND lane<>$2`, [ticketId, bucket.lane]);
@@ -37,6 +40,11 @@ export class SqlMutationStore implements MutationStore {
   }
   private async fenced(tx: SqlExecutor, id: string): Promise<Row> {
     const context = this.context();
+    const ref = (await tx.query('SELECT proposal_id,ticket_id FROM mutations WHERE id=$1', [id])).rows[0];
+    assert(ref && String(ref.ticket_id) === context.ticketId, 'conflict', 'Mutation does not match ticket ownership');
+    // Every write path uses chat -> ticket -> proposal -> journal, including
+    // observation from conflict/commit; no journal owner waits for a new chat lock.
+    await lockProposal(tx, String(ref.proposal_id));
     const row = (await tx.query('SELECT * FROM mutations WHERE id=$1 FOR UPDATE', [id])).rows[0];
     assert(row && String(row.ticket_id) === context.ticketId && row.worker_id === context.token && ['prepared', 'remote_unknown', 'remote_confirmed'].includes(String(row.state)) && row.lease_until && new Date(row.lease_until as string).getTime() > this.clock.now().getTime(), 'conflict', 'Mutation claim expired or was replaced');
     this.context(context.ticketId); return row;
@@ -62,7 +70,11 @@ export class SqlMutationStore implements MutationStore {
       const stale = await staleReason(tx, proposal, ticket, chat);
       if (stale || proposal.applyState === 'stale') {
         await markStale(tx, proposal.id, stale ?? 'already_stale');
-        if (adopted) { this.finish(adopted); await this.conflictTx(tx, adopted, 'stale_before_apply'); }
+        if (adopted) {
+          // Any prepared attempt may have crossed the remote acceptance boundary
+          // before a crash. Source changes forbid new writes, never readback.
+          this.finish(adopted); return { mutation: mutationRow(adopted), stale: false };
+        }
         return { mutation: null, stale: true };
       }
       assert(ticket.vikunja_task_id, 'upstream_unavailable', 'Ticket must be projected before applying a proposal');
@@ -80,7 +92,8 @@ export class SqlMutationStore implements MutationStore {
   async claim(input: { workerId: string; leaseMs: number }): Promise<Mutation | null> {
     const context = this.context(); assert(input.workerId.length > 0 && input.leaseMs > 0 && input.leaseMs <= 3600000, 'validation', 'Invalid mutation lease');
     return this.db.transaction(async (tx) => {
-      const row = (await tx.query("SELECT * FROM mutations WHERE ticket_id=$1 AND state IN ('prepared','remote_unknown','remote_confirmed') ORDER BY created_at,id FOR UPDATE LIMIT 1", [context.ticketId])).rows[0]; if (!row) return null;
+      const ref = (await tx.query("SELECT id FROM mutations WHERE ticket_id=$1 AND state IN ('prepared','remote_unknown','remote_confirmed') ORDER BY created_at,id LIMIT 1", [context.ticketId])).rows[0]; if (!ref) return null;
+      const row = await this.fenced(tx, String(ref.id));
       // Never rotate ownership within an existing scope. prepare/adoption captures it once.
       assert(row.worker_id === context.token && new Date(row.lease_until as string).getTime() > this.clock.now().getTime(), 'conflict', 'Prepare mutation under this ownership before claiming');
       const updated = (await tx.query("UPDATE mutations SET lease_until=$2,updated_at=now() WHERE id=$1 AND worker_id=$3 AND state IN ('prepared','remote_unknown','remote_confirmed') AND lease_until>$4 RETURNING *", [row.id, new Date(this.clock.now().getTime() + input.leaseMs), context.token, this.clock.now()])).rows[0]!;
