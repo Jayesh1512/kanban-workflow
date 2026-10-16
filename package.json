@@ -1,0 +1,39 @@
+{
+  "name": "antseed-kanban",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.23.3" },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@mtcute/node": "0.32.4",
+    "dotenv": "17.2.3",
+    "fastify": "5.12.7",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@types/node": "22.20.5",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "overrides": {
+    "@mtcute/core": "0.32.4",
+    "@mtcute/html-parser": "0.32.4",
+    "@mtcute/markdown-parser": "0.32.4",
+    "@mtcute/wasm": "0.32.0",
+    "better-sqlite3": "12.10.0"
+  }
+}
