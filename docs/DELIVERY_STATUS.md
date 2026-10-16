@@ -39,7 +39,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 ## Milestone status
 
 - M0: PASS, QA report/regressions integrated and PM rerun24/24+build/typecheck/native/compiled runtime pass.
-- M1: integrated/canonical wiring complete, independent QA and architecture code review running.
+- M1: integrated/canonical wiring complete, gate HELD for 3 real-reproduced P1s; architecture assigned targeted fixes and QA continues independent acceptance.
 - M2: implementation running on Builder A branch; operational migration reserved, live Telegram prerequisites sought from reference thread.
 - M3: M3.1 implementation running in parallel with M1; real Jev success externally blocked by Gateway credits.
 - M4: pending M3 interfaces/implementation handoff.
@@ -54,6 +54,9 @@ PM sent architecture a bounded consolidated fix list before contract freeze: exp
 After baseline integration, PM approved B's narrow transactional analysis-mapping ownership (manual corrections remain A-owned) and a minimal explicit immutable claim-token seam: returned AnalysisJob.claimToken, final token arguments on saveExtraction/complete/fail, exact-token/running/unexpired-lease CAS. Existing worker_id storage suffices; no schema addition. Builder B must test stale save/complete/fail after same-workerId lease reclaim. Snapshot correction is integrated and checked15/15; M1/M3.1 implementation continues independently.
 
 ## Evidence
+
+- M1 architectural P1s (real isolated PostgreSQL/Vikunja reproductions): lock callbacks exhaust8-session pool by borrowing additional sessions; stale full task details PUT with done=false can undo a concurrent approved Completed move while returning success; checked-out PostgreSQL connection termination during lock callback emits unhandled error57P01/process exit1. Architect owns bounded repairs to src/platform/database.ts + src/vikunja/adapter.ts, minimal shared session-lock seam and regressions. Builder A keeps M2 and avoids these files until handoff. M1 cannot pass before repaired real repros and independent QA.
+- M2 exact mtcute finding: notifyLoggedIn starts updates automatically. A implements updates-disabled authentication/resume, binds actual account before update processing, closes auth storage, then reopens live catchUp client with handlers. Independent implementation continues while M1 defects are fixed.
 
 - Initial requirements committed as `bf76f1b`.
 - Docker Engine 29.4.0 responds on host; Node 26.4.0 and npm 11.17.0 available.
