@@ -5,3 +5,12 @@ export { archiveCard, dismissCardOffer, unarchiveCard, updateCard } from './corr
 export { forgetMessages } from './forget.ts';
 export { archiveLane, createLane, listLanes, updateLane } from './lanes.ts';
 export { getBoard, getCard, searchCards } from './views.ts';
+export {
+  configureWorkflow,
+  createWorkflowTicket,
+  getDailyPriorities,
+  getWorkflowBoard,
+  getWorkflowTicket,
+  moveWorkflowTicket,
+  updateWorkflowTicket,
+} from './workflow.ts';
