@@ -2,6 +2,7 @@ import { discoverGeneratedOutputs } from '../agent/forget.ts';
 import { forgetMessages as forgetAgent } from '../agent/index.ts';
 import { clearGeneratedText } from '../board/forget.ts';
 import { forgetMessages as forgetBoard } from '../board/index.ts';
+import { forgetWorkflowFields } from '../board/workflow-forget.ts';
 import type { Ctx, Host, Id } from '../contracts/index.ts';
 import { AppError, IdSchema } from '../contracts/index.ts';
 import { eraseGeneratedCompanies, resetGeneratedRoles } from '../graph/forget.ts';
@@ -32,6 +33,7 @@ export function withdrawChat(ctx: Ctx, host: Host, accountId: Id, chatId: Id): v
     ctx.db.run('PRAGMA defer_foreign_keys=ON');
     const messageIds = host.markWithdrawn(ctx, accountId, chatId);
     const outputs = discoverGeneratedOutputs(ctx, messageIds);
+    const workflowCardIds = forgetWorkflowFields(ctx, messageIds, chatId);
     const agent = forgetAgent(ctx, messageIds);
     const board = forgetBoard(ctx, messageIds);
     const clearedCardIds = clearGeneratedText(ctx, outputs.cardIds, messageIds);
@@ -41,7 +43,13 @@ export function withdrawChat(ctx: Ctx, host: Host, accountId: Id, chatId: Id): v
     redact(ctx, {
       messageIds,
       decisionIds: agent.decisionIds,
-      cardIds: [...board.removedCardIds, ...board.clearedCardIds, ...clearedCardIds, ...companies.cardIds],
+      cardIds: [
+        ...workflowCardIds,
+        ...board.removedCardIds,
+        ...board.clearedCardIds,
+        ...clearedCardIds,
+        ...companies.cardIds,
+      ],
       reviewItemIds: agent.reviewItemIds,
       contactIds: [...graph.removedContactIds, ...graph.resetContactIds, ...resetContactIds, ...companies.contactIds],
       companyIds: [...graph.removedCompanyIds, ...companies.companyIds],

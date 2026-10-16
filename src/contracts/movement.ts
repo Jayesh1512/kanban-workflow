@@ -109,6 +109,10 @@ export interface MovementProviderStatus {
 }
 
 export interface MovementDecisionProvider {
+  classifyWorkflow?(
+    request: import('./workflow-inference.ts').WorkflowInferenceRequest,
+    signal: AbortSignal,
+  ): Promise<import('./workflow-inference.ts').WorkflowInferenceResult>;
   decide(request: MovementRequest, signal: AbortSignal): Promise<MovementResult>;
   status(): MovementProviderStatus;
 }

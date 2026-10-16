@@ -116,6 +116,14 @@ export function moveCard(
     if (!target) throw new AppError('invalid', 'Inactive stage');
     if (ctx.actor.kind === 'agent' && target.lane_id !== before.laneId)
       throw new AppError('forbidden', 'Cross-lane move requires human');
+    if (
+      ctx.db.get("SELECT key FROM workflow_stage WHERE stage_id=? AND key='blocked'", i.stageId) &&
+      !ctx.db.get(
+        'SELECT card_id FROM workflow_ticket WHERE card_id=? AND blocked_reason IS NOT NULL AND (next_action IS NOT NULL OR follow_up_at IS NOT NULL)',
+        cardId,
+      )
+    )
+      throw new AppError('invalid', 'Blocked requires a reason and next action or follow-up');
     for (const id of i.evidenceMessageIds ?? [])
       if (!ctx.db.get('SELECT id FROM message WHERE id=?', id)) throw new AppError('not_found', 'Evidence not found');
     ctx.db.run(
@@ -127,6 +135,11 @@ export function moveCard(
       actor(ctx),
       cardId,
     );
+    if (by === 'human' && ctx.db.get('SELECT id FROM workflow_config WHERE lane_id=?', target.lane_id))
+      ctx.db.run(
+        "INSERT INTO workflow_field_source(card_id,field,human) VALUES (?,'stage',1) ON CONFLICT(card_id,field) DO UPDATE SET human=1,source_message_ids='[]',source_chat_ids='[]'",
+        cardId,
+      );
     record(ctx, {
       action: 'card.move',
       subjectKind: 'card',

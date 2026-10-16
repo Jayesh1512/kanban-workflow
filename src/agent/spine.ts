@@ -18,10 +18,12 @@ import { bindOutputContext, captureOutputContext } from './forget.ts';
 import { judge, readGuardFacts } from './guard.ts';
 import { movementRequest } from './movement/subject.ts';
 import { commitDecision, commitFailure } from './process.ts';
-import { captureReviewSources } from './review-state.ts';
+import { bindReviewState, captureReviewSources } from './review-state.ts';
 import { eligibleChat, eligibleMessage } from './selection.ts';
 import { spineInput } from './spine-input.ts';
 import { inputProvenance } from './spine-provenance.ts';
+import { commitWorkflowInference } from './workflow-apply.ts';
+import { prepareWorkflowInference, workflowInputContext } from './workflow-input.ts';
 
 export function createPipeline(deps: {
   db: Db;
@@ -217,7 +219,15 @@ export function createPipeline(deps: {
         if (!dependencies || !selectedEligible(next.id, next.version)) return null;
         // Freeze the producing support at the same time as the actual supplied
         // input, before either provider can yield and owner history can change.
+        const workflowContext = workflowInputContext(ctx, input);
         const outputContext = captureOutputContext(ctx, input, dependencies.scope);
+        outputContext.messageIds = [
+          ...new Set([...outputContext.messageIds, ...workflowContext.scope.messageIds]),
+        ].sort((a, b) => a - b);
+        outputContext.chatIds = [...new Set([...outputContext.chatIds, ...workflowContext.scope.chatIds])].sort(
+          (a, b) => a - b,
+        );
+        outputContext.unknown ||= workflowContext.unknown;
         const fullScope = { chatIds: outputContext.chatIds, messageIds: outputContext.messageIds };
         const reviewSources = captureReviewSources(ctx, fullScope);
         if (!reviewSources) return null;
@@ -228,6 +238,7 @@ export function createPipeline(deps: {
           if (!live(captured)) return false;
           // Always read actual Db before any provider/status/apply continuation.
           if (!selectedEligible(selected.id, selected.version)) return false;
+          if (workflowInputContext(ctx, input).hash !== workflowContext.hash) return false;
           if (digest(input) !== inputHash || digest(spineInput(ctx, selected.id)) !== inputHash) return false;
           return (
             inputProvenance(ctx, input, chatEligible)?.hash === dependencies?.hash &&
@@ -299,7 +310,27 @@ export function createPipeline(deps: {
               return id;
             });
           }
-          const d = ModelDecisionSchema.parse(raw);
+          const original = ModelDecisionSchema.parse(raw);
+          const workflowRequest = prepareWorkflowInference(ctx, input, original);
+          let workflowResult: import('../contracts/index.ts').WorkflowInferenceResult | null = null;
+          if (workflowRequest) {
+            const requestHash = digest(workflowRequest);
+            const reply = await observe(captured, () =>
+              movement.classifyWorkflow
+                ? movement.classifyWorkflow(workflowRequest, captured.controller.signal)
+                : Promise.resolve({ kind: 'failed' as const, code: 'missing_config' as const }),
+            );
+            if (!fresh() || reply.kind === 'cancelled' || digest(workflowRequest) !== requestHash) return null;
+            if (reply.kind === 'error') {
+              if (reply.error instanceof AppError) throw reply.error;
+              workflowResult = { kind: 'failed', code: 'unavailable' };
+            } else workflowResult = reply.value;
+          }
+          // General extraction retains its own role/company path. Workflow stage,
+          // workstream and disposition are committed only from the Jev result.
+          const d = workflowRequest
+            ? { ...original, disposition: 'none' as const, cardId: null, proposalId: null, move: null }
+            : original;
           const preview = judge(d, readGuardFacts(db, input.message.id, d));
           const subjectAllowed =
             preview.some(
@@ -372,13 +403,29 @@ export function createPipeline(deps: {
               current.withdrawn_at !== null
             )
               return null;
-            commitDecision(ctx, input, raw, d, model.name, request, result, reviewSources);
+            commitDecision(ctx, input, raw, d, model.name, request, result, reviewSources, workflowRequest !== null);
             const decisionId = db.get<{ id: Id }>(
               'SELECT id FROM decision WHERE message_id=? AND message_version=?',
               next.id,
               next.version,
             )?.id;
-            if (decisionId) bindOutputContext(ctx, decisionId, outputContext);
+            if (decisionId) {
+              if (workflowRequest && workflowResult) {
+                commitWorkflowInference(
+                  ctx,
+                  input,
+                  original,
+                  workflowRequest,
+                  workflowResult,
+                  decisionId,
+                  fullScope,
+                  outputContext.unknown,
+                );
+                // Include the workflow reviews created after the general decision.
+                bindReviewState(ctx, decisionId, reviewSources);
+              }
+              bindOutputContext(ctx, decisionId, outputContext);
+            }
             modelFailure = null;
             delays.delete(delayKey);
             return next.id;

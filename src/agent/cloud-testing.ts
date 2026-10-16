@@ -122,6 +122,7 @@ export async function cloudFixture(
   t: TestContext,
   options: {
     gateway?: boolean;
+    recordingLines?: FixtureLine[];
     attempts?: 1 | 2;
     movementAttempts?: 1 | 2;
     threshold?: number;
@@ -162,7 +163,7 @@ export async function cloudFixture(
     JEV_MAX_ATTEMPTS: String(options.movementAttempts ?? 1),
   });
   const fixture = createFixtureConnector({
-    lines: [...recording(options.text, options.otherText), ...(options.extraLines ?? [])],
+    lines: [...(options.recordingLines ?? recording(options.text, options.otherText)), ...(options.extraLines ?? [])],
   });
   const ctx: Ctx = { db, actor: { kind: 'system' }, canReadText: true, now };
   const id = addTeammate(ctx, { username: 'alice', displayName: 'Alice', password: 'synthetic-password' });
@@ -228,6 +229,7 @@ export async function cloudFixture(
       model: await createModel(config.model, { db, oplog() {}, openai: createOpenAIResponsesPort(config.model, send) }),
       movement: {
         status: movement.status,
+        classifyWorkflow: movement.classifyWorkflow,
         async decide(r, signal) {
           return handlers.normalized(await movement.decide(r, signal));
         },

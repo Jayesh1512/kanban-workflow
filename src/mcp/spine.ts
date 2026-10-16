@@ -5,6 +5,7 @@ import type { AppConfig, Ctx, Db, OpLog } from '../contracts/index.ts';
 import { AppError, CompanyViewSchema, IdSchema } from '../contracts/index.ts';
 import { getCompany } from '../graph/index.ts';
 import { record } from '../log/index.ts';
+import { registerWorkflowTools } from './workflow.ts';
 
 export function createMcp(deps: { db: Db; now(): Date; config: AppConfig; oplog: OpLog }): {
   fetch(req: Request): Promise<Response>;
@@ -27,6 +28,7 @@ export function createMcp(deps: { db: Db; now(): Date; config: AppConfig; oplog:
       const handler = createMcpHandler(
         () => {
           const server = new McpServer({ name: 'kanban', version: '0.0.0' });
+          registerWorkflowTools(server, ctx, bearer?.[1] ?? '', deps.oplog);
           server.registerTool(
             'get_company',
             {

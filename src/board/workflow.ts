@@ -53,6 +53,16 @@ export function getWorkflowTicket(ctx: Ctx, cardId: Id): WorkflowTicket {
   );
   const stage = ctx.db.get<{ key: WorkflowStage }>('SELECT key FROM workflow_stage WHERE stage_id=?', c.stageId);
   if (!stage || !r) throw new AppError('conflict', 'Workflow stage configuration changed');
+  if (
+    fields &&
+    !ctx.canReadText &&
+    ctx.db.get(
+      "SELECT field FROM workflow_field_source WHERE card_id=? AND field='blockedReason' AND human=0",
+      cardId,
+    ) &&
+    fields.blockedReason
+  )
+    fields.blockedReason = 'Blocker reported; message text scope required';
   return {
     ...(fields ?? { workstream: 'others', nextAction: null, followUpAt: null, blockedReason: null, buyerId: null }),
     card: c,
@@ -146,7 +156,7 @@ export function updateWorkflowTicket(
   workflowAccess(ctx, true);
   const i = validate(updateWorkflowSchema, input);
   return ctx.db.tx(() => {
-    const before = getWorkflowTicket(ctx, cardId);
+    const before = getWorkflowTicket({ ...ctx, canReadText: true }, cardId);
     if (before.version !== i.version) throw new AppError('conflict', 'Stale ticket version');
     const after = { ...before, ...i };
     if (before.workflowStage === 'blocked' && (!after.blockedReason || (!after.nextAction && !after.followUpAt)))
@@ -224,6 +234,10 @@ export function moveWorkflowTicket(
         { reason: i.reason },
       );
     }
+    ctx.db.run(
+      "INSERT INTO workflow_field_source(card_id,field,human) VALUES (?,'stage',1) ON CONFLICT(card_id,field) DO UPDATE SET human=1,source_message_ids='[]',source_chat_ids='[]'",
+      cardId,
+    );
     record(ctx, {
       action: 'workflow.move',
       subjectKind: 'card',
@@ -248,7 +262,7 @@ export function getDailyPriorities(
     input ?? {},
   );
   const board = getWorkflowBoard(ctx),
-    asOf = i.at ?? ctx.now().toISOString();
+    asOf = new Date(i.at ?? ctx.now().toISOString()).toISOString();
   const day = (t: string) =>
     new Intl.DateTimeFormat('en-CA', {
       timeZone: board.timeZone,

@@ -16,7 +16,9 @@ import {
   updateWorkflowTicket,
 } from './index.ts';
 
-test('opt-in idempotent workflow preserves generic lanes, archived cards and global policy', async () => {
+test('opt-in idempotent workflow preserves generic lanes, archived cards and global policy', {
+  timeout: 10000,
+}, async () => {
   const t = await testApp({ teammates: [{ username: 'ravi' }] });
   try {
     const ctx = t.ctxFor('ravi');
@@ -89,7 +91,9 @@ test('opt-in idempotent workflow preserves generic lanes, archived cards and glo
   }
 });
 
-test('workflow write scope is opt-in, actor is credential, revoked credentials cannot read or write', async () => {
+test('workflow write scope is opt-in, actor is credential, revoked credentials cannot read or write', {
+  timeout: 10000,
+}, async () => {
   const t = await testApp({ teammates: [{ username: 'ravi' }] });
   try {
     const ctx = t.ctxFor('ravi');

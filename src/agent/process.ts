@@ -27,6 +27,7 @@ export function commitDecision(
   request: MovementRequest | null,
   result: MovementResult | null,
   sources: ReviewSource[],
+  workflowOwned = false,
 ): Id {
   const decisionId = ctx.db.run(
     "INSERT INTO decision(message_id,message_version,outcome,disposition,confidence,reason,lane_versions,model,raw,decided_at) VALUES (?,?,'none',?,?,?,?,?,?,?)",
@@ -47,7 +48,7 @@ export function commitDecision(
   const genericCrossLane =
     d.move !== null && genericTargetLane !== undefined && sourceLane !== undefined && genericTargetLane !== sourceLane;
   const effective = { ...d, move: genericCrossLane || (gate && gate.kind !== 'release') ? null : d.move };
-  const outcomes = judge(effective, facts);
+  const outcomes = judge(effective, facts).filter((o) => !workflowOwned || o.do !== 'review' || o.kind !== 'is_work');
   let cardId: Id | null = null,
     proposalId: Id | null = null,
     auditReviewId: Id | null = null,

@@ -162,7 +162,7 @@ export function redactUnscopedMovementFeedback(ctx: Ctx): number {
       `UPDATE action_log SET redacted=1,before=NULL,after=NULL,reason='',message_ids='[]'
      WHERE redacted=0 AND (actor_kind='agent' OR decision_id IS NOT NULL
        OR subject_kind='review' OR action='card.move' OR action LIKE '%movement%'
-       OR action LIKE 'review.%')`,
+       OR action LIKE 'review.%' OR action LIKE 'workflow.%')`,
     ).changes;
     return count + redactCorrections(ctx);
   });

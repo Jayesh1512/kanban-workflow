@@ -10,6 +10,7 @@ import type {
 } from '../../contracts/index.ts';
 import { AppError, MOVEMENT_LIMITS, ModelResponseError } from '../../contracts/index.ts';
 import { boundRequest, parseWire, wireBody } from './wire.ts';
+import { workflowClassifier } from './workflow-provider.ts';
 
 export function jevProvider(
   cfg: MovementConfig,
@@ -45,6 +46,15 @@ export function jevProvider(
     };
   }
   return {
+    classifyWorkflow: workflowClassifier(config, deps, (failure) => {
+      reason = failure;
+      state =
+        failure === null
+          ? 'ready'
+          : ['unauthorised', 'missing_config', 'endpoint_blocked'].includes(failure)
+            ? 'blocked'
+            : 'degraded';
+    }),
     status: () => ({
       provider: 'jev',
       execution: 'hosted',

@@ -11,3 +11,4 @@ export * from './schemas.ts';
 export * from './telegram.ts';
 export * from './views.ts';
 export * from './workflow.ts';
+export * from './workflow-inference.ts';

@@ -124,7 +124,7 @@ const answer = z.strictObject({
   confidence: z.number(),
   probabilities: z.record(z.string(), z.number()),
 });
-const envelope = z.strictObject({
+export const envelope = z.strictObject({
   model: z.string().nullable(),
   answers: z.record(z.string(), answer),
   usage: z
@@ -141,7 +141,7 @@ const gatewayCost = z
   .string()
   .max(64)
   .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/);
-const gatewayEnvelope = envelope.extend({
+export const gatewayEnvelope = envelope.extend({
   provider_metadata: z
     .strictObject({
       gateway: z.strictObject({
