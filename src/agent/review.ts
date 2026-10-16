@@ -76,8 +76,10 @@ function changes(p: ReviewProposal): ReviewChange['to'][] {
     case 'new_card':
     case 'attach':
     case 'is_work':
-      for (const m of ids) attachMessage(ctx, m, null, { setBy: 'human' });
-      return null;
+    case 'model_failed':
+      return ['new_card', 'card'];
+    case 'move':
+      return ['stage'];
     case 'contact_company':
       return ['company'];
     case 'contact_role':
@@ -219,16 +221,7 @@ function applyProposal(ctx: Ctx, id: Id, p: ReviewProposal): Id | null {
       );
       return null;
     case 'is_work':
-      for (const m of ids) {
-        const movementOnly =
-          p.kind === 'model_failed' &&
-          ctx.db.get(
-            'SELECT md.decision_id FROM movement_decision md JOIN review_message rm ON rm.decision_id=md.decision_id WHERE rm.review_item_id=? AND rm.message_id=?',
-            id,
-            m,
-          );
-        if (!movementOnly) attachMessage(ctx, m, null, { setBy: 'human' });
-      }
+      for (const m of ids) attachMessage(ctx, m, null, { setBy: 'human' });
       return null;
     case 'contact_company':
       setContactCompany(ctx, p.contactId, { company: p.company, evidenceMessageIds: ids }, { setBy: 'human' });
