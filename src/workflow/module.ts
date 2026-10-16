@@ -1,5 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { registerTransports } from '../hermes/module.js';
+import { registerStatus } from '../hermes/status.js';
 import { DomainError } from '../shared/api.js';
 import type { ApplicationModule, PlatformServices } from '../shared/ports.js';
 import type { ServiceStatus } from '../shared/domain.js';
@@ -36,6 +38,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   const names = (await readdir(directory)).filter((name) => /^\d[\w.-]*\.sql$/.test(name));
   const expectedMigrations = new Map(await Promise.all(names.map(async (name) => [name, createHash('sha256').update(await readFile(new URL(name, directory))).digest('hex')] as const)));
   let started = false, stopped = false, timer: ReturnType<typeof setTimeout> | null = null, task: Promise<void> | null = null;
+  let transports: ReturnType<typeof registerTransports> | null = null;
   let unsubscribe: (() => void) | null = null; const replies = new Set<Promise<void>>(); const abort = new AbortController();
   let state: ServiceStatus = { state: 'connecting', code: 'not_started', detail: 'Workflow has not started', checkedAt: platform.clock.now().toISOString() };
   async function migrationsReady(): Promise<'pending' | 'ready' | 'drift'> {
@@ -86,8 +89,19 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   }
   return {
     name: 'workflow',
-    async register() {
+    async register(app) {
       if (unsubscribe || stopped) return;
+      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis }, requireDatabaseReady);
+      registerStatus(app, async () => {
+        const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
+          try { return await read(); } catch (error) {
+            const absent = error && typeof error === 'object' && 'code' in error && error.code === '42P01';
+            return { state: absent ? 'connecting' : 'unavailable', code: absent ? 'database_pending' : 'database_unavailable', detail: absent ? 'Provider status awaits validated migrations' : 'Provider status unavailable while database is unavailable', checkedAt: platform.clock.now().toISOString() };
+          }
+        };
+        const [extraction, jev] = await Promise.all([safe(() => services.extraction.status()), safe(() => services.jev.status())]);
+        return { workflow: { ...state }, extraction, jev };
+      });
       unsubscribe = platform.control.subscribe(async (message) => {
         if (stopped) throw new Error('Workflow stopping; retain inbox reply');
         const reply = requireDatabaseReady().then(() => services.proposals.handleControlReply(message)); replies.add(reply);
@@ -95,7 +109,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       });
     },
     async start() { if (started || stopped) return; started = true; schedule(); },
-    async stop() { if (stopped) return; stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer); unsubscribe?.(); unsubscribe = null; await task; await Promise.allSettled([...replies]); },
+    async stop() { if (stopped) return; stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer); unsubscribe?.(); unsubscribe = null; await transports?.close(); await task; await Promise.allSettled([...replies]); },
     async status() { return { ...state }; },
   };
 }
