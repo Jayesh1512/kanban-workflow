@@ -1133,11 +1133,11 @@ button:disabled {
 .accounts-page .chat-actions > .chat-include > summary:hover {
   background: var(--accent-hover);
 }
-.accounts-page .chat-actions > .chat-withdraw > summary {
-  color: var(--danger);
-}
 .accounts-page .chat-actions > .chat-information > summary {
   color: var(--muted);
+}
+.accounts-page .chat-actions > details:has(.danger) > summary {
+  color: var(--danger);
 }
 .accounts-page .chat-actions > details[open] {
   flex-basis: 100%;
