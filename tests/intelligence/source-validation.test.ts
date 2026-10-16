@@ -62,6 +62,16 @@ describe('independent identity and precision regressions (no providers)', () => 
     const value = extractionFixture(); value.facts[0]!.dates[0]!.originalText = 'today'; expect(() => validateExtraction(value, inputFixture())).toThrow();
     const input = inputFixture(); text(input, `${input.messages[0]!.text} Kal.`); Object.assign(value.facts[0]!.dates[0]!, { originalText: 'kal', precision: 'instant', localDate: null, resolvedAt: '2026-10-18T00:00:00Z' }); expect(() => validateExtraction(value, input)).toThrow();
   });
+  it.each([
+    ['Kal subah 10 baje IST contract bhejunga.', '2026-10-17T20:00:00Z', '2026-10-19T04:30:00Z'],
+    ['मैं कल सुबह दस बजे IST अनुबंध भेजूँगा।', '2026-10-16T20:00:00Z', '2026-10-18T04:30:00Z'],
+  ])('preserves sourced multilingual explicit clock: %s', (source, anchor, resolvedAt) => {
+    const input = inputFixture(); text(input, source); input.messages[0]!.sentAt = anchor;
+    const value = extractionFixture(); value.contacts = []; value.companies = []; value.companyCandidates = []; value.facts = [];
+    value.dates = [{ kind: 'commitment', originalText: source, relativeTo: anchor, timezone: 'Asia/Kolkata', resolvedAt, localDate: null, precision: 'instant', ambiguous: false, evidenceIds: value.evidenceIds }];
+    expect(validateExtraction(value, input).dates[0]!.resolvedAt).toBe(resolvedAt);
+    value.dates[0]!.resolvedAt = '1999-01-01T04:30:00Z'; expect(() => validateExtraction(value, input)).toThrow();
+  });
   it('anchors forwarded dates to the original message date when available', () => {
     const input = forwarded(); input.messages[0]!.forward.originDate = '2026-10-15T20:00:00Z'; const value = extractionFixture();
     expect(() => validateExtraction(value, input)).toThrow('anchor');
