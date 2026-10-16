@@ -174,3 +174,96 @@ test('I1 provider deadlines and cancellation finish even when injected transport
   );
   await keepAlive;
 });
+
+test('cloud SDK raw boundary rejects recursive and escaped duplicate keys, malformed JSON and excessive depth safely', async () => {
+  for (const raw of [
+    '{"status":"incomplete","status":"completed","output":[]}',
+    '{"status":"completed","output":[{"type":"reasoning","summary":[],"summary":[]}]}',
+    String.raw`{"status":"completed","output":[],"st\u0061tus":"completed"}`,
+    '{"status":"completed","output":[],}',
+    `${'['.repeat(102)}0${']'.repeat(102)}`,
+  ]) {
+    let calls = 0;
+    const port = createOpenAIResponsesPort(cfg, async () => {
+      calls++;
+      return new Response(raw, { headers: { 'Content-Type': 'application/json' } });
+    });
+    assert.ok(port);
+    await assert.rejects(
+      port.create(request(), options()),
+      (error) =>
+        error instanceof ModelResponseError && error.code === 'schema_invalid' && error.message === 'schema_invalid',
+    );
+    assert.equal(calls, 1);
+  }
+  const value = { status: 'completed', output: [], metadata: { quote: '"key":"x","key":"y"', slash: '\\' } };
+  const port = createOpenAIResponsesPort(cfg, async () => Response.json(value));
+  assert.ok(port);
+  assert.deepEqual(await port.create(request(), options()), value);
+});
+
+test('cloud movement transport admits only both exact canonical URLs and cancels gateway bodies and redirects', async () => {
+  const gateway = 'https://ai-gateway.vercel.sh/typesafe/v1/systemone';
+  const input = {
+    url: gateway,
+    headers: { Authorization: 'Bearer synthetic-gateway', Ambient: 'must-not-forward' },
+    body: '{}',
+    signal: new AbortController().signal,
+    timeoutMs: 500,
+    redirect: 'error' as const,
+    maxResponseBytes: 1048576,
+  };
+  let calls = 0;
+  const movement = createMovementHttpPort(async (url, init) => {
+    calls++;
+    assert.ok([gateway, 'https://api.typesafe.ai/v1/systemone'].includes(url));
+    assert.deepEqual(Object.fromEntries(new Headers(init.headers)), {
+      authorization: 'Bearer synthetic-gateway',
+      'content-type': 'application/json',
+    });
+    return new Response('{}');
+  });
+  for (const url of [
+    'http://ai-gateway.vercel.sh/typesafe/v1/systemone',
+    'https://ai-gateway.vercel.sh/v1/systemone',
+    `${gateway}/`,
+    `${gateway}?x=1`,
+    `${gateway}#x`,
+    'https://ai-gateway.vercel.sh:443/typesafe/v1/systemone',
+    'https://ai-gateway.vercel.sh:444/typesafe/v1/systemone',
+    'https://user@ai-gateway.vercel.sh/typesafe/v1/systemone',
+    'https://ai-gateway.vercel.sh.evil.invalid/typesafe/v1/systemone',
+    'https://ai-gateway.vercel.sh/typesafe/v1/../v1/systemone',
+  ])
+    await assert.rejects(movement.post({ ...input, url }), { code: 'forbidden' });
+  assert.equal(calls, 0);
+  await movement.post(input);
+  assert.equal(calls, 1);
+  const redirected = createMovementHttpPort(async () => new Response(null, { status: 307 }));
+  await assert.rejects(redirected.post(input), { code: 'forbidden' });
+  let cancelled = false;
+  let entered!: () => void;
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const controller = new AbortController();
+  const held = createMovementHttpPort(
+    async () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.enqueue(new TextEncoder().encode('{'));
+            entered();
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+      ),
+  );
+  const pending = held.post({ ...input, signal: controller.signal });
+  await started;
+  controller.abort();
+  await assert.rejects(pending, { name: 'AbortError' });
+  assert.equal(cancelled, true);
+});

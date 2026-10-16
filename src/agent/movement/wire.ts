@@ -135,12 +135,40 @@ const envelope = z.strictObject({
     .nullable()
     .optional(),
 });
+// Gateway routing/cost metadata is validated and discarded. It cannot supply
+// movement authority or establish an underlying resolved Jev version.
+const gatewayCost = z
+  .string()
+  .max(64)
+  .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/);
+const gatewayEnvelope = envelope.extend({
+  provider_metadata: z
+    .strictObject({
+      gateway: z.strictObject({
+        routing: z
+          .strictObject({
+            originalModelId: z.literal('typesafe-ai/jev').optional(),
+            resolvedProvider: z.literal('typesafe-ai').optional(),
+            canonicalSlug: z.literal('typesafe-ai/jev').optional(),
+            finalProvider: z.literal('typesafe-ai').optional(),
+          })
+          .optional(),
+        cost: gatewayCost.optional(),
+        marketCost: gatewayCost.optional(),
+        surchargeCost: gatewayCost.optional(),
+        gatewayCost: gatewayCost.optional(),
+        generationId: z.string().min(1).max(256).optional(),
+      }),
+    })
+    .optional(),
+});
 export function parseWire(
   raw: unknown,
   r: MovementRequest,
   execution: 'hosted' | 'replay',
   configuredModel: string | null,
   providerRequestId: string | null,
+  gateway = false,
 ): MovementResult {
   if (Buffer.byteLength(typeof raw === 'string' ? raw : (JSON.stringify(raw) ?? '')) > MOVEMENT_LIMITS.responseBytes)
     throw new Error('context_limit');
@@ -150,13 +178,15 @@ export function parseWire(
   } catch {
     throw new Error('invalid_response');
   }
-  const p = envelope.safeParse(value);
+  const p = (gateway ? gatewayEnvelope : envelope).safeParse(value);
   if (!p.success) throw new Error('invalid_response');
   const e = p.data;
   if (execution === 'hosted' && !e.usage) throw new Error('invalid_response');
   if (
     execution === 'hosted' &&
-    (!e.model || !/^jev-\S+$/.test(e.model) || (configuredModel !== 'jev-latest' && e.model !== configuredModel))
+    (gateway
+      ? configuredModel !== 'typesafe-ai/jev' || e.model !== configuredModel
+      : !e.model || !/^jev-\S+$/.test(e.model) || (configuredModel !== 'jev-latest' && e.model !== configuredModel))
   )
     throw new Error('invalid_response');
   const expected = Object.keys(questions(r)).sort();
@@ -188,7 +218,7 @@ export function parseWire(
     requestId: r.requestId,
     snapshotHash: r.snapshotHash,
     kind: 'answered',
-    resolvedModel: e.model,
+    resolvedModel: gateway ? null : e.model,
     movement,
     support,
     supportTarget: support === null ? null : movement.choice,

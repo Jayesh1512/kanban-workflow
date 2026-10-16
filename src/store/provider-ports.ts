@@ -19,7 +19,14 @@ function destination(url: string, expected: string): void {
   } catch {
     throw new AppError('forbidden', 'Provider destination blocked');
   }
-  if (parsed.href !== expected || parsed.username || parsed.password || parsed.search || parsed.hash)
+  if (
+    url !== expected ||
+    parsed.href !== expected ||
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    parsed.hash
+  )
     throw new AppError('forbidden', 'Provider destination blocked');
 }
 function boundedOptions(timeoutMs: number, maxResponseBytes: number, maxTimeout: number): void {
@@ -182,6 +189,77 @@ async function boundedPost(url: string, init: RequestInit, bytes: number, send: 
   });
 }
 
+/** Validate the original token stream before JSON.parse can discard duplicate fields. */
+function strictJson(text: string): unknown {
+  let at = 0;
+  function space() {
+    while (/\s/.test(text[at] ?? '') && at < text.length) at++;
+  }
+  function string(): string {
+    const start = at++;
+    while (at < text.length) {
+      const ch = text[at++];
+      if (ch === '\\') at++;
+      else if (ch === '"') return JSON.parse(text.slice(start, at)) as string;
+    }
+    throw new SyntaxError('Invalid JSON');
+  }
+  function value(depth: number): void {
+    if (depth > 100) throw new SyntaxError('Invalid JSON');
+    space();
+    const ch = text[at];
+    if (ch === '"') {
+      string();
+      return;
+    }
+    if (ch === '{') {
+      at++;
+      space();
+      const keys = new Set<string>();
+      if (text[at] === '}') {
+        at++;
+        return;
+      }
+      for (;;) {
+        space();
+        if (text[at] !== '"') throw new SyntaxError('Invalid JSON');
+        const key = string();
+        if (keys.has(key)) throw new SyntaxError('Duplicate JSON field');
+        keys.add(key);
+        space();
+        if (text[at++] !== ':') throw new SyntaxError('Invalid JSON');
+        value(depth + 1);
+        space();
+        const next = text[at++];
+        if (next === '}') return;
+        if (next !== ',') throw new SyntaxError('Invalid JSON');
+      }
+    }
+    if (ch === '[') {
+      at++;
+      space();
+      if (text[at] === ']') {
+        at++;
+        return;
+      }
+      for (;;) {
+        value(depth + 1);
+        space();
+        const next = text[at++];
+        if (next === ']') return;
+        if (next !== ',') throw new SyntaxError('Invalid JSON');
+      }
+    }
+    const token = /^(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(text.slice(at));
+    if (!token) throw new SyntaxError('Invalid JSON');
+    at += token[0].length;
+  }
+  value(0);
+  space();
+  if (at !== text.length) throw new SyntaxError('Invalid JSON');
+  return JSON.parse(text) as unknown;
+}
+
 /** Official SDK bridge only. General envelope parsing and judgment remain A1-owned. No inference at construction. */
 export function createOpenAIResponsesPort(
   cfg: ModelConfig,
@@ -217,7 +295,7 @@ export function createOpenAIResponsesPort(
             try {
               destination(String(url), 'https://api.openai.com/v1/responses');
               if (init?.method !== 'POST') throw new AppError('forbidden', 'Provider operation blocked');
-              return await boundedPost(
+              const response = await boundedPost(
                 String(url),
                 {
                   method: 'POST',
@@ -228,6 +306,17 @@ export function createOpenAIResponsesPort(
                 options.maxResponseBytes,
                 send,
               );
+              // The SDK JSON parser discards duplicate keys. Check the bounded original
+              // token stream recursively first; retain only fixed safe failures.
+              if (!response.ok) return response;
+              const raw = await response.text();
+              try {
+                strictJson(raw);
+              } catch {
+                throw new ModelResponseError('schema_invalid');
+              }
+              signal.throwIfAborted();
+              return new Response(raw, { status: response.status, headers: response.headers });
             } catch (error) {
               transportFailure = error;
               throw error;
@@ -255,7 +344,12 @@ export function createOpenAIResponsesPort(
 export function createMovementHttpPort(send: ProviderFetch = nativeFetch): MovementHttpPort {
   return {
     async post(input) {
-      destination(input.url, 'https://api.typesafe.ai/v1/systemone');
+      destination(
+        input.url,
+        input.url === 'https://ai-gateway.vercel.sh/typesafe/v1/systemone'
+          ? 'https://ai-gateway.vercel.sh/typesafe/v1/systemone'
+          : 'https://api.typesafe.ai/v1/systemone',
+      );
       boundedOptions(input.timeoutMs, input.maxResponseBytes, 30000);
       if (input.redirect !== 'error') throw new AppError('forbidden', 'Provider redirect blocked');
       if (Buffer.byteLength(input.body) > 262144) throw new ModelResponseError('context_limit');

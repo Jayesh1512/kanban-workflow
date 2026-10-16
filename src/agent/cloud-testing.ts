@@ -121,6 +121,7 @@ export function recording(text = 'Synthetic integration request'): FixtureLine[]
 export async function cloudFixture(
   t: TestContext,
   options: {
+    gateway?: boolean;
     attempts?: 1 | 2;
     movementAttempts?: 1 | 2;
     threshold?: number;
@@ -153,7 +154,9 @@ export async function cloudFixture(
     JEV_TIMEOUT_MS: String(options.timeoutMs ?? 10000),
     OPENAI_MAX_ATTEMPTS: String(options.attempts ?? 2),
     MOVEMENT_PROVIDER: 'jev',
-    JEV_API_KEY: options.missingMovement ? undefined : 'synthetic-jev-secret',
+    JEV_API_KEY: options.missingMovement && !options.gateway ? undefined : 'synthetic-jev-secret',
+    JEV_ENDPOINT: options.gateway ? 'https://ai-gateway.vercel.sh/typesafe/v1/systemone' : undefined,
+    AI_GATEWAY_API_KEY: options.missingMovement ? undefined : 'synthetic-gateway-secret',
     JEV_MAX_ATTEMPTS: String(options.movementAttempts ?? 1),
   });
   const fixture = createFixtureConnector({ lines: recording(options.text) });
@@ -199,7 +202,10 @@ export async function cloudFixture(
       calls.push({ url, input, init });
       return handlers.general(input, request);
     }
-    assert.equal(url, 'https://api.typesafe.ai/v1/systemone');
+    assert.equal(
+      url,
+      options.gateway ? 'https://ai-gateway.vercel.sh/typesafe/v1/systemone' : 'https://api.typesafe.ai/v1/systemone',
+    );
     const body = JSON.parse(String(init.body)) as WireRequest;
     calls.push({ url, input: body, init });
     return handlers.movement(body);

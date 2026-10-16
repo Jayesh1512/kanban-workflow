@@ -158,3 +158,28 @@ test('I1 R26.2 root CLI creates first teammate locally with a once-shown passwor
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('cloud Vercel Jev config selects only its route key and documented model alias without credential substitution', () => {
+  const secrets = {
+    JEV_API_KEY: 'synthetic-direct',
+    AI_GATEWAY_API_KEY: 'synthetic-gateway',
+    OPENAI_API_KEY: 'synthetic-openai',
+  };
+  const gateway = 'https://ai-gateway.vercel.sh/typesafe/v1/systemone';
+  const base = { ...env, MOVEMENT_PROVIDER: 'jev', ...secrets };
+  const routed = loadConfig({ ...base, JEV_ENDPOINT: gateway, OPENAI_MODEL: 'gpt-6.1-sol' });
+  assert.ok(AppConfigSchema.safeParse(routed).success);
+  assert.equal(routed.model.name, 'gpt-6.1-sol');
+  assert.equal(routed.model.apiKey, 'synthetic-openai');
+  assert.equal(routed.movement.endpoint, gateway);
+  assert.equal(routed.movement.model, 'typesafe-ai/jev');
+  assert.equal(routed.movement.apiKey, 'synthetic-gateway');
+  assert.equal(loadConfig({ ...base, JEV_ENDPOINT: gateway, AI_GATEWAY_API_KEY: undefined }).movement.apiKey, null);
+  assert.equal(loadConfig({ ...base, AI_GATEWAY_API_KEY: undefined }).movement.apiKey, 'synthetic-direct');
+  assert.equal(loadConfig({ ...base, JEV_API_KEY: undefined }).movement.apiKey, null);
+  assert.equal(
+    loadConfig({ ...base, JEV_ENDPOINT: gateway, JEV_MODEL: 'operator-model' }).movement.model,
+    'operator-model',
+  );
+  assert.equal(loadConfig(base).movement.model, 'jev-latest');
+});

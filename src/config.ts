@@ -39,6 +39,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   if (!['jev', 'replay', 'disabled'].includes(movement)) invalid('MOVEMENT_PROVIDER');
   if (provider !== 'scripted' && env.MODEL_SCRIPT_PATH) invalid('MODEL_SCRIPT_PATH');
   if (movement !== 'replay' && env.MOVEMENT_REPLAY_PATH) invalid('MOVEMENT_REPLAY_PATH');
+  const movementEndpoint = movement === 'jev' ? (env.JEV_ENDPOINT ?? 'https://api.typesafe.ai/v1/systemone') : null;
+  const gateway = movementEndpoint === 'https://ai-gateway.vercel.sh/typesafe/v1/systemone';
   const connectors: AppConfig['connectors'] = {};
   for (const channel of (env.CONNECTORS ?? 'telegram').split(',').filter(Boolean)) {
     if (!/^[a-z][a-z0-9_]*$/.test(channel)) invalid('CONNECTORS');
@@ -66,9 +68,9 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     },
     movement: {
       provider: movement === 'disabled' ? null : (movement as 'jev' | 'replay'),
-      endpoint: movement === 'jev' ? (env.JEV_ENDPOINT ?? 'https://api.typesafe.ai/v1/systemone') : null,
-      model: movement === 'jev' ? (env.JEV_MODEL ?? 'jev-latest') : null,
-      apiKey: env.JEV_API_KEY || null,
+      endpoint: movementEndpoint,
+      model: movement === 'jev' ? (env.JEV_MODEL ?? (gateway ? 'typesafe-ai/jev' : 'jev-latest')) : null,
+      apiKey: (gateway ? env.AI_GATEWAY_API_KEY : env.JEV_API_KEY) || null,
       replayPath: env.MOVEMENT_REPLAY_PATH || null,
       timeoutMs: number('JEV_TIMEOUT_MS', 10000, 1, 30000),
       maxAttempts: number('JEV_MAX_ATTEMPTS', 1, 1, 2) as 1 | 2,

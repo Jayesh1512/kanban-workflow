@@ -16,11 +16,14 @@ export function jevProvider(
   deps: { db: Db; now(): Date; sleep(ms: number): Promise<void>; http: MovementHttpPort },
 ): MovementDecisionProvider {
   const config = { ...cfg };
-  const endpoint = 'https://api.typesafe.ai/v1/systemone';
+  const endpoint = config.endpoint;
+  const gateway = endpoint === 'https://ai-gateway.vercel.sh/typesafe/v1/systemone';
   let reason: MovementFailure | null =
-    config.endpoint !== endpoint
+    !gateway && endpoint !== 'https://api.typesafe.ai/v1/systemone'
       ? 'endpoint_blocked'
-      : !config.apiKey || !config.model || !/^jev-\S+$/.test(config.model)
+      : !config.apiKey ||
+          !config.model ||
+          (gateway ? config.model !== 'typesafe-ai/jev' : !/^jev-\S+$/.test(config.model))
         ? 'missing_config'
         : null;
   let state: MovementProviderStatus['state'] = reason ? 'blocked' : 'ready';
@@ -47,7 +50,7 @@ export function jevProvider(
       execution: 'hosted',
       state,
       reason,
-      endpointHost: 'api.typesafe.ai',
+      endpointHost: gateway ? 'ai-gateway.vercel.sh' : 'api.typesafe.ai',
       model: config.model,
     }),
     async decide(input, signal) {
@@ -69,7 +72,7 @@ export function jevProvider(
             code: 'no_destination',
           };
         if (state === 'blocked' && reason) return failed(r, reason);
-        if (!config.model || !config.apiKey) return failed(r, 'missing_config');
+        if (!endpoint || !config.model || !config.apiKey) return failed(r, 'missing_config');
         body = wireBody(r, config.model);
       } catch (error) {
         const code = error instanceof Error && error.message === 'context_limit' ? 'context_limit' : 'invalid_response';
@@ -105,7 +108,14 @@ export function jevProvider(
           else {
             if (Buffer.byteLength(response.body) > MOVEMENT_LIMITS.responseBytes) code = 'context_limit';
             else {
-              const result = parseWire(response.body, r, 'hosted', config.model, response.providerRequestId ?? null);
+              const result = parseWire(
+                response.body,
+                r,
+                'hosted',
+                config.model,
+                response.providerRequestId ?? null,
+                gateway,
+              );
               fresh(signal);
               state = 'ready';
               reason = null;

@@ -135,21 +135,20 @@ test('R13.3/R27 settings retain automatic-off and distinguish unavailable OpenAI
   assert.doesNotMatch(js, /setInterval|board\/version|fetch\(/);
 });
 
-test('R13 early checkpoint review unavailability differs from zero queue; direct actions never fake success', async (t) => {
+test('R13 implemented review distinguishes an empty queue from missing resources; direct actions never fake success', async (t) => {
   const h = await webTestApp(t);
   const cookie = h.cookieFor('alice');
-  for (const path of ['/review', '/review/1']) {
-    const r = await h.get(path, { cookie });
-    assert.equal(r.status, 503);
-    const text = await r.text();
-    assert.match(text, /unavailable/);
-    assert.doesNotMatch(text, /No open review items|Accept proposed action|Dismiss without changes/);
-  }
+  const queue = await h.get('/review', { cookie });
+  assert.equal(queue.status, 200);
+  assert.match(await queue.text(), /No open review items/);
+  const missing = await h.get('/review/1', { cookie });
+  assert.equal(missing.status, 404);
+  assert.doesNotMatch(await missing.text(), /Accept proposed action|Dismiss without changes/);
   assert.equal(
     (await h.post('/review/1/change', { to: 'company', company: 'Human correction' }, { cookie })).status,
-    503,
+    404,
   );
-  assert.equal((await h.post('/review/1/dismiss', {}, { cookie })).status, 503);
+  assert.equal((await h.post('/review/1/dismiss', {}, { cookie })).status, 404);
   assert.equal((await h.post('/review/1/accept', {}, { cookie })).status, 404);
   assert.equal((await h.post('/settings/accounts/1/chats/1/withdraw', {}, { cookie })).status, 403);
   assert.equal(h.db.get<{ n: number }>('SELECT count(*) AS n FROM review_item')?.n, 0);
