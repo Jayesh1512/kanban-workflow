@@ -90,7 +90,7 @@ export function proposalFacts(ctx: Ctx, item: ReviewItemView): Markup {
     const stage = p.move
       ? location(ctx, p.move.toStageId)
       : lane
-        ? `${lane.name} / ${lane.stages[0]?.name ?? 'No first stage'}`
+        ? `${lane.name} / ${lane.stages[0]?.name ?? 'No first stage'}${lane.archived ? ' (archived)' : ''}`
         : 'Lane no longer available';
     return html`<dl class="proposal-facts">${field('Proposed title', p.title)}${field('Summary', p.summary || 'No summary proposed.')}${field('Create in', stage)}${field('Company', p.companyId === null ? 'Unknown' : (available(() => getCompany(ctx, p.companyId as number))?.name ?? 'Company no longer available'))}${p.move ? field('Stage entry evidence', p.move.criterion) : ''}</dl><p>${item.messages.length} supporting messages will be linked to this deal.</p>`;
   }

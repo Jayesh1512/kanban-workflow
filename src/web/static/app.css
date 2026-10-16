@@ -860,3 +860,17 @@ button:disabled {
     grid-auto-columns: minmax(16rem, 85%);
   }
 }
+@media (max-width: 22rem) {
+  .app-bar > nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+  .app-bar > nav a {
+    min-width: 0;
+    white-space: normal;
+    justify-content: center;
+    padding-inline: var(--space-1);
+    text-align: center;
+  }
+}
