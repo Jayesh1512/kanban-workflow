@@ -51,3 +51,29 @@ document.querySelectorAll('[data-lane-form]').forEach((form) => {
     form.querySelector('[data-add-stage]').focus();
   });
 });
+
+// Native disclosure stays usable without JavaScript; direct action links open it.
+function revealTarget() {
+  const target = document.getElementById(location.hash.slice(1));
+  if (!target) return;
+  for (let parent = target; parent; parent = parent.parentElement) {
+    if (parent instanceof HTMLDetailsElement) parent.open = true;
+  }
+}
+window.addEventListener('hashchange', revealTarget);
+revealTarget();
+document.querySelectorAll('[data-open-details]').forEach((link) => {
+  link.addEventListener('click', () => {
+    const target = document.getElementById(link.hash.slice(1));
+    if (target instanceof HTMLDetailsElement) {
+      target.open = true;
+      target.querySelector('input:not([type="hidden"]), select, textarea')?.focus();
+    }
+  });
+});
+const workspaceMenu = document.querySelector('.workspace-menu');
+workspaceMenu?.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  workspaceMenu.open = false;
+  workspaceMenu.querySelector('summary').focus();
+});

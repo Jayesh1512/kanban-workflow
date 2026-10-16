@@ -56,18 +56,27 @@ export async function form(c: WebContext): Promise<Record<string, string>> {
   return result;
 }
 export function shell(title: string, content: Markup, active = '/board', signedIn = true): Markup {
-  const nav = [
-    ['/board', 'Board'],
-    ['/review', 'Review'],
+  const primary = [
+    ['/board', 'Pipeline'],
+    ['/review', 'Review suggestions'],
+    ['/settings/accounts', 'Connections'],
+  ];
+  const secondary = [
     ['/companies', 'Companies'],
     ['/contacts', 'Contacts'],
-    ['/lanes', 'Lanes'],
+    ['/search', 'Search messages'],
     ['/log', 'Activity'],
-    ['/settings', 'Settings'],
+    ['/lanes', 'Pipeline rules'],
+    ['/settings', 'Settings & team'],
   ];
+  const selected = (path: string) => active === path || (path !== '/settings' && active.startsWith(`${path}/`));
+  const links = (items: string[][]) =>
+    items.map(
+      ([path = '', label]) => html`<a href="${path}" aria-current="${selected(path) ? 'page' : 'false'}">${label}</a>`,
+    );
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title} · Team board</title><link rel="stylesheet" href="/static/app.css"><script src="/static/app.js" defer></script></head><body>
     <a class="skip-link" href="#content">Skip to content</a>
-    ${signedIn ? html`<div class="app-bar"><a class="app-name" href="/board">Team board</a><nav aria-label="Main">${nav.map(([path, label]) => html`<a href="${path}" aria-current="${active === path ? 'page' : 'false'}">${label}</a>`)}</nav><form class="quick-search" action="/search" method="get"><label class="sr-only" for="quick-q">Search messages</label><input id="quick-q" name="q" placeholder="Search messages" required></form><form action="/logout" method="post"><button class="quiet">Sign out</button></form></div>` : ''}
+    ${signedIn ? html`<header class="app-bar"><a class="app-name" href="/board">Team board</a><nav aria-label="Main">${links(primary)}</nav><details class="workspace-menu"><summary${secondary.some(([path = '']) => selected(path)) ? html` class="current"` : ''}>More</summary><div class="workspace-menu-content"><nav aria-label="More workspace tools">${links(secondary)}</nav><form class="quick-search" action="/search" method="get"><label for="quick-q">Search messages</label><input id="quick-q" name="q" type="search" placeholder="Words from a conversation" required><button class="secondary">Search</button></form><form action="/logout" method="post"><button class="quiet">Sign out</button></form></div></details></header>` : ''}
     <div id="content" class="workspace" tabindex="-1">${content}</div></body></html>`;
 }
 export function pageHeading(title: string, description: string, action: Markup | string = ''): Markup {

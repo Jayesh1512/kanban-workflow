@@ -66,7 +66,7 @@ for (const threshold of [1, 0])
     assert.equal((await h.get('/review')).status, 200);
     const detail = await h.get(`/review/${review.id}`);
     assert.equal(detail.status, 200);
-    assert.match(await detail.text(), /Accept proposed action/);
+    assert.match(await detail.text(), review.proposal.kind === 'new_card' ? /Create deal/ : /Move deal/);
     assert.equal((await h.post(`/review/${review.id}/accept`)).status, 303);
     assert.equal(getBoard(h.ctx).lanes[1]?.cards[0]?.stageId, h.other?.stages[1]?.id);
     assert.equal(history(h.ctx, { action: 'review.accept' })[0]?.actor.name, 'Alice');

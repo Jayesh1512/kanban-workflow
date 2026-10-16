@@ -55,7 +55,7 @@ export function createWeb(deps: WebDeps): {
     return c.html(
       shell(
         'Request could not be completed',
-        html`<main class="error-page"><h1>Request could not be completed</h1><p role="alert">${message}</p><p>Return to the page and check your input before submitting again.</p><a href="${c.req.path === '/login' ? '/login' : '/board'}">${c.req.path === '/login' ? 'Return to sign in' : 'Return to board'}</a></main>`,
+        html`<main class="error-page"><h1>Request could not be completed</h1><p role="alert">${message}</p><p>Nothing was confirmed by this response. Reopen the latest page and check its current state before trying again.</p><p><a href="/review">Review current suggestions</a> · <a href="/settings/accounts">Manage connections</a></p><a href="${c.req.path === '/login' ? '/login' : '/board'}">${c.req.path === '/login' ? 'Return to sign in' : 'Return to board'}</a></main>`,
         '/board',
         Boolean(c.get('ctx')),
       ),
@@ -66,7 +66,7 @@ export function createWeb(deps: WebDeps): {
     c.html(
       shell(
         'Sign in',
-        html`<main class="login"><h1>Sign in</h1><p class="muted">Open your team's board and supporting evidence.</p><form method="post" action="/login"><label>Username<input name="username" autocomplete="username" maxlength="200" required autofocus></label><label>Password<input name="password" type="password" autocomplete="current-password" maxlength="4096" required></label><button>Sign in</button></form><p class="muted">An existing teammate can add your account.</p></main>`,
+        html`<main class="login"><h1>Sign in</h1><p class="muted">Track deals and review suggestions from your team’s conversations.</p><form method="post" action="/login"><label>Username<input name="username" autocomplete="username" maxlength="200" required autofocus></label><label>Password<input name="password" type="password" autocomplete="current-password" maxlength="4096" required></label><button>Sign in</button></form><p class="muted">An existing teammate can add your account.</p></main>`,
         '/board',
         false,
       ),
