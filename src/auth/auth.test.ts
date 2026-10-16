@@ -66,9 +66,9 @@ test('I1 R26.2/4 full auth enforces actors, salted scrypt, hash-only sessions/cr
   signOut(db, session.token);
   assert.equal(teammateForSession(db, session.token, now()), null);
   const issued = createCredential(ctx, { name: 'reader', scopeMessages: false });
-  assert.deepEqual(credentialForToken(db, issued.token), { id: issued.id, scopeMessages: false });
+  assert.deepEqual(credentialForToken(db, issued.token), { id: issued.id, scopeMessages: false, scopeWrite: false });
   assert.deepEqual(listCredentials(ctx), [
-    { id: issued.id, name: 'reader', scopeMessages: false, createdBy: 'Alice', revoked: false },
+    { id: issued.id, name: 'reader', scopeMessages: false, scopeWrite: false, createdBy: 'Alice', revoked: false },
   ]);
   const dump = JSON.stringify([
     db.all('SELECT * FROM teammate'),

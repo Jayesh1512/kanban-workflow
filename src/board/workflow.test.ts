@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { testApp } from '../../test/harness.ts';
-import { getSetting } from '../auth/index.ts';
+import { createCredential, credentialForToken, getSetting } from '../auth/index.ts';
 import {
   archiveCard,
   configureWorkflow,
@@ -84,6 +84,31 @@ test('opt-in idempotent workflow preserves generic lanes, archived cards and glo
       /Stale/,
     );
     assert.equal(getWorkflowTicket(ctx, c.card.id).workflowStage, 'work_in_progress');
+  } finally {
+    t.close();
+  }
+});
+
+test('workflow write scope is opt-in, actor is credential, revoked credentials cannot read or write', async () => {
+  const t = await testApp({ teammates: [{ username: 'ravi' }] });
+  try {
+    const ctx = t.ctxFor('ravi');
+    configureWorkflow(ctx);
+    const read = createCredential(ctx, { name: 'Read only', scopeMessages: false });
+    assert.equal(credentialForToken(t.db, read.token)?.scopeWrite, false);
+    const reader = { ...ctx, actor: { kind: 'credential' as const, id: read.id }, canReadText: false };
+    assert.equal(getWorkflowBoard(reader).tickets.length, 0);
+    assert.throws(() => createWorkflowTicket(reader, { title: 'Denied' }), /write scope/);
+    const write = createCredential(ctx, { name: 'Hermis', scopeMessages: false, scopeWrite: true });
+    const writer = { ...reader, actor: { kind: 'credential' as const, id: write.id } };
+    assert.equal(credentialForToken(t.db, write.token)?.scopeWrite, true);
+    const ticket = createWorkflowTicket(writer, { title: 'Authorized lead' });
+    assert.equal(ticket.card.lastChangeBy, 'credential');
+    assert.throws(() => configureWorkflow(writer), /Teammate setup/);
+    t.db.run('UPDATE credential SET revoked_at=? WHERE id=?', ctx.now().toISOString(), write.id);
+    assert.equal(credentialForToken(t.db, write.token), null);
+    assert.throws(() => getWorkflowBoard(writer), /Active credential/);
+    assert.throws(() => createWorkflowTicket(writer, { title: 'Denied after revocation' }), /Active credential/);
   } finally {
     t.close();
   }

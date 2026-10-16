@@ -65,15 +65,16 @@ export function revokeCredential(ctx: Ctx, credentialId: Id): void {
 }
 export function listCredentials(
   ctx: Ctx,
-): { id: Id; name: string; scopeMessages: boolean; createdBy: string; revoked: boolean }[] {
+): { id: Id; name: string; scopeMessages: boolean; scopeWrite: boolean; createdBy: string; revoked: boolean }[] {
   requireTeammate(ctx);
   return ctx.db
-    .all<{ id: Id; name: string; scope_messages: number; createdBy: string; revoked: number }>(
-      'SELECT c.id,c.name,c.scope_messages,t.display_name AS createdBy,c.revoked_at IS NOT NULL AS revoked FROM credential c JOIN teammate t ON t.id=c.created_by ORDER BY c.id',
+    .all<{ id: Id; name: string; scope_messages: number; scope_write: number; createdBy: string; revoked: number }>(
+      'SELECT c.id,c.name,c.scope_messages,c.scope_write,t.display_name AS createdBy,c.revoked_at IS NOT NULL AS revoked FROM credential c JOIN teammate t ON t.id=c.created_by ORDER BY c.id',
     )
-    .map(({ scope_messages, revoked, ...row }) => ({
+    .map(({ scope_messages, scope_write, revoked, ...row }) => ({
       ...row,
       scopeMessages: Boolean(scope_messages),
+      scopeWrite: Boolean(scope_write),
       revoked: Boolean(revoked),
     }));
 }

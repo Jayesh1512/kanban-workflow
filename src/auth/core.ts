@@ -95,18 +95,29 @@ export function teammateForSession(db: Db, token: string, now: Date): Id | null 
     )?.id ?? null
   );
 }
-export function createCredential(ctx: Ctx, i: { name: string; scopeMessages: boolean }): { id: Id; token: string } {
+export function createCredential(
+  ctx: Ctx,
+  i: { name: string; scopeMessages: boolean; scopeWrite?: boolean },
+): { id: Id; token: string } {
   const owner = requireTeammate(ctx);
-  i = validate(z.strictObject({ name: z.string().trim().min(1).max(200), scopeMessages: z.boolean() }), i);
+  i = validate(
+    z.strictObject({
+      name: z.string().trim().min(1).max(200),
+      scopeMessages: z.boolean(),
+      scopeWrite: z.boolean().optional(),
+    }),
+    i,
+  );
   return ctx.db.tx(() => {
     if (ctx.db.get('SELECT id FROM credential WHERE name=?', i.name))
       throw new AppError('conflict', 'Credential name exists');
     const secret = randomBytes(32).toString('base64url');
     const id = ctx.db.run(
-      'INSERT INTO credential(name,token_hash,scope_messages,created_by,created_at) VALUES (?,?,?,?,?)',
+      'INSERT INTO credential(name,token_hash,scope_messages,scope_write,created_by,created_at) VALUES (?,?,?,?,?,?)',
       i.name,
       hash(secret),
       Number(i.scopeMessages),
+      Number(i.scopeWrite ?? false),
       owner,
       ctx.now().toISOString(),
     ).lastInsertRowid;
@@ -114,20 +125,23 @@ export function createCredential(ctx: Ctx, i: { name: string; scopeMessages: boo
       action: 'credential.create',
       subjectKind: 'credential',
       subjectId: id,
-      after: { name: i.name, scopeMessages: i.scopeMessages },
+      after: { name: i.name, scopeMessages: i.scopeMessages, scopeWrite: i.scopeWrite ?? false },
     });
     return { id, token: `kbn_${id}_${secret}` };
   });
 }
-export function credentialForToken(db: Db, token: string): { id: Id; scopeMessages: boolean } | null {
+export function credentialForToken(
+  db: Db,
+  token: string,
+): { id: Id; scopeMessages: boolean; scopeWrite: boolean } | null {
   const match = /^kbn_([1-9]\d*)_([A-Za-z0-9_-]{43})$/.exec(token);
   if (!match || !Number.isSafeInteger(Number(match[1]))) return null;
-  const row = db.get<{ id: Id; scope_messages: number }>(
-    'SELECT c.id,c.scope_messages FROM credential c JOIN teammate t ON t.id=c.created_by WHERE c.id=? AND c.token_hash=? AND c.revoked_at IS NULL AND t.removed_at IS NULL',
+  const row = db.get<{ id: Id; scope_messages: number; scope_write: number }>(
+    'SELECT c.id,c.scope_messages,c.scope_write FROM credential c JOIN teammate t ON t.id=c.created_by WHERE c.id=? AND c.token_hash=? AND c.revoked_at IS NULL AND t.removed_at IS NULL',
     Number(match[1]),
     hash(match[2] as string),
   );
-  return row ? { id: row.id, scopeMessages: Boolean(row.scope_messages) } : null;
+  return row ? { id: row.id, scopeMessages: Boolean(row.scope_messages), scopeWrite: Boolean(row.scope_write) } : null;
 }
 function settingSchema(key: string): z.ZodType {
   switch (key) {
