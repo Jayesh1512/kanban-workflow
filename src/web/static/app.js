@@ -77,3 +77,48 @@ workspaceMenu?.addEventListener('keydown', (event) => {
   workspaceMenu.open = false;
   workspaceMenu.querySelector('summary').focus();
 });
+
+// Only local titles and inclusion state are filtered; forms still submit natively.
+document.querySelectorAll('[data-chat-selection]').forEach((selection) => {
+  const tools = selection.querySelector('[data-chat-tools]');
+  const search = selection.querySelector('[data-chat-search]');
+  const results = selection.querySelector('[data-chat-results]');
+  const noMatches = selection.querySelector('[data-chat-no-matches]');
+  const reset = selection.querySelector('[data-chat-reset]');
+  const filters = Array.from(selection.querySelectorAll('[data-chat-filter]'));
+  const rows = Array.from(selection.querySelectorAll('[data-chat-row]'));
+  if (!tools || !search || !results || !noMatches || !reset || !filters.length || !rows.length) return;
+  let activeFilter = 'all';
+  const normalize = (value) => value.normalize('NFKC').toLowerCase();
+  const titles = rows.map((row) => normalize(row.querySelector('[data-chat-title]').textContent));
+  const update = () => {
+    const query = normalize(search.value.trim());
+    let visible = 0;
+    rows.forEach((row, index) => {
+      const included = row.dataset.chatIncluded === 'true';
+      const matchesFilter = activeFilter === 'all' || included === (activeFilter === 'included');
+      row.hidden = !matchesFilter || !titles[index].includes(query);
+      if (!row.hidden) visible++;
+    });
+    for (const button of filters) {
+      button.setAttribute('aria-pressed', String(button.dataset.chatFilter === activeFilter));
+    }
+    results.textContent = `Showing ${visible} of ${rows.length} chats`;
+    noMatches.hidden = visible !== 0;
+  };
+  search.addEventListener('input', update);
+  filters.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeFilter = button.dataset.chatFilter;
+      update();
+    });
+  });
+  reset.addEventListener('click', () => {
+    search.value = '';
+    activeFilter = 'all';
+    update();
+    search.focus();
+  });
+  update();
+  tools.hidden = false;
+});

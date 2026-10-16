@@ -874,3 +874,335 @@ button:disabled {
     text-align: center;
   }
 }
+
+/* Connections: scoped messaging surfaces, native forms and disclosures. */
+.accounts-page {
+  --accent: #0968a8;
+  --accent-hover: #075789;
+  --well: #f1f6fa;
+  --line: #d8e2ea;
+  --control-border: #778c9b;
+  --muted: #526575;
+  --focus: #0968a8;
+  max-width: 72rem;
+  margin-inline: auto;
+}
+.accounts-page [hidden] {
+  display: none;
+}
+.accounts-page ::selection {
+  background: var(--accent);
+  color: var(--surface);
+}
+.accounts-page button,
+.accounts-page .button,
+.accounts-page input,
+.accounts-page summary,
+.accounts-page .check {
+  min-height: 2.75rem;
+}
+.accounts-page .check input {
+  min-height: 1.125rem;
+}
+.accounts-page summary {
+  overflow-wrap: anywhere;
+}
+.accounts-page .notice {
+  background: var(--well);
+  border-color: var(--line);
+}
+.accounts-page .section-nav {
+  padding-bottom: var(--space-3);
+}
+.accounts-page .section-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.accounts-page .accounts-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  align-items: start;
+  gap: var(--space-6);
+}
+.accounts-page .accounts-layout > *,
+.accounts-page .connection-identity {
+  min-width: 0;
+}
+.accounts-page .accounts-list,
+.accounts-page .chat-selection {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.accounts-page .accounts-list-heading,
+.accounts-page .chat-selection-heading {
+  padding: var(--space-4) var(--space-6);
+}
+.accounts-page .accounts-list-heading > p {
+  margin-top: var(--space-2);
+}
+.accounts-page .accounts-list > .empty,
+.accounts-page .chat-selection > .empty {
+  padding: var(--space-6);
+  font-size: 0.875rem;
+}
+.accounts-page .account-row,
+.accounts-page .chat-row {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+.accounts-page .account-row-heading,
+.accounts-page .chat-row-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.accounts-page .connection-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: 50%;
+  background: #e9f2f9;
+  color: #255977;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.accounts-page .connection-identity {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.accounts-page .connection-identity h2,
+.accounts-page .connection-identity h3 {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.accounts-page .account-state,
+.accounts-page .chat-decision {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-top: var(--space-1);
+}
+.accounts-page .account-state[data-account-state="connected"],
+.accounts-page .chat-decision[data-chat-decision="included"] {
+  color: var(--accent);
+}
+.accounts-page .account-state[data-account-state="failed"],
+.accounts-page .account-state[data-account-state="auth_lost"] {
+  color: var(--danger);
+}
+.accounts-page .account-row-heading > .button {
+  flex: none;
+}
+.accounts-page .account-row-body,
+.accounts-page .chat-row-body {
+  padding-left: 3.5rem;
+}
+.accounts-page .account-row-body > details > summary {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.accounts-page .account-row-body > p {
+  margin-top: var(--space-3);
+}
+.accounts-page .accounts-connect {
+  padding: var(--space-3) var(--space-4);
+  background: var(--well);
+  border-radius: var(--radius);
+}
+.accounts-page .accounts-connect > details > summary {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.accounts-page .accounts-connect .connection-form {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+}
+.accounts-page .accounts-connect .connection-form > h3 {
+  font-size: 1rem;
+}
+.accounts-page .chat-selection-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  background: var(--well);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.accounts-page .chat-selection-heading > .muted {
+  margin-left: auto;
+  font-size: 0.8125rem;
+}
+.accounts-page .chat-selection-count {
+  color: var(--muted);
+}
+.accounts-page .chat-selection-help {
+  margin: var(--space-4) var(--space-6);
+  font-size: 0.8125rem;
+}
+.accounts-page .chat-tools {
+  padding: var(--space-4) var(--space-6) var(--space-2);
+  border-top: 1px solid var(--line);
+}
+.accounts-page .chat-tools > label {
+  max-width: 32rem;
+  font-size: 0.875rem;
+}
+.accounts-page .chat-tools input {
+  background: var(--well);
+  border-radius: var(--radius);
+}
+.accounts-page .chat-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.accounts-page .chat-filter-options > button {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--line);
+  border-radius: 2rem;
+  padding-inline: var(--space-4);
+}
+.accounts-page .chat-filter-options > button:hover {
+  background: var(--well);
+  color: var(--accent);
+}
+.accounts-page .chat-filter-options > button[aria-pressed="true"] {
+  color: var(--accent);
+  background: #e9f2f9;
+  border-color: var(--accent);
+}
+.accounts-page .chat-results {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.accounts-page .chat-results button {
+  font-size: inherit;
+}
+.accounts-page .chat-row-heading {
+  align-items: flex-start;
+}
+.accounts-page .chat-latest {
+  max-width: 13rem;
+  font-size: 0.75rem;
+  text-align: right;
+}
+.accounts-page .chat-latest time {
+  display: block;
+}
+.accounts-page .chat-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+}
+.accounts-page .chat-actions > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.accounts-page .chat-actions > details:where([open]) > summary {
+  width: fit-content;
+  max-width: 100%;
+}
+.accounts-page .chat-actions > details > summary {
+  font-size: 0.875rem;
+}
+.accounts-page .chat-actions > details:where(:not(.chat-information)) > summary {
+  font-weight: 600;
+}
+.accounts-page .chat-actions > .chat-include > summary {
+  color: var(--surface);
+  background: var(--accent);
+  border-radius: 0.375rem;
+  padding: var(--space-2) var(--space-4);
+  list-style-position: inside;
+}
+.accounts-page .chat-actions > .chat-include > summary:hover {
+  background: var(--accent-hover);
+}
+.accounts-page .chat-actions > .chat-withdraw > summary {
+  color: var(--danger);
+}
+.accounts-page .chat-actions > .chat-information > summary {
+  color: var(--muted);
+}
+.accounts-page .chat-actions > details[open] {
+  flex-basis: 100%;
+  padding: var(--space-3);
+  background: var(--well);
+  border-radius: var(--radius);
+}
+.accounts-page .chat-actions .check,
+.accounts-page .account-management .check {
+  margin-top: var(--space-3);
+}
+.accounts-page .chat-row-body > .warning-text,
+.accounts-page .chat-row-body > p {
+  margin-top: var(--space-3);
+}
+.accounts-page .chat-no-matches {
+  padding: var(--space-8) var(--space-6);
+  border-top: 1px solid var(--line);
+}
+.accounts-page .chat-no-matches > p {
+  margin-top: var(--space-2);
+}
+@media (max-width: 55rem) {
+  .accounts-page .accounts-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 40rem) {
+  .accounts-page .accounts-list-heading,
+  .accounts-page .chat-selection-heading,
+  .accounts-page .account-row,
+  .accounts-page .chat-row,
+  .accounts-page .chat-tools,
+  .accounts-page .chat-no-matches {
+    padding-inline: var(--space-4);
+  }
+  .accounts-page .chat-selection-help {
+    margin-inline: var(--space-4);
+  }
+  .accounts-page .account-row-heading,
+  .accounts-page .chat-row-heading {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+  .accounts-page .account-row-heading > .button,
+  .accounts-page .chat-latest {
+    grid-column: 2;
+    justify-self: start;
+    text-align: left;
+    max-width: 100%;
+  }
+  .accounts-page .account-row-body,
+  .accounts-page .chat-row-body {
+    padding-left: 0;
+  }
+  .accounts-page .chat-latest time {
+    display: inline;
+  }
+  .accounts-page .chat-selection-heading > .muted {
+    margin-left: 0;
+  }
+  .accounts-page .chat-filter-options {
+    gap: var(--space-1);
+  }
+  .accounts-page .chat-filter-options > button {
+    padding-inline: var(--space-3);
+  }
+}
