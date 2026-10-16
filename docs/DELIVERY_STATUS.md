@@ -17,7 +17,8 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M0 architecture/contracts/foundation — Architecture Builder, running.
 - M0-P verify mtcute/Vikunja deployment and actual APIs — Builder A, running; docs/PLATFORM_RESEARCH.md only.
 - M0-I verify Jev/OpenAI/Hermes contracts — Builder B, running; docs/INTELLIGENCE_RESEARCH.md only. Start confirmed.
-- M0-Q independent acceptance plan — QA, running; docs/QA_PLAN.md only.
+- M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
+- M0-Q2 independent multilingual conversation corpus — assigned to QA; tests/fixtures/relationship-cases.json and fixture documentation only, no product/package edits.
 
 ## PM progression protocol
 
