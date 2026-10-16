@@ -1,0 +1,84 @@
+# Independent M1 deployment acceptance
+
+Owner: QA, `antseed/qa`. Initial canonical integration: `06374d3`, merged as QA `fc42b19`. Repair `5224cd9` merged as QA `971d85a`; final integration `bb8abde` merged as QA `5ffca7d`. Testing ran on 2026-10-17, using actual Docker Engine 29.4.0 / Compose 5.3.1 / Linux ARM64, with host Node v26.4.0. No real provider calls, Telegram connection/group/message, unrelated service mutation, or user's Hermes/profile changes were used.
+
+## Gate status
+
+**M1 PASS against final integration `bb8abde`.** All three originally reproduced P1s are independently verified fixed: the four unchanged adversarial checks now pass on the rebuilt canonical image. The original five real integration checks and three independent HTTP/advisory-lock/task-readback checks also pass: **12 actual tests, zero skips**, run serially on the QA stack. Earlier unrelated native/lifecycle/bootstrap evidence below is retained rather than relabeled as repeated repair testing. M2/M3/M4/live-provider gates are not passed by this report.
+
+Final `npm run check`: **81 passed / 19 opt-in skipped**, strict typecheck/build PASS. These skips are the original five platform live tests, seven architect live regressions and seven independent QA live tests. QA explicitly ran its own seven plus the original five against the real stack; the architect's seven were not independently rerun and are not counted as QA evidence. Incoming M3.1 developer tests are included in this ordinary suite, not an independent M3 acceptance result.
+
+The actual canonical backend was rebuilt from `5224cd9` with `compose up --build -d`, retaining only this QA project's volumes. Its engine image ID is `sha256:697452d63ae4eaac3d108d9e0a4157eaa987752f20bd87493b080f635293529c`. `git diff 5224cd9 bb8abde -- src Dockerfile compose.yaml deploy package.json package-lock.json` is empty: the final follow-up changes test fixtures/docs only, so that rebuilt product image is the exact final product source. Host compilation was also rerun before the compiled child-loss regression.
+
+## Isolation and canonical startup
+
+- New project: `antseed-qa-m1-06374d3-20261017a`; loopback backend 18080, Vikunja 18081, PostgreSQL 18433. Ports were successfully bound/rechecked immediately before startup. Builder A's project `antseed-m1-builder-20261017` and its ports/volumes were not inspected or modified.
+- Synthetic AI env and PostgreSQL-port override are outside Git in a QA-owned temporary directory. The manifest path is recorded locally in `/tmp/antseed-qa-m1-manifest-path`; it contains project/config paths and ports, not generated runtime credentials. `AI_ENV_PATH` overrides the default private file. Telegram ID/hash are explicitly blank; no account/session was borrowed. Nonempty AI keys are clearly synthetic sentinels, with no successful provider access claimed.
+- Started with `docker compose --project-name <QA project> --project-directory <QA checkout> -f compose.yaml -f <QA PG-port override> up --build -d`. The override only publishes PostgreSQL on QA loopback; it does not change product commands, initialization or dependencies. No bootstrap setup shell command was run beforehand.
+- Checked normalized Compose configuration: no backend command override/fixed container name/external volumes; only QA-scoped volume names; only loopback published ports. Image and running container both use `node dist/main.js`. Four newly created named volumes have the matching `com.docker.compose.project` ownership label. Backend UID is 1000; runtime credential file is UID1000/mode0400. Actual writable-open attempt against the AI bind mount fails EROFS.
+- Backend image is pinned Node 22.23.3 bookworm-slim; PostgreSQL 17.11 bookworm and Vikunja 2.7.0 are pinned by digest. The final-image native SQLite/mtcute build probe executed successfully. Reused lifecycle verification also prepared and reopened the real target-native SQLite/session storage in a second Linux ARM64 container with `--network none`. This proves native/offline persistence, not authenticated Telegram behavior or AMD64 compatibility.
+
+## Actual passing evidence on the original canonical baseline
+
+- `npm run check`: 31 passed / five opt-in upstream tests skipped, strict typecheck and production build passed. A skipped test was not counted as upstream success. The historical `qa-m0-runtime.mjs` was not run: empty modules and an M0 milestone label are no longer current runtime invariants.
+- Explicit `npx vitest run tests/platform/integration.test.ts` on this QA stack: **5/5 passed**, no skips. Real PostgreSQL separate antseed/vikunja databases; exact seeded rows; single-connection rollback; concurrent migration serialization; checksum-drift rejection; failed DDL/ledger rollback; exact remote view/buckets/labels and interrupted binding recovery; task marker deduplication, done flag and label/detail preservation.
+- `tests/qa-m1.integration.test.ts`: **3/3 passed**, including the final registration assertions, on both repaired integrations. Independent HTTP status/UI/readiness and no-secret checks; an actually held PostgreSQL advisory lock blocks a migration before schema mutation and releases it afterward; a recovered task already moved to Completed retains its lane/done state, unrelated label, priority, due date and completion fraction after description/workstream update. Raw project task pagination uses `per_page=1`, validates the actual v2 envelope and finds exactly one ticket marker.
+- Public Vikunja `/api/v2/info` reports `auth.local.registration_enabled=false`; synthetic POST `/api/v2/register` returns 404 for pinned 2.7.0. One existing service user remains after recreation. No public test account was created.
+- Final SQL readback finds exactly one marker-bound AntSeed project and one managed Kanban view within it, plus one service user. Vikunja also automatically creates its ordinary unmanaged Inbox with its own default views; QA preserves that upstream object. The six-lane/default/done/filter requirements apply to the managed AntSeed view, not Inbox or every view globally.
+- `node tests/platform/compose-smoke.mjs` with this project's explicit ports override: **PASS** target-native SQLite and offline mtcute directory reopen; read-only AI bind; service restart with stable board/task/credential identities; persistent down/up with four retained volumes, file marker and one service account; real Vikunja outage/recovery while process liveness remains reachable.
+- `node tests/qa-m1-compose.mjs` with the isolation manifest: **PASS** independent repeated canonical up; raw remote board/view/task semantic snapshots and local IDs stable; real PostgreSQL stop shows database unavailable while `/` and `/health/live` remain 200 under two seconds and readiness stays 503; automatic database/board recovery; checksum-ledger fault produces permanent sanitized `migration_drift`, no repeated retry timestamp or extra migration ledger while setup stays accessible; checksum restore/restart recovers; partial local bucket/label binding loss reconstructs original remote IDs; another down/up retains exact lanes/done/marker/field/label state and generated credential bundle. A JWT issued before recreation remains valid afterward, exercising persisted signing secret through the real API.
+- The independent lifecycle script scans public responses, accumulated runtime logs, full backend image history, and streamed image exports for both backend and Vikunja. It scans gzip-compressed OCI layer content as well as plain layer data. **Zero matches** for generated PostgreSQL/Vikunja passwords, signing secret, retained test JWT or synthetic AI keys; values never printed/written to reports. The image build context is an explicit allowlist and the AI file is a runtime-only read-only bind.
+- T3 native preview opened only this setup page in an **incognito** tab. Actual rendered page and browser network snapshot show root/status 200, database/Vikunja ready, Telegram explicitly M2 pending, providers configured-but-not-checked, account unbound and zero import/analysis/proposal counts. No console errors were shown. The UI does not claim authentication, AI inference or business synchronization exists.
+
+These are actual PostgreSQL/Vikunja/container checks, not PGlite results. Any direct SQL or raw stage API actions create/manipulate synthetic acceptance fixtures only; they do not demonstrate the unimplemented AI approval workflow.
+
+## Independently reproduced P1s on `06374d3`
+
+All three architect-reported issues were independently reproduced using QA's own stack and independently written `tests/qa-m1-races.integration.test.ts`. The first run failed **3/3 in 4.8 seconds**:
+
+1. **P1-M1-01, pool starvation:** eight concurrent `ensureTask` calls for an existing ticket yielded one rejection/seven successes after roughly 3.47 seconds. The held pool sessions needed further pool borrowing to complete.
+2. **P1-M1-02, lost Completed movement:** a local HTTP proxy paused only the task-description full PUT after capture; concurrent application movement completed; releasing the description write returned success but remote lane reverted from Completed (QA bucket6) to To be started (QA bucket4).
+3. **P1-M1-03, process crash on checked-out session loss:** an isolated child used the actual compiled PgDatabase; QA terminated precisely its reported PostgreSQL backend PID while its checked-out lock callback waited. Child exited1 instead of handling rejection and using a fresh pool connection. No raw child error/connection object or credential was published.
+
+After the approved PATCH repair direction, QA adapted the proxy to pause **both PUT/PATCH at the exact `/api/v2/tasks/{id}` path**, never bucket-movement requests. The app-serialization case starts movement, verifies it waits, releases the description write, then awaits completion; it never demands lock acquisition before releasing the current owner. A separate hostile-interleaving case moves Completed through the direct real remote stage API while description is paused, then releases it. Description can succeed safely or report a conservative conflict, but must not undo Completed.
+
+The expanded original-baseline run remains **4/4 failing**: eight-way projection rejection (~3.48s), application move finishes before description release, external remote Completed reverted (bucket6→4), and checked-out-loss child exit1 (~93ms). This is transport/scheduling adaptation, not weakened expected behavior. Frozen red-regression SHA256: `54e6c28db7a0780bda240cc035ce381398c356b94d9b08c147d450fc6b734e04`. No QA product/shared/package file changes attempt to repair these defects.
+
+## Independent repair verification and disposition
+
+All four assertions retain the above exact file digest. No outcome assertion was changed after the expanded red baseline. On `5224cd9` they pass **4/4 in 2.64s**; on final `bb8abde` they pass **4/4 in 3.04s**:
+
+- **P1-M1-01 CLOSED/verified:** all eight existing projections succeed, same task ID, ~367ms on final run. No pool size increase or reduced concurrency is used by QA.
+- **P1-M1-02 CLOSED/verified:** application movement waits behind the paused descriptive write and finishes Completed (~866ms); separate direct real remote Completed movement remains Completed after the paused descriptive write is released (~806ms). Conservative conflict is permitted. The proxy still intercepts the original PUT and the repaired PATCH at the same exact task path.
+- **P1-M1-03 CLOSED/verified:** the compiled child survives termination of its checked-out PostgreSQL session, reports handled rejection plus subsequent pool recovery, and exits0 (~793ms). Child isolation and exact PID termination are unchanged; no global PostgreSQL/service process was killed.
+
+The original five platform real integration tests were rerun **5/5 PASS** after each repaired integration (~1.06s final). Three QA black-box tests were rerun **3/3 PASS** (~803ms final), covering the changed adapter/database plus public registration/status contract. All three suites were run as separate serial Vitest invocations to avoid mixing lifecycle faults with another test's database state.
+
+Final rebuilt backend and Vikunja image exports, current public responses/logs and backend image history were separately rescanned with the actual generated passwords/signing secret and synthetic AI values: **zero matches**. Earlier JWT-included scan and persisted-JWT recreation check remain recorded above. An unnecessary extra login for the final scan hit Vikunja's upstream HTTP429 after the repeated test-login burst; it was not retried or disabled. The final scan needed no new token and completed without another login. Avoid tight repeated authentication loops when reproducing; this is not a model-entitlement request or unresolved M1 defect.
+
+## Reproducing the QA-owned checks
+
+Prepare a new isolated QA project with synthetic AI env containing nonempty fake OpenAI/Gateway keys, blank Telegram credentials, rechecked loopback ports and a PostgreSQL-port-only override. Run canonical Compose up and wait for database/board ready. The test commands read generated credentials into memory from that specified backend; never paste them into the shell/report.
+
+```sh
+QA_M1_PROJECT=<own-antseed-qa-m1-project> QA_M1_PG_PORT=<own-pg-port> \
+  BACKEND_PORT=<own-backend-port> VIKUNJA_PORT=<own-vikunja-port> \
+  npx vitest run tests/qa-m1.integration.test.ts tests/qa-m1-races.integration.test.ts
+QA_M1_MANIFEST=<own-isolation-manifest.json> node tests/qa-m1-compose.mjs
+```
+
+The final run used project `antseed-qa-m1-06374d3-20261017a`, `QA_M1_PG_PORT=18433`, `BACKEND_PORT=18080`, `VIKUNJA_PORT=18081`. `QA_M1_MANIFEST` is the path stored in `/tmp/antseed-qa-m1-manifest-path` on this host. Explicitly run the four-case file, original platform file and three-case file serially, as done for final acceptance; do not run a service-lifecycle script alongside them.
+
+Run the reused builder tests separately with `PLATFORM_TEST_PROJECT`, `PLATFORM_TEST_PG_PORT`, `PLATFORM_TEST_VIKUNJA_URL` as documented in deploy/README.md. Run its compose smoke with the matching `AI_ENV_PATH`, port variables, `PLATFORM_TEST_PROJECT` and `PLATFORM_TEST_PORTS_FILE`. Do not run any lifecycle script concurrently with another test suite on the same stack.
+
+The lifecycle manifest has `project`, `root`, `ports:{backend,vikunja,postgres}`, `compose_args:["docker","compose","--project-name",project,"--project-directory",root,"-f","compose.yaml","-f",absolutePortOverride]`, and `environment_overrides:{AI_ENV_PATH,BACKEND_PORT,VIKUNJA_PORT,TELEGRAM_API_ID:"",TELEGRAM_API_HASH:""}`. This file is outside Git and contains no generated secret values. The script rejects unrelated project prefixes and asserts resource ownership before scoped actions. It preserves volumes and leaves its QA stack running for review.
+
+Only four QA-owned files are added by this handoff: this report, `tests/qa-m1.integration.test.ts`, `tests/qa-m1-races.integration.test.ts`, and `tests/qa-m1-compose.mjs`. The QA plan/corpus remain unchanged; no product/shared/composition/package/deployment file was edited by QA. Final scope/whitespace checks and private configured-credential comparisons pass. Four QA-labeled volumes and the synthetic stack remain retained, with the original project name/ports; no volume deletion occurred.
+
+## Remaining milestone boundaries
+
+Live Telegram remains M2, real extraction/Jev/application are later integrated milestones, and MCP/Hermes is M4. Known Gateway Jev entitlement remains blocked; no extra real request was made. Installed Hermes CLI access is authorized, but later checks must use a project-specific isolated configuration/profile rather than the user's unrelated profile.
+
+Later M3.2 acceptance must independently exercise immutable analysis/apply attempt tokens and async apply scope with same-worker reclaim, session-abort/no replacement-connection fallback, out-of-scope journal writes, conservative unknown-remote-outcome readback and one logical local stage commit. These are not inferred from this platform gate or interface signatures.
+
+M5 additionally requires the user-requested final demo after all implementation/tests/fixes: readable real-UI recording on a synthetic-company dataset, approximately 2–4 minutes, ideally 1080p MP4 with captions/callouts and reproducible steps. Story: setup → ingested Telegram example → company/all contacts/ticket → evidence-backed proposal with unchanged board → explicit operational Telegram approval → actual Vikunja movement → installed Hermes daily priorities. Label fixture/replay boundaries if live dependencies remain unavailable; no invented successful live integration or private contacts/chats/login codes/keys. Prefer T3 native recording; do not record incomplete product as the final demo.
