@@ -140,8 +140,19 @@ export function validateExtraction(raw: unknown, input: AnalysisInput): Extracti
       if (!r.role.trim() || !roleQuotes.some((q) => q.toLowerCase().includes(r.companyName.toLowerCase()) && q.toLowerCase().includes(r.role.toLowerCase()) && sourceMessages.some((m) => m.text.includes(q) && attributed(q, m)))) throw new Error('Role lacks explicit identity-attributed source');
     }
     const atCompany = (company: string) => clauses.some((q) => new RegExp(`(?:\\b(?:at|from|of)\\s+|\\b(?:company|team) is\\s+)${escape(company)}(?:\\b|$)`, 'iu').test(q));
-    if (c.affiliation === 'internal' && !atCompany('AntSeed')) throw new Error('Internal affiliation lacks identity-attributed AntSeed evidence');
-    if (c.affiliation === 'external' && !c.roles.some((r) => r.companyName.toLowerCase() !== 'antseed') && !value.companies.some((company) => company.canonicalName.toLowerCase() !== 'antseed' && atCompany(company.canonicalName))) throw new Error('External affiliation lacks identity-attributed company evidence');
+    // An authored introduction can explicitly state affiliation even if the
+    // extractor omitted a redundant company/role object. Partial display names
+    // are accepted here only when bound to that exact visible user profile.
+    const introducedCompanies = c.evidenceIds.flatMap((id) => {
+      const e = validEvidence.get(id)!; const m = sourceMessages.find((m) => m.id === e.messageId && m.chatId === e.chatId)!; const p = author(m);
+      if (!p || !snapshots.some((s) => s.id === p.id)) return [];
+      const names = p.names.flatMap((name) => [name, name.trim().split(/\s+/)[0]!]).filter((name) => name.length > 1);
+      return names.flatMap((name) => {
+        const match = new RegExp(`^${escape(name)}\\s+(?:from|at)\\s+([^.!?;\\n]{1,100}?)\\s+here\\b`, 'iu').exec(e.excerpt.trim()); return match ? [match[1]!.trim()] : [];
+      });
+    });
+    if (c.affiliation === 'internal' && !introducedCompanies.some((name) => normalize(name) === 'antseed') && !atCompany('AntSeed')) throw new Error('Internal affiliation lacks identity-attributed AntSeed evidence');
+    if (c.affiliation === 'external' && !introducedCompanies.some((name) => normalize(name) !== 'antseed') && !c.roles.some((r) => r.companyName.toLowerCase() !== 'antseed') && !value.companies.some((company) => company.canonicalName.toLowerCase() !== 'antseed' && atCompany(company.canonicalName))) throw new Error('External affiliation lacks identity-attributed company evidence');
   }
   const keys = new Set(value.facts.map((f) => f.localKey));
   if (keys.size !== value.facts.length) throw new Error('Duplicate local fact keys');
