@@ -5,6 +5,7 @@ import type { HistoryCursor, ServiceStatus } from '../shared/domain.js';
 import type { OperationsStatus, PlatformModule, RuntimeConfig } from '../shared/ports.js';
 import { VikunjaAdapter } from '../vikunja/adapter.js';
 import { configMetadata } from './config.js';
+import { createMigrationGate } from './migration-gate.js';
 import { migrate, PgDatabase } from './database.js';
 import { MtcuteAdapter } from '../telegram/adapter.js';
 import { ControlSetupManager, DurableControlBus } from '../telegram/control.js';
@@ -31,6 +32,7 @@ const safeCount = (raw: unknown): number => {
 export async function createPlatformModule(config: RuntimeConfig): Promise<PlatformModule> {
   // Constructors allocate no open connection, session, timer or remote action.
   const db = new PgDatabase(config.databaseUrl), store = new TelegramStore(db, config.telegram), telegram = new MtcuteAdapter(config.telegram, store), vikunja = new VikunjaAdapter(config.vikunja, db);
+  const migrationsReady = await createMigrationGate(db);
   telegram.setControlSetup(new ControlSetupManager(db, store, () => telegram.requireLive()));
   const control = new DurableControlBus(db, telegram), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize);
   let telegramStarted = false, telegramTask: Promise<void> | null = null;
@@ -38,12 +40,25 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
   let boardState: ServiceStatus | null = null;
   let migrationsDone = false, boardDone = false, stopped = false, started = false, permanentFailure = false;
   let task: Promise<void> | null = null, timer: ReturnType<typeof setTimeout> | null = null;
+  async function requireDatabaseReady(): Promise<void> {
+    if (!migrationsDone) throw new DomainError('upstream_unavailable', 'Database initialization is pending', true);
+    try {
+      const result = await migrationsReady();
+      if (result === 'ready') { dbState = state('ready', null, 'PostgreSQL connected; current migration ledger checksums verified'); return; }
+      dbState = result === 'drift'
+        ? state('unavailable', 'migration_drift', 'Migration ledger differs from the application; business work is paused')
+        : state('connecting', 'database_pending', 'Waiting for the complete checksum-validated migration ledger');
+      throw new DomainError('upstream_unavailable', dbState.detail!, true);
+    } catch (error) {
+      if (error instanceof DomainError) throw error;
+      dbState = state('unavailable', 'database_unavailable', 'Database readiness unavailable; business work is paused');
+      throw new DomainError('upstream_unavailable', dbState.detail!, true);
+    }
+  }
   async function initialize(): Promise<void> {
     try {
-      await db.query('SELECT 1');
       if (stopped) return;
       if (!migrationsDone) { await migrate(db); migrationsDone = true; }
-      dbState = state('ready', null, 'PostgreSQL connected; migration checksums verified');
     } catch (error) {
       const migrationDrift = error instanceof Error && /Migration checksum mismatch|Missing applied migration/.test(error.message);
       permanentFailure = migrationDrift;
@@ -51,6 +66,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       return;
     }
     if (stopped) return;
+    try { await requireDatabaseReady(); } catch { return; }
     if (!telegramStarted) { telegramStarted = true; telegramTask = telegram.start().catch(() => {}).finally(() => { if (!stopped) sync.start(); }); }
     try {
       if (!boardDone) { await vikunja.ensureBoard(); boardDone = true; } else await vikunja.check();
@@ -69,6 +85,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
     });
   }
   async function operationsStatus(): Promise<OperationsStatus> {
+    if (migrationsDone) { try { await requireDatabaseReady(); } catch { /* Status remains available with the failed gate state. */ } }
     let imports: HistoryCursor[] = [], accountBound = false, replayPending = 0, analysisPending = 0, proposalsPending = 0;
     if (migrationsDone && dbState.state === 'ready') {
       try {
@@ -92,24 +109,25 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
     name: 'platform', services: { db, config, clock: { now: () => new Date() }, telegram, vikunja, chats: store, ingestion: store, control },
     async register(app) {
       sync.register(); // subscriptions installed before any module starts
-      const ready = () => { if (!migrationsDone || dbState.state !== 'ready') throw new DomainError('upstream_unavailable', 'Database initialization is pending', true); };
+      const ready = requireDatabaseReady;
       const chatParams = z.strictObject({ chatId: chatIdSchema });
-      app.get('/api/chats', async (req) => { ready(); const input = z.strictObject({ cursor: z.string().max(500).optional(), limit: z.coerce.number().int().min(1).max(200).optional() }).parse(req.query); return store.list({ ...(input.cursor !== undefined ? { cursor: input.cursor } : {}), ...(input.limit !== undefined ? { limit: input.limit } : {}) }); });
-      app.put('/api/chats/:chatId/inclusion', async (req) => { ready(); return store.setInclusion(setInclusionSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
-      app.get('/api/chats/:chatId/import', async (req) => { ready(); return store.importStatus(chatParams.parse(req.params).chatId); });
-      app.post('/api/chats/:chatId/import', async (req) => { ready(); return store.requestImport(z.strictObject({ chatId: chatIdSchema, idempotencyKey: idempotencyKeySchema, maxBatches: z.number().int().min(1).max(10000), batchSize: z.number().int().min(1).max(100) }).parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
-      app.get('/api/chats/:chatId/mapping', async (req) => { ready(); return store.mappingCandidates(chatParams.parse(req.params).chatId); });
-      app.put('/api/chats/:chatId/mapping', async (req) => { ready(); return store.correctMapping(correctMappingSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params), source: 'http' })); });
+      app.get('/api/chats', async (req) => { await ready(); const input = z.strictObject({ cursor: z.string().max(500).optional(), limit: z.coerce.number().int().min(1).max(200).optional() }).parse(req.query); return store.list({ ...(input.cursor !== undefined ? { cursor: input.cursor } : {}), ...(input.limit !== undefined ? { limit: input.limit } : {}) }); });
+      app.put('/api/chats/:chatId/inclusion', async (req) => { await ready(); return store.setInclusion(setInclusionSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
+      app.get('/api/chats/:chatId/import', async (req) => { await ready(); return store.importStatus(chatParams.parse(req.params).chatId); });
+      app.post('/api/chats/:chatId/import', async (req) => { await ready(); return store.requestImport(z.strictObject({ chatId: chatIdSchema, idempotencyKey: idempotencyKeySchema, maxBatches: z.number().int().min(1).max(10000), batchSize: z.number().int().min(1).max(100) }).parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
+      app.get('/api/chats/:chatId/mapping', async (req) => { await ready(); return store.mappingCandidates(chatParams.parse(req.params).chatId); });
+      app.put('/api/chats/:chatId/mapping', async (req) => { await ready(); return store.correctMapping(correctMappingSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params), source: 'http' })); });
       app.get('/', async (_req, reply) => reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(onboardingPage));
       app.get('/api/status', async (_req, reply) => reply.header('Cache-Control', 'no-store').send(await operationsStatus()));
       app.get('/api/telegram/login', async () => telegram.loginState());
-      app.post('/api/telegram/login', async (req) => { const input = loginInput.parse(req.body); ready(); return telegram.submitLogin(input); });
-      app.post('/api/telegram/control-setup', async (req) => { ready(); return telegram.configureControlChat(setupInput.parse(req.body)); });
-      app.post('/api/telegram/control-setup/:operationKey/reconcile', async (req) => { ready(); return telegram.reconcileControlSetup(z.strictObject({ operationKey: idempotencyKeySchema }).parse(req.params).operationKey); });
+      app.post('/api/telegram/login', async (req) => { const input = loginInput.parse(req.body); await ready(); return telegram.submitLogin(input); });
+      app.post('/api/telegram/control-setup', async (req) => { await ready(); return telegram.configureControlChat(setupInput.parse(req.body)); });
+      app.post('/api/telegram/control-setup/:operationKey/reconcile', async (req) => { await ready(); return telegram.reconcileControlSetup(z.strictObject({ operationKey: idempotencyKeySchema }).parse(req.params).operationKey); });
     },
     async start() { if (started || stopped) return; started = true; schedule(); },
     async stop() { if (stopped) return; stopped = true; if (timer) clearTimeout(timer); await sync.stop(); await telegram.stop(); await telegramTask; await task; await db.close(); },
     async status() {
+      if (migrationsDone) { try { await requireDatabaseReady(); } catch { return dbState; } }
       if (dbState.state !== 'ready') return dbState;
       const board = boardState ?? await vikunja.status();
       if (board.state !== 'ready') return state('degraded', board.code, board.detail);
