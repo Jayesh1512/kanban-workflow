@@ -30,6 +30,8 @@ M0 verification on 2026-10-17: clean `npm ci --no-audit --no-fund` passed; `npm 
 
 The exact signatures, field names, nullability and discriminated outcomes are exported from `src/shared/index.ts`, with stable lifecycle imports from `src/shared/lifecycle.ts`. `domain.ts` defines records; `ports.ts` defines all interfaces; `schemas.ts` exports runtime validators and inferred mutation input types; `api.ts` defines the transport inventory and shared errors. Exported interfaces are real application ports, not claimed upstream APIs.
 
+PM-approved mapping ownership exception: B's analysis completion transaction may write `chats` mapping and `mapping_history.source='analysis'` atomically with company/contact/facts/ticket persistence and the associated evidence/audit/version invalidation. Lock the chat and compare the input mapping version; protect operator corrections recorded by HTTP/MCP/Telegram, including deliberate unresolved/non-company selections. Model output cannot overwrite a manual mapping simply because a later job sees the newer version. A owns operator `ChatService.correctMapping` and its transaction; B does not route analysis through that separate operator transaction or implement a competing operator mapping service.
+
 Required concrete module exports (implement these names exactly):
 
 ```ts
@@ -137,7 +139,20 @@ Extraction uses configured OpenAI model (`gpt-6.1-sol`), real structured `/v1/re
 
 Gateway request is JSON `{model,state,questions}` with `Authorization: Bearer <Gateway key>`. Native typed questions are `noul` (yes probability), `choice` (criteria keyed by option) and `score` (ordered criteria). Parse `answers` keyed by question, not `choices[0].message.content`. Preserve `JevDiagnostics` native types/distributions/confidence/legend and rubric version, plus separate `ProviderProvenance` for extraction and Jev. Bound timeouts/retries; respect rate limits. Invalid/missing/unknown answers produce a typed failure, never a default lane.
 
-`AnalysisQueue` claims leased jobs, loads versioned input, saves validated extraction through `saveExtraction` **before** calling Jev, and exposes `getExtraction` for replay. The canonical input hash includes account/chat, policy/mapping/message/evidence versions, relevant ticket context, timezone and extraction schema version. Commit checks current input hash/versions. Persist extraction/facts/provenance even when the later Jev call fails; do not publish guessed Jev classifications. Reuse a current checkpoint rather than paying extraction again; changed input requires a new checkpoint. `complete(jobId, decision, provenance)` uses the saved extraction and rechecks policy/mapping/evidence/ticket stage. Claim ownership and updates must be fenced against expired leases in repository implementations.
+`AnalysisQueue` claims leased jobs, loads versioned input, saves validated extraction through `saveExtraction(checkpoint, claimToken)` **before** calling Jev, and exposes `getExtraction` for replay. The canonical input hash includes account/chat, policy/mapping/message/evidence versions, relevant ticket context, timezone and extraction schema version. Commit checks current input hash/versions. Persist extraction/facts/provenance even when the later Jev call fails; do not publish guessed Jev classifications. Reuse a current checkpoint rather than paying extraction again; changed input requires a new checkpoint. `complete(jobId, decision, provenance, claimToken)` uses the saved extraction and rechecks policy/mapping/evidence/ticket stage; failures use `fail(jobId, error, claimToken)`.
+
+Every claim returns an immutable `AnalysisJob.claimToken: string`, freshly generated for that attempt even when the same worker reclaims the same job. Persist the token in the existing `analysis_jobs.worker_id` column (for example, worker ID plus a random UUID); the caller's stable worker ID alone is not a token. Each of the three result writes atomically requires **exact token equality, `status='running'`, and `lease_until > now()`**, in addition to input-version checks where applicable. Lock/check the claim in the same transaction as all resulting writes; an expired/replaced token returns conflict and changes no job/checkpoint/domain state. `loadInput` and `getExtraction` remain reads. Capture the returned token in each asynchronous attempt's closure; never look up a mutable current token when a delayed callback returns. Repository concurrency/lease-reclaim implementation tests belong to B.
+
+```ts
+const claim = await queue.claim({ workerId, leaseMs });
+if (claim) {
+  const { id: jobId, claimToken } = claim;
+  const finish = (decision: JevDecision, provenance: ProviderProvenance) =>
+    queue.complete(jobId, decision, provenance, claimToken);
+  // This attempt's asynchronous callback retains finish and its original token.
+  // saveExtraction and fail likewise receive this captured claimToken.
+}
+```
 
 Observed real probe: configured Gateway key was accepted enough to route, but HTTP 403 `no_providers_available` / `RestrictedModelsError` reports free-tier paid-credit restriction (zero provider attempts). Treat it as provider unavailable/entitlement, retain `provider_unavailable` jobs/checkpoints, show honest status and permit explicit `replayUnavailable` after access is fixed. Do not hammer entitlement errors or fabricate successful recommendations. OpenAI's separate successful synthetic request does not pass the live Jev gate. No additional real entitlement probe is needed for M0. Real Gateway success remains externally blocked; deterministic mocks are explicit test dependencies only.
 

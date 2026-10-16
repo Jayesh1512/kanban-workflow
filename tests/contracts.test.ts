@@ -2,8 +2,8 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import { API_OPERATIONS, MCP_OPERATIONS } from '../src/shared/api.js';
 import { correctMappingSchema, decideProposalSchema, proposeLaneSchema, setInclusionSchema } from '../src/shared/schemas.js';
 import { LANES, WORKSTREAMS } from '../src/shared/domain.js';
-import type { AnalysisInput, Message, PeerSnapshot } from '../src/shared/domain.js';
-import type { DomainServices, ExtractionPort, RecordsService, TelegramMessageInput } from '../src/shared/ports.js';
+import type { AnalysisInput, ExtractionCheckpoint, JevDecision, Message, PeerSnapshot, ProviderProvenance, UUID } from '../src/shared/domain.js';
+import type { AnalysisJob, AnalysisQueue, DomainServices, ExtractionPort, ProviderResult, RecordsService, TelegramMessageInput } from '../src/shared/ports.js';
 
 type ServiceMethod = { [K in keyof DomainServices]: `${K}.${Extract<keyof DomainServices[K], string>}` }[keyof DomainServices];
 const bindings: readonly { service: ServiceMethod }[] = API_OPERATIONS;
@@ -12,6 +12,14 @@ const sender: PeerSnapshot = { id: '123', kind: 'user', names: ['Riya Fixture'],
 const peer: PeerSnapshot = { id: '-1001', kind: 'channel', names: ['Fixture company'], usernames: [], visiblePhones: [], visibleEmails: [], observedAt: '2026-10-17T00:00:00Z' };
 
 describe('shared integration contract', () => {
+  it('requires the immutable attempt token on every analysis result write', () => {
+    expectTypeOf<Pick<AnalysisJob, 'claimToken'>>().toEqualTypeOf<{ readonly claimToken: string }>();
+    expectTypeOf<Parameters<AnalysisQueue['saveExtraction']>>().toEqualTypeOf<[ExtractionCheckpoint, string]>();
+    expectTypeOf<Parameters<AnalysisQueue['complete']>>().toEqualTypeOf<[UUID, JevDecision, ProviderProvenance, string]>();
+    expectTypeOf<Parameters<AnalysisQueue['fail']>>().toEqualTypeOf<[UUID, Extract<ProviderResult<never>, { ok: false }>, string]>();
+    expectTypeOf<Parameters<AnalysisQueue['loadInput']>>().toEqualTypeOf<[UUID]>();
+    expectTypeOf<Parameters<AnalysisQueue['getExtraction']>>().toEqualTypeOf<[UUID]>();
+  });
   it('preserves identical own and forwarded bodies with unknown original author', () => {
     const own: Message = { chatId: '-1001', id: 1, senderId: '123', sender, peer, sentAt: '2026-10-17T00:00:00Z', editedAt: null, deletedAt: null, text: 'We are live', replyToId: null, sourceUrl: null, version: 1, forward: { isForwarded: false, sourceKind: 'own', originPeer: null, originName: null, originDate: null, originMessageId: null } };
     const forwarded: Message = { ...own, forward: { ...own.forward, isForwarded: true, sourceKind: 'forwarded', originDate: '2026-10-16T00:00:00Z' } };
