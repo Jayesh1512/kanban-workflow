@@ -36,8 +36,8 @@ export async function assertEvidence(tx: SqlExecutor, ids: string[], chatId?: st
   assert(result.rows.length === unique.length, 'conflict', 'Evidence is missing, stale, excluded or belongs to another chat');
 }
 
-export async function links(tx: SqlExecutor, table: 'company_evidence' | 'contact_evidence' | 'ticket_evidence' | 'fact_evidence' | 'role_evidence' | 'mapping_candidate_evidence' | 'mapping_history_evidence', column: string, id: string, evidenceIds: string[], replace = true): Promise<void> {
-  const columns = { company_evidence: 'company_id', contact_evidence: 'contact_id', ticket_evidence: 'ticket_id', fact_evidence: 'fact_id', role_evidence: 'role_id', mapping_candidate_evidence: 'candidate_id', mapping_history_evidence: 'history_id' };
+export async function links(tx: SqlExecutor, table: 'company_evidence' | 'contact_evidence' | 'ticket_evidence' | 'fact_evidence' | 'role_evidence' | 'mapping_candidate_evidence' | 'mapping_history_evidence' | 'proposal_evidence', column: string, id: string, evidenceIds: string[], replace = true): Promise<void> {
+  const columns = { company_evidence: 'company_id', contact_evidence: 'contact_id', ticket_evidence: 'ticket_id', fact_evidence: 'fact_id', role_evidence: 'role_id', mapping_candidate_evidence: 'candidate_id', mapping_history_evidence: 'history_id', proposal_evidence: 'proposal_id' };
   assert(columns[table] === column, 'internal', 'Invalid relationship column');
   if (replace) await tx.query(`DELETE FROM ${table} WHERE ${column}=$1`, [id]);
   if (evidenceIds.length) await tx.query(`INSERT INTO ${table}(${column},evidence_id) SELECT $1,unnest($2::uuid[]) ON CONFLICT DO NOTHING`, [id, [...new Set(evidenceIds)]]);
