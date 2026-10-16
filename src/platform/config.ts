@@ -20,6 +20,8 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   const aiEnvPath = env['AI_ENV_PATH'] ?? '/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env';
   const ai = await readEnv(aiEnvPath);
   const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...env };
+  // Compose's optional blank fields must not erase mounted Telegram credentials.
+  for (const key of ['TELEGRAM_API_ID', 'TELEGRAM_API_HASH']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
   const str = (key: string, fallback: string) => nonblank(values[key]) ?? fallback;
   const int = (key: string, fallback: number, max = 2_147_483_647) => {
     const raw = nonblank(values[key]);

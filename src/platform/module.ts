@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { DomainError } from '../shared/api.js';
-import { chatIdSchema, idempotencyKeySchema } from '../shared/schemas.js';
+import { chatIdSchema, correctMappingSchema, idempotencyKeySchema, setInclusionSchema } from '../shared/schemas.js';
 import type { HistoryCursor, ServiceStatus } from '../shared/domain.js';
 import type { OperationsStatus, PlatformModule, RuntimeConfig } from '../shared/ports.js';
 import { VikunjaAdapter } from '../vikunja/adapter.js';
 import { configMetadata } from './config.js';
 import { migrate, PgDatabase } from './database.js';
-import { pendingChats, pendingControl, pendingIngestion, pendingTelegram } from './pending.js';
+import { MtcuteAdapter } from '../telegram/adapter.js';
+import { ControlSetupManager, DurableControlBus } from '../telegram/control.js';
+import { TelegramStore } from '../telegram/store.js';
+import { TelegramSync } from '../telegram/sync.js';
 import { onboardingPage } from './page.js';
 
 const loginInput = z.discriminatedUnion('step', [
@@ -27,7 +30,10 @@ const safeCount = (raw: unknown): number => {
 
 export async function createPlatformModule(config: RuntimeConfig): Promise<PlatformModule> {
   // Constructors allocate no open connection, session, timer or remote action.
-  const db = new PgDatabase(config.databaseUrl), telegram = pendingTelegram(), vikunja = new VikunjaAdapter(config.vikunja, db);
+  const db = new PgDatabase(config.databaseUrl), store = new TelegramStore(db, config.telegram), telegram = new MtcuteAdapter(config.telegram, store), vikunja = new VikunjaAdapter(config.vikunja, db);
+  telegram.setControlSetup(new ControlSetupManager(db, store, () => telegram.requireLive()));
+  const control = new DurableControlBus(db, telegram), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize);
+  let telegramStarted = false, telegramTask: Promise<void> | null = null;
   let dbState = state('connecting', 'database_pending', 'Waiting for database and migrations');
   let boardState: ServiceStatus | null = null;
   let migrationsDone = false, boardDone = false, stopped = false, started = false, permanentFailure = false;
@@ -45,6 +51,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       return;
     }
     if (stopped) return;
+    if (!telegramStarted) { telegramStarted = true; telegramTask = telegram.start().catch(() => {}).finally(() => { if (!stopped) sync.start(); }); }
     try {
       if (!boardDone) { await vikunja.ensureBoard(); boardDone = true; } else await vikunja.check();
       boardState = await vikunja.status();
@@ -78,26 +85,38 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       } catch { dbState = state('unavailable', 'database_unavailable', 'Database status query failed; retrying connection'); }
     }
     const configured = (present: boolean, name: string) => state(present ? 'degraded' : 'unconfigured', present ? 'not_checked' : 'missing_credentials', present ? `${name} configured; access has not been verified by the workflow module` : `Configure ${name} runtime credentials`);
-    return { components: { database: dbState, vikunja: boardState ?? await vikunja.status(), telegram: await telegram.status(), extraction: configured(Boolean(config.extraction.apiKey), 'OpenAI'), jev: configured(Boolean(config.jev.apiKey), 'Vercel AI Gateway Jev') }, telegramLogin: await telegram.loginState(), accountBound, imports, replayPending, analysisPending, proposalsPending,
+    return { components: { database: dbState, vikunja: boardState ?? await vikunja.status(), telegram: await telegram.status(), telegramSync: sync.status(), control: migrationsDone && dbState.state === 'ready' ? await control.status().catch(() => state('unavailable', 'control_status_unavailable', 'Control status query failed')) : state('connecting', 'database_pending', 'Control status awaits migrations'), extraction: configured(Boolean(config.extraction.apiKey), 'OpenAI'), jev: configured(Boolean(config.jev.apiKey), 'Vercel AI Gateway Jev') }, telegramLogin: await telegram.loginState(), accountBound, imports, replayPending, analysisPending, proposalsPending,
       configuration: { ...configMetadata(config), telegramConfigured: Boolean(config.telegram.apiId && config.telegram.apiHash), extractionConfigured: Boolean(config.extraction.apiKey), jevConfigured: Boolean(config.jev.apiKey) } };
   }
   return {
-    name: 'platform', services: { db, config, clock: { now: () => new Date() }, telegram, vikunja, chats: pendingChats(), ingestion: pendingIngestion(), control: pendingControl() },
+    name: 'platform', services: { db, config, clock: { now: () => new Date() }, telegram, vikunja, chats: store, ingestion: store, control },
     async register(app) {
+      sync.register(); // subscriptions installed before any module starts
+      const ready = () => { if (!migrationsDone || dbState.state !== 'ready') throw new DomainError('upstream_unavailable', 'Database initialization is pending', true); };
+      const chatParams = z.strictObject({ chatId: chatIdSchema });
+      app.get('/api/chats', async (req) => { ready(); const input = z.strictObject({ cursor: z.string().max(500).optional(), limit: z.coerce.number().int().min(1).max(200).optional() }).parse(req.query); return store.list({ ...(input.cursor !== undefined ? { cursor: input.cursor } : {}), ...(input.limit !== undefined ? { limit: input.limit } : {}) }); });
+      app.put('/api/chats/:chatId/inclusion', async (req) => { ready(); return store.setInclusion(setInclusionSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
+      app.get('/api/chats/:chatId/import', async (req) => { ready(); return store.importStatus(chatParams.parse(req.params).chatId); });
+      app.post('/api/chats/:chatId/import', async (req) => { ready(); return store.requestImport(z.strictObject({ chatId: chatIdSchema, idempotencyKey: idempotencyKeySchema, maxBatches: z.number().int().min(1).max(10000), batchSize: z.number().int().min(1).max(100) }).parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
+      app.get('/api/chats/:chatId/mapping', async (req) => { ready(); return store.mappingCandidates(chatParams.parse(req.params).chatId); });
+      app.put('/api/chats/:chatId/mapping', async (req) => { ready(); return store.correctMapping(correctMappingSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params), source: 'http' })); });
       app.get('/', async (_req, reply) => reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(onboardingPage));
       app.get('/api/status', async (_req, reply) => reply.header('Cache-Control', 'no-store').send(await operationsStatus()));
       app.get('/api/telegram/login', async () => telegram.loginState());
-      app.post('/api/telegram/login', async (req) => telegram.submitLogin(loginInput.parse(req.body)));
-      app.post('/api/telegram/control-setup', async (req) => telegram.configureControlChat(setupInput.parse(req.body)));
-      app.post('/api/telegram/control-setup/:operationKey/reconcile', async (req) => telegram.reconcileControlSetup(z.strictObject({ operationKey: idempotencyKeySchema }).parse(req.params).operationKey));
+      app.post('/api/telegram/login', async (req) => { const input = loginInput.parse(req.body); ready(); return telegram.submitLogin(input); });
+      app.post('/api/telegram/control-setup', async (req) => { ready(); return telegram.configureControlChat(setupInput.parse(req.body)); });
+      app.post('/api/telegram/control-setup/:operationKey/reconcile', async (req) => { ready(); return telegram.reconcileControlSetup(z.strictObject({ operationKey: idempotencyKeySchema }).parse(req.params).operationKey); });
     },
     async start() { if (started || stopped) return; started = true; schedule(); },
-    async stop() { if (stopped) return; stopped = true; if (timer) clearTimeout(timer); await task; await telegram.stop(); await db.close(); },
+    async stop() { if (stopped) return; stopped = true; if (timer) clearTimeout(timer); await sync.stop(); await telegram.stop(); await telegramTask; await task; await db.close(); },
     async status() {
       if (dbState.state !== 'ready') return dbState;
       const board = boardState ?? await vikunja.status();
       if (board.state !== 'ready') return state('degraded', board.code, board.detail);
-      return state('degraded', 'telegram_m2_pending', 'Database and Vikunja ready; Telegram onboarding and synchronization require M2');
+      const tg = await telegram.status();
+      if (tg.state !== 'ready') return state('degraded', tg.code, tg.detail);
+      const worker = sync.status();
+      return worker.state === 'ready' ? state('ready', null, 'Platform services connected; durable import/replay status is visible separately') : worker;
     },
     operationsStatus,
   };
