@@ -1,0 +1,11 @@
+version: 1
+id: 29b4fe42-83e2-4e03-a8fc-76efd7953c2a
+name: AntSeed Gateway entitlement fixture
+slug: antseed-gateway-entitlement-fixt
+protocol: http
+interceptRequests: true
+port: 4951
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

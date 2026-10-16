@@ -1,0 +1,29 @@
+import type { AnalysisQueue, ExtractionPort, JevPort } from '../shared/ports.js';
+import { DomainError } from '../shared/api.js';
+import { inputHash } from './analysis.js';
+
+/** Bounded single job. Callers own scheduling/readiness; there is no hidden loop. */
+export async function processAnalysisOnce(services: { queue: AnalysisQueue; extraction: ExtractionPort; jev: JevPort }, options: { workerId: string; leaseMs: number; signal?: AbortSignal }): Promise<boolean> {
+  const job = await services.queue.claim(options); if (!job) return false;
+  const token = job.claimToken; // Immutable closure value, never looked up again after reclaim.
+  try {
+    const input = await services.queue.loadInput(job.id);
+    let checkpoint = await services.queue.getExtraction(job.id);
+    if (!checkpoint) {
+      const result = await services.extraction.extract(input, options.signal);
+      if (!result.ok) { await services.queue.fail(job.id, result, token); return true; }
+      checkpoint = { jobId: job.id, extraction: result.value, provenance: result.provenance, inputHash: inputHash(input) };
+      await services.queue.saveExtraction(checkpoint, token);
+    }
+    const decision = await services.jev.decide({ ...input, extraction: checkpoint.extraction }, options.signal);
+    if (!decision.ok) { await services.queue.fail(job.id, decision, token); return true; }
+    await services.queue.complete(job.id, decision.value, decision.provenance, token);
+    return true;
+  } catch (error) {
+    // Fenced/stale callbacks never cancel or mutate a newer attempt. The next lease claim can recover.
+    if (error instanceof DomainError && ['conflict', 'excluded_chat', 'not_found'].includes(error.code)) return true;
+    try { await services.queue.fail(job.id, { ok: false, code: 'invalid_response', retryable: false, retryAt: null, detail: 'Analysis processing failed validation' }, token); }
+    catch (failure) { if (!(failure instanceof DomainError)) throw failure; }
+    return true;
+  }
+}
