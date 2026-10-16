@@ -120,7 +120,7 @@ const auditSchema = z.object({
     configDigest: z.string(),
   }),
 });
-export function validateSettlement(ctx: Ctx, reviewId: Id, proposal: ReviewProposal): void {
+export function validateSettlement(ctx: Ctx, reviewId: Id, proposal: ReviewProposal, requireAuthority = false): void {
   const stageId =
     proposal.kind === 'move' ? proposal.toStageId : proposal.kind === 'new_card' ? proposal.move?.toStageId : null;
   if (stageId == null) return;
@@ -146,6 +146,7 @@ export function validateSettlement(ctx: Ctx, reviewId: Id, proposal: ReviewPropo
     );
   });
   if (!candidate) {
+    if (requireAuthority) throw new AppError('conflict', 'Workflow stage requires retained Jev authority');
     if (sourceLane !== lane.lane_id) throw new AppError('conflict', 'Cross-lane review provenance is unavailable');
     return;
   }

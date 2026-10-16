@@ -49,7 +49,12 @@ export function workflowTarget(ctx: Ctx, input: DecideInput, d: ModelDecision): 
   if (config && d.disposition === 'join')
     return (
       !!workflowProposalContext(ctx, input, d) ||
-      input.proposals.some((p) => p.id === d.proposalId && p.laneId === config.lane_id)
+      (input.proposals.some((p) => p.id === d.proposalId && p.laneId === config.lane_id) &&
+        !!ctx.db.get(
+          "SELECT id FROM review_item WHERE id=? AND chat_id=? AND status='open'",
+          d.proposalId,
+          input.chat.id,
+        ))
     );
   if (config && d.cardId !== null) return input.cards.some((c) => c.id === d.cardId && c.laneId === config.lane_id);
   if (config && d.disposition === 'create' && d.laneId !== null) return d.laneId === config.lane_id;

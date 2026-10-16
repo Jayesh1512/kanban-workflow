@@ -9,6 +9,7 @@ import type {
 } from '../contracts/index.ts';
 import { AppError, IdSchema, ReviewProposalSchema } from '../contracts/index.ts';
 import { digest } from './json.ts';
+import { validateSettlement } from './movement/audit.ts';
 import { joinProposal } from './review-groups.ts';
 import { eligibleChat } from './selection.ts';
 
@@ -28,11 +29,30 @@ export function workflowProposalContext(ctx: Ctx, input: DecideInput, d: ModelDe
     !parsed.success ||
     parsed.data.kind !== 'new_card' ||
     parsed.data.laneId !== offered.laneId ||
-    !input.lanes.some((l) => l.id === offered.laneId) ||
+    parsed.data.title !== offered.title ||
+    parsed.data.summary !== offered.summary
+  )
+    return null;
+  // Historical proposal data is immutable audit, not the location of a human's result.
+  // Settled proposals resolve only their exact, currently offered same-chat linked card.
+  const result =
+    row.status === 'open' ? null : input.cards.find((c) => c.id === row.result_card_id && c.link === 'this_chat');
+  if (row.status !== 'open' && !result) return null;
+  const laneId = result?.laneId ?? parsed.data.laneId;
+  if (
+    !input.lanes.some((l) => l.id === laneId) ||
     !ctx.db.get(
       'SELECT w.id FROM workflow_config w JOIN lane l ON l.id=w.lane_id WHERE w.lane_id=? AND l.archived_at IS NULL',
-      parsed.data.laneId,
-    )
+      laneId,
+    ) ||
+    (result &&
+      !ctx.db.get(
+        'SELECT c.id FROM card c JOIN card_chat cc ON cc.card_id=c.id WHERE c.id=? AND c.lane_id=? AND c.stage_id=? AND c.archived_at IS NULL AND cc.chat_id=?',
+        result.id,
+        result.laneId,
+        result.stageId,
+        input.chat.id,
+      ))
   )
     return null;
   return { ...row, proposal: parsed.data };
@@ -106,6 +126,17 @@ const authoritySchema = z.object({
 });
 /** Native settlement provenance is necessary; workflow stage authority must also be Jev-owned. */
 export function validateWorkflowStageReview(ctx: Ctx, reviewId: Id, p: ReviewProposal): void {
+  if (p.kind === 'move') {
+    if (
+      ctx.db.get(
+        'SELECT w.id FROM workflow_config w WHERE w.lane_id=(SELECT lane_id FROM card WHERE id=?) OR w.lane_id=(SELECT lane_id FROM stage WHERE id=?)',
+        p.cardId,
+        p.toStageId,
+      )
+    )
+      validateSettlement(ctx, reviewId, p, true);
+    return;
+  }
   if (p.kind !== 'new_card' || !p.move) return;
   const config = ctx.db.get<{ confidence_threshold: number }>(
     'SELECT confidence_threshold FROM workflow_config WHERE lane_id=?',

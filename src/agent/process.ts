@@ -47,7 +47,27 @@ export function commitDecision(
   const genericTargetLane = input.lanes.find((l) => l.stages.some((s) => s.id === d.move?.toStageId))?.id;
   const genericCrossLane =
     d.move !== null && genericTargetLane !== undefined && sourceLane !== undefined && genericTargetLane !== sourceLane;
-  const effective = { ...d, move: genericCrossLane || (gate && gate.kind !== 'release') ? null : d.move };
+  const resolvedCard =
+    d.disposition === 'join'
+      ? ctx.db.get<{ result_card_id: Id | null }>(
+          "SELECT result_card_id FROM review_item WHERE id=? AND chat_id=? AND status IN ('accepted','changed')",
+          d.proposalId,
+          input.chat.id,
+        )?.result_card_id
+      : d.cardId;
+  const unownedWorkflowMove =
+    d.move !== null &&
+    !!ctx.db.get(
+      'SELECT id FROM workflow_config WHERE lane_id=? OR lane_id=(SELECT lane_id FROM card WHERE id=?)',
+      genericTargetLane ?? null,
+      resolvedCard ?? null,
+    );
+  // General extraction cannot propose or apply workflow stages. A genuine cross-lane
+  // Jev target is added separately below, with its correlated settlement audit.
+  const effective = {
+    ...d,
+    move: genericCrossLane || unownedWorkflowMove || (gate && gate.kind !== 'release') ? null : d.move,
+  };
   const outcomes = judge(effective, facts).filter((o) => !workflowOwned || o.do !== 'review' || o.kind !== 'is_work');
   let cardId: Id | null = null,
     proposalId: Id | null = null,
@@ -127,6 +147,7 @@ export function commitDecision(
   }
   for (const o of outcomes) outcome(o);
   if (genericCrossLane) outcome({ do: 'refuse', why: 'invalid_move' });
+  else if (unownedWorkflowMove) outcome({ do: 'refuse', why: 'workflow_stage_requires_jev' });
   // This refusal only rejects optional company text, after judge's shared
   // identifier/evidence checks. It must not discard a valid disposition. Every
   // other refusal still fences the join, including unoffered contacts and moves.
