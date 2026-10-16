@@ -14,7 +14,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Current assignments
 
-- M0 architecture/contracts/foundation — baseline `25d66b8` integrated as `9b9b823`; PM clean install/check PASS (strict TypeScript, 14 tests, production build) and native SQLite open/read/close PASS. Independent QA in progress. Architect assigned a small additive correction so sender/peer snapshots are typed in analysis/context messages and discovery defaults to included.
+- M0 architecture/contracts/foundation — baseline `25d66b8` integrated as `9b9b823`; snapshot/default-included patch `b431c44` integrated as `18ea376`, PM check PASS (strict TypeScript, 15 tests, production build) and native SQLite PASS. Independent QA in progress. Architect assigned minimal explicit analysis claim-token seam required to fence reclaimed jobs.
 - M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. M0-P2 draft review complete; no product edits. M1/M2 pending corrected baseline.
 - M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. M0-I2 draft review complete; no product edits. M3/M4 pending corrected baseline.
 - M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
@@ -36,7 +36,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Milestone status
 
-- M0: baseline integrated and PM executable checks pass; independent QA final review and additive snapshot correction pending.
+- M0: baseline/snapshot correction integrated and PM executable checks pass; independent QA final review and additive claim-token seam pending.
 - M1: implementation running on committed M0.
 - M2: pending M1 handoff; interfaces committed.
 - M3: M3.1 implementation running in parallel with M1; real Jev success externally blocked by Gateway credits.
@@ -46,6 +46,8 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 ## M0 review disposition
 
 PM sent architecture a bounded consolidated fix list before contract freeze: explicit single-account Telegram dataset binding; separate durable live/history checkpoints, ownership/CAS and pre-message delete tombstones; sender/peer snapshots; subscriber-before-catchUp and nonblocking/degraded onboarding lifecycle with complete cleanup; durable idempotent control setup/reconciliation; verified Vikunja bootstrap/view semantics; HTTP-only operator decisions excluded from Hermes MCP catalog; durable extraction checkpoint before Jev; structured extracted company attributes; action/question actors/resolution and date-only granularity; contact role read/create consistency; separate typed provider/question diagnostics; mapping correction reason/evidence audit. These are shared-contract/schema refinements, not an instruction to implement domain modules in M0. QA must review the corrected committed baseline.
+
+After baseline integration, PM approved B's narrow transactional analysis-mapping ownership (manual corrections remain A-owned) and a minimal explicit immutable claim-token seam: returned AnalysisJob.claimToken, final token arguments on saveExtraction/complete/fail, exact-token/running/unexpired-lease CAS. Existing worker_id storage suffices; no schema addition. Builder B must test stale save/complete/fail after same-workerId lease reclaim. Snapshot correction is integrated and checked15/15; M1/M3.1 implementation continues independently.
 
 ## Evidence
 
