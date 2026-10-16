@@ -23,13 +23,21 @@ export function forgetWorkflowFields(ctx: Ctx, messageIds: Id[], chatId: Id): Id
       chats = JSON.parse(source.source_chat_ids) as Id[];
     if (!source.source_unknown && !messages.some((id) => messageIds.includes(id)) && !chats.includes(chatId)) continue;
     if (source.field === 'stage') {
-      const target = ctx.db.get<{ stage_id: Id }>("SELECT stage_id FROM workflow_stage WHERE key='to_be_started'");
+      const target = ctx.db.get<{ stage_id: Id; lane_id: Id }>(
+        "SELECT w.stage_id,s.lane_id FROM workflow_stage w JOIN stage s ON s.id=w.stage_id JOIN workflow_config c ON c.lane_id=s.lane_id WHERE w.key='to_be_started' AND s.removed_at IS NULL",
+      );
+      // An obsolete row is not ownership of a later human or generic placement.
+      // Native placement logs survive payload redaction, and their order also
+      // distinguishes human moves at the same timestamp from generated moves.
       if (target)
         ctx.db.run(
-          "UPDATE card SET stage_id=? WHERE id=? AND NOT EXISTS (SELECT 1 FROM workflow_field_source WHERE card_id=? AND field='stage' AND human=1)",
+          `UPDATE card SET stage_id=? WHERE id=? AND lane_id=?
+           AND EXISTS (SELECT 1 FROM workflow_stage w JOIN stage s ON s.id=w.stage_id WHERE s.id=card.stage_id AND s.lane_id=card.lane_id AND s.removed_at IS NULL)
+           AND (SELECT actor_kind FROM action_log WHERE subject_kind='card' AND subject_id=card.id AND action IN ('card.create','card.move') ORDER BY id DESC LIMIT 1)='agent'
+           AND NOT EXISTS (SELECT 1 FROM workflow_field_source WHERE card_id=card.id AND field='stage' AND human=1)`,
           target.stage_id,
           source.card_id,
-          source.card_id,
+          target.lane_id,
         );
     } else if (columns[source.field])
       ctx.db.run(

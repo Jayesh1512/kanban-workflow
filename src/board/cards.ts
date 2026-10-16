@@ -136,9 +136,13 @@ export function moveCard(
       actor(ctx),
       cardId,
     );
-    if (by === 'human' && ctx.db.get('SELECT id FROM workflow_config WHERE lane_id=?', target.lane_id))
+    if (
+      by === 'human' &&
+      (ctx.db.get('SELECT id FROM workflow_config WHERE lane_id IN (?,?)', before.laneId, target.lane_id) ||
+        ctx.db.get("SELECT field FROM workflow_field_source WHERE card_id=? AND field='stage'", cardId))
+    )
       ctx.db.run(
-        "INSERT INTO workflow_field_source(card_id,field,human) VALUES (?,'stage',1) ON CONFLICT(card_id,field) DO UPDATE SET human=1,source_message_ids='[]',source_chat_ids='[]'",
+        "INSERT INTO workflow_field_source(card_id,field,human) VALUES (?,'stage',1) ON CONFLICT(card_id,field) DO UPDATE SET human=1,source_message_ids='[]',source_chat_ids='[]',source_unknown=0",
         cardId,
       );
     record(ctx, {
