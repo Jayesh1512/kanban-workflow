@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { parse } from 'dotenv';
-import { PgDatabase } from '../src/platform/database.js';
+import { migrate, PgDatabase } from '../src/platform/database.js';
 import type { AnalysisInput, Extraction, JevDecision, ProviderProvenance } from '../src/shared/domain.js';
 import { SqlAnalysisQueue, inputHash } from '../src/workflow/analysis.js';
 import { RecordsRepository } from '../src/workflow/records.js';
@@ -28,7 +28,7 @@ export function provenance(provider: 'openai' | 'vercel' = 'openai'): ProviderPr
 export function decision(input: AnalysisInput, companyId?: string): JevDecision {
   return { relevance: 'company', companyMatch: companyId ? { outcome: 'matched', companyId, confidence: 1 } : { outcome: 'ambiguous', candidates: [] }, workstream: 'Buyer', urgency: 'normal', lane: { outcome: 'no_change', reason: 'QA authored decision, not model inference', evidenceIds: input.evidence.map((e) => e.id) }, model: 'typesafe-ai/jev', diagnostics: { rubricVersion: 'jev.antseed.v1', answers: { company_match: { type: 'choice', choice: companyId ? 'existing_0' : 'ambiguous', confidence: 1, probabilities: companyId ? { existing_0: 1 } : { ambiguous: 1 } } } } };
 }
-export async function isolatedDatabase(project: string) {
+export async function isolatedDatabase(project: string, allMigrations = false) {
   if (!/^antseed-qa-m1-[a-z0-9-]+$/.test(project)) throw new Error('Requires retained QA-owned Compose project');
   // Never log the generated runtime bundle or connection URL.
   const bundle = parse(execFileSync('docker', ['compose', '-p', project, '-f', 'compose.yaml', 'exec', '-T', 'backend', 'cat', '/run/antseed/runtime.env'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }));
@@ -37,7 +37,8 @@ export async function isolatedDatabase(project: string) {
   const admin = new PgDatabase(url.toString()); await admin.query(`CREATE SCHEMA ${schema}`);
   url.searchParams.set('options', `-c search_path=${schema}`);
   let db = new PgDatabase(url.toString());
-  await db.query(readFileSync(new URL('../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
+  if (allMigrations) await migrate(db);
+  else await db.query(readFileSync(new URL('../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
   await db.query('INSERT INTO telegram_account(self_user_id) VALUES(990000099)');
   const peers: PgDatabase[] = [];
   return { get db() { return db; }, peer() { const p = new PgDatabase(url.toString()); peers.push(p); return p; }, async reopen() { await db.close(); db = new PgDatabase(url.toString()); return db; }, async close() { await Promise.all(peers.map((p) => p.close())); await db.close(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.close(); } };
