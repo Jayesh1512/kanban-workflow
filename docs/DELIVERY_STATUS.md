@@ -14,9 +14,9 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 
 ## Current assignments
 
-- M0 architecture/contracts/foundation — Architecture Builder, running.
-- M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. Builder A assigned bounded read-only review of architect draft before M1/M2.
-- M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. Builder B assigned bounded read-only review of architect draft before M3/M4.
+- M0 architecture/contracts/foundation — Architecture Builder, running; PM consolidated both builders' draft contract reviews and assigned pre-freeze corrections.
+- M0-P verify mtcute/Vikunja deployment and actual APIs — complete and integrated from `0a11825`; docs/PLATFORM_RESEARCH.md. M0-P2 draft review complete; no product edits. M1/M2 pending corrected baseline.
+- M0-I verify Jev/OpenAI/Hermes contracts — complete and integrated from `25b3170`; docs/INTELLIGENCE_RESEARCH.md. M0-I2 draft review complete; no product edits. M3/M4 pending corrected baseline.
 - M0-Q independent acceptance plan — complete and integrated from `156e14d`; docs/QA_PLAN.md defines 35 acceptance scenarios and M0–M5 gates.
 - M0-Q2 independent multilingual conversation corpus — assigned to QA; tests/fixtures/relationship-cases.json and fixture documentation only, no product/package edits.
 
@@ -38,6 +38,10 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M3: pending M0; provider research underway.
 - M4: pending M0/M3 interfaces.
 - M5: acceptance plan underway; integrated implementation not available yet.
+
+## M0 review disposition
+
+PM sent architecture a bounded consolidated fix list before contract freeze: explicit single-account Telegram dataset binding; separate durable live/history checkpoints, ownership/CAS and pre-message delete tombstones; sender/peer snapshots; subscriber-before-catchUp and nonblocking/degraded onboarding lifecycle with complete cleanup; durable idempotent control setup/reconciliation; verified Vikunja bootstrap/view semantics; HTTP-only operator decisions excluded from Hermes MCP catalog; durable extraction checkpoint before Jev; structured extracted company attributes; action/question actors/resolution and date-only granularity; contact role read/create consistency; separate typed provider/question diagnostics; mapping correction reason/evidence audit. These are shared-contract/schema refinements, not an instruction to implement domain modules in M0. QA must review the corrected committed baseline.
 
 ## Evidence
 
