@@ -12,6 +12,7 @@ export function routeInventory(): { method: string; path: string; public: boolea
     '/board/fragment',
     '/board/version',
     '/cards/:id',
+    '/workflow/priorities',
     '/review',
     '/review/:id',
     '/lanes',
@@ -30,6 +31,11 @@ export function routeInventory(): { method: string; path: string; public: boolea
   ];
   const protectedPosts = [
     '/logout',
+    '/workflow/configure',
+    '/workflow/tickets',
+    '/workflow/import',
+    '/workflow/tickets/:id',
+    '/workflow/tickets/:id/move',
     '/cards',
     '/cards/:id',
     '/cards/:id/move',
