@@ -86,17 +86,64 @@ Vikunja 2.7.0 flat task responses (including `/views/{v}/tasks`) can expose
 whose unpaginated grouped response carries actual per-view membership. Project,
 label and ordinary task collections still use standard v2 pagination.
 
-## M2 integration seams
+## Telegram onboarding and M2 operations
 
-Replace `src/platform/pending.ts` with real adapters/stores behind the existing
-shared ports. Persist the authorized account before processing, default newly
-discovered chats to included (control excluded) while preserving explicit
-exclusions, and populate job message/version snapshots atomically with ingestion.
-Do not use the migration's historical undecided default for discovery.
-Keep M2 commits separate from this M1 checkpoint. B owns analysis/provider/records
-and approval execution, while A owns chat policy/manual mapping, normalized
-ingestion, session/control transport and outbox delivery.
+Set `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` in the read-only runtime file or
+process environment. Blank optional Compose values preserve mounted credentials.
+Use the local page to request a code, enter it, and enter 2FA when requested.
+The page clears the submitted field; status never returns codes/passwords/hash or
+session contents. An existing session resumes automatically. The actual self ID
+is bound before discovery or updates. A different account requires separate
+PostgreSQL/session volumes; changing credentials does not mix datasets.
+
+Discovery includes archived cloud dialogs and explicitly inserts `included`.
+Rediscovery preserves exclusions. The page provides stable chat IDs, include/
+exclude and bounded import. Platform owns the six canonical `/api/chats` HTTP
+routes; workflow owns chat MCP bindings without registering those HTTP routes a
+second time. Manual mapping uses the shared `ChatService.correctMapping` contract.
+
+`TELEGRAM_HISTORY_BATCH_SIZE` (1..100, default 100) and
+`TELEGRAM_HISTORY_MAX_BATCHES` (1..10000, default 10) bound initial descending
+backfill. A request's remaining budget and cursor persist. The live coverage
+checkpoint is independent: first connection starts with one current-head window
+of batch size; older messages follow the backfill budget. Forward replay continues
+one page per turn until an empty probe. A nonempty short page never proves catch-up.
+Recent persisted messages are reread for edits/missing-message tombstones within
+the same configurable window. Restart/reconnect/TooLong/queue overflow marks replay
+required. mtcute update/session writes and PostgreSQL are not one transaction;
+replay reduces this gap but cannot prove Telegram retained arbitrary older missed
+deletions. No claim of complete historical delete recovery is made.
+
+Exclusion fences in-flight history/replay, cancels old analysis claims, invalidates
+unapplied proposals and suspends tickets. Tombstones can precede chat discovery;
+null-scope common-mailbox deletion cannot delete channel/supergroup messages.
+Message, evidence invalidation, job and versioned job-message snapshots commit
+atomically. Forward origin and sender/peer snapshots remain separate from body text.
+
+Configure an existing group or explicitly create a private supergroup on the page.
+The operation key is kept in local browser storage (no login secrets). Unknown
+creation is journaled before the remote request; repeat that key/reconcile it.
+Another create is blocked while an earlier outcome is unknown. Reconciliation
+reads the stored marker and never blindly creates a second group. Group/title/key
+are the only request data persisted in the setup journal.
+
+Control replies, including outgoing replies from another user-account client,
+enter a durable inbox before business exclusion. No subscriber leaves them pending;
+handlers are awaited. Success (including ignored/invalid/stale decisions handled
+by workflow) acknowledges the immutable claim; transient failures replay after
+bounded delay. Proposal outbox rows retain signed64-bit MTProto random IDs and
+markers; retries read recent own-message receipts before resending that same ID.
+Only the actual configured group is sendable. Stale source policies/versions/
+evidence suppress queued proposal delivery. A transport worker never moves lanes.
+Ten failed sends stop automatic resend and expose `control_delivery_failed` for
+receipt/operator investigation; unresolved remote outcomes remain stored.
+
+`/api/status` distinguishes Telegram login, synchronization and control states,
+import cursor/error, replay/analysis/proposal counts, and missing control group.
+It is not a provider entitlement probe. Jev remains Vercel-only; the separately
+observed403 paid-credit restriction is not a successful live Jev test.
 
 For actual Telegram integration questions the user designated existing T3 thread
-`66cc9b30-4836-4f8d-8c6c-b0831923b62c`. Use it only for a real question, protect
-credentials, and keep independent tests moving if authenticated access is absent.
+`66cc9b30-4836-4f8d-8c6c-b0831923b62c`. A targeted prerequisite request was sent;
+no authenticated Telegram call/send/group creation was performed during M2 tests.
+See [M2 handoff](M2_HANDOFF.md) for evidence and remaining live gate.

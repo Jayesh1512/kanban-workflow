@@ -27,6 +27,14 @@ describe('runtime configuration and M1 status', () => {
     expect(result.json().components.jev.code).toBe('not_checked');
     await app.close();
   });
+  it('preserves mounted Telegram credentials when optional Compose fields are blank', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'antseed-telegram-config-')); directories.push(dir); const file = join(dir, 'ai.env');
+    await writeFile(file, 'TELEGRAM_API_ID=123\nTELEGRAM_API_HASH=synthetic-mounted-hash\n');
+    const config = await loadRuntimeConfig({ AI_ENV_PATH: file, TELEGRAM_API_ID: '', TELEGRAM_API_HASH: ' ' });
+    expect(config.telegram.apiId).toBe(123); expect(config.telegram.apiHash).toBe('synthetic-mounted-hash');
+    const override = await loadRuntimeConfig({ AI_ENV_PATH: file, TELEGRAM_API_ID: '456', TELEGRAM_API_HASH: 'synthetic-override' });
+    expect(override.telegram.apiId).toBe(456); expect(override.telegram.apiHash).toBe('synthetic-override');
+  });
   it('keeps onboarding reachable when configuration or database is unavailable', async () => {
     const config = await loadRuntimeConfig({ AI_ENV_PATH: '/missing/ai.env', DATABASE_URL: 'postgresql://u:p@127.0.0.1:1/none' });
     expect(configMetadata(config).aiEnvReadable).toBe(false);
@@ -34,10 +42,10 @@ describe('runtime configuration and M1 status', () => {
     expect((await app.inject('/')).statusCode).toBe(200);
     const status = (await app.inject('/api/status')).json();
     expect(status.configuration.aiEnvReadable).toBe(false);
-    expect(status.components.telegram.code).toBe('telegram_m2_pending');
+    expect(status.components.telegram.code).toBe('login_required');
     expect((await app.inject('/health/ready')).statusCode).toBe(503);
     const login = await app.inject({ method: 'POST', url: '/api/telegram/login', payload: { step: 'phone', phone: '+1000000000' } });
-    expect(login.statusCode).toBe(503); expect(login.json().error.code).toBe('not_configured');
+    expect(login.statusCode).toBe(503); expect(login.json().error.code).toBe('upstream_unavailable');
     expect((await app.inject({ method: 'POST', url: '/api/telegram/login', payload: { step: 'code', code: '' } })).statusCode).toBe(400);
     await app.close(); await module.stop();
   });
