@@ -132,7 +132,14 @@ export class ProposalRepository {
   async handleControlReply(message: ControlMessage): Promise<void> {
     if (!message.replyToMessageId || !/^(approve|reject|correct)\b/i.test(message.text.trim())) return;
     const control = (await this.db.query('SELECT id FROM chats WHERE id=$1 AND is_control', [message.chatId])).rows[0]; if (!control) return;
-    const outbox = (await this.db.query<{ proposal_id: string }>('SELECT proposal_id FROM control_outbox WHERE chat_id=$1 AND message_id=$2', [message.chatId, message.replyToMessageId])).rows[0]; if (!outbox) return;
+    const outbox = (await this.db.query<{ proposal_id: string }>('SELECT proposal_id FROM control_outbox WHERE chat_id=$1 AND message_id=$2', [message.chatId, message.replyToMessageId])).rows[0];
+    if (!outbox) {
+      const unknown = (await this.db.query("SELECT 1 FROM control_outbox WHERE chat_id=$1 AND message_id IS NULL AND attempts>0 AND state IN ('sending','failed') LIMIT 1", [message.chatId])).rows.length > 0;
+      // A received reply can precede lost-send receipt reconciliation. Keep it
+      // replayable until the attempted delivery's message linkage is known.
+      if (unknown) throw new DomainError('upstream_unavailable', 'Proposal delivery receipt remains unknown; retain reply for replay', true);
+      return;
+    }
     const commandId = `telegram:${message.chatId}:${message.messageId}`;
     try {
       const text = message.text.trim(); const match = /^(approve|reject|correct)\b\s*([\s\S]*)$/i.exec(text)!; const action = match[1]!.toLowerCase();

@@ -16,7 +16,7 @@ export class ProposalWorkflow implements ProposalService {
   handleControlReply: ProposalService['handleControlReply'] = (message) => this.proposals.handleControlReply(message);
   async applyNext(signal?: AbortSignal): Promise<Mutation | null> {
     const row = (await this.proposals.db.query<{ id: string; ticket_id: string }>(`SELECT p.id,p.ticket_id FROM proposals p LEFT JOIN mutations m ON m.proposal_id=p.id
-      WHERE p.decision='approved' AND p.apply_state IN ('queued','applying','reconciling','stale') AND (m.id IS NULL OR m.state IN ('prepared','remote_unknown','remote_confirmed'))
+      WHERE p.decision='approved' AND ((m.id IS NULL AND p.apply_state='queued') OR (m.state IN ('prepared','remote_unknown','remote_confirmed') AND p.apply_state IN ('queued','applying','reconciling','stale')))
       ORDER BY COALESCE(m.updated_at,p.updated_at),p.id LIMIT 1`)).rows[0];
     if (!row) return null;
     try { return await this.run(row.id, row.ticket_id, signal); }
