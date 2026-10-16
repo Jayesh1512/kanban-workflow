@@ -40,7 +40,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 ## Milestone status
 
 - M0: PASS, QA report/regressions integrated and PM rerun24/24+build/typecheck/native/compiled runtime pass.
-- M1: integrated/canonical wiring complete, gate HELD for 3 real-reproduced P1s; architecture assigned targeted fixes and QA continues independent acceptance.
+- M1: targeted repair `ccd2645` integrated as `5224cd9`; combined PM check PASS81 tests, 12 explicit integration skips, strict TypeScript/build. Gate remains HELD until QA reruns its four independent regressions and five original real integration tests on the committed repair.
 - M2: implementation running on Builder A branch; operational migration reserved, live Telegram prerequisites sought from reference thread.
 - M3: M3.1 integrated, M3.2 implementing proposals/apply/scheduling; real Jev success externally blocked by Gateway credits.
 - M4: pending M3 interfaces/implementation handoff.
@@ -75,3 +75,7 @@ M3.2 ownership decision: internal immutable mutation attempt scope `{ticketId,to
 ## M2 transport ownership refinement
 
 Builder A reports 16 deterministic transport/PGlite tests passing, including updates-disabled authentication, durable self binding before live catch-up, account mismatch, 2FA retry, bounded emitter retry, inclusion/exclusion preservation, snapshots, cursor CAS and pre-discovery tombstones. This is not authenticated Telegram evidence. Platform owns the six existing canonical `/api/chats` HTTP bindings (list, inclusion, import GET/POST, mapping GET/PUT) over ChatService so M2 onboarding works independently. No `/ops/chats` aliases. Builder B M4 skips only these HTTP registrations, retains every chat MCP tool, and owns remaining domain HTTP/MCP. Shared catalog remains unchanged; prereadiness requests must return honest unavailable state. Both builders informed.
+
+## M1 targeted repair handoff
+
+Architect fix `ccd26450df7500b0d6d0a9881061f9e5d8fc5ea2` integrated as `5224cd9`. Shared `Database.withSessionLock(key, (session, signal) => Promise)` reuses one checked-out connection for nested calls and short transactions, rejects lock entry inside transactions, aborts and permanently fences late SQL after session loss. Adapter ticket writes share `antseed:ticket:${ticketId}`; details use title/description-only merge PATCH. Architect reports seven actual PostgreSQL/Vikunja regression passes and three deterministic scope passes; independent QA has exact rerun assignment, and both builders have the seam. PM combined check passes 81 tests (12 opt-in actual integration cases skipped), typecheck and build. Integration adds explicit unsupported session-lock method to PGlite fixture and converts real PostgreSQL workflow smoke to production PgDatabase; no simulated session-lock guarantee is claimed. M1 acceptance remains held until independent rerun/report.

@@ -14,6 +14,10 @@ export async function fixtureDatabase() {
   } };
   const db: Database = { ...executor, async transaction<T>(work: (tx: SqlExecutor) => Promise<T>) {
     const result = tail.then(async () => { await engine.exec('BEGIN'); try { const value = await work(executor); await engine.exec('COMMIT'); return value; } catch (error) { await engine.exec('ROLLBACK'); throw error; } }); tail = result.catch(() => {}); return result;
+  }, async withSessionLock<T>(): Promise<T> {
+    // PGlite has no independently checked-out PostgreSQL sessions/advisory locks.
+    // Lock-dependent workflows require the real PostgreSQL integration fixture.
+    throw new Error('Session-lock workflows require a real PostgreSQL test database');
   }, async close() { await tail; await engine.close(); } };
   await db.query('INSERT INTO telegram_account(self_user_id) VALUES(99)');
   await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-1001,'supergroup','Cedar Labs','included')");

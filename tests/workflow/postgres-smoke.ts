@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import pg from 'pg';
-import type { Database } from '../../src/shared/ports.js';
+import { PgDatabase } from '../../src/platform/database.js';
 import { SqlAnalysisQueue, inputHash } from '../../src/workflow/analysis.js';
 import { RecordsRepository } from '../../src/workflow/records.js';
 import { decisionFixture, extractionFixture, inputFixture, provenance } from '../intelligence/fixtures.js';
@@ -11,11 +10,10 @@ import { seedJob } from './database.js';
 const connectionString = process.env.M31_DATABASE_URL;
 assert(connectionString && ['127.0.0.1', 'localhost'].includes(new URL(connectionString).hostname), 'Requires an explicit isolated loopback test PostgreSQL URL');
 const schema = `m31_${randomUUID().replaceAll('-', '')}`;
-const pool = new pg.Pool({ connectionString, options: `-c search_path=${schema}` });
-const db: Database = { query: (text, values) => pool.query(text, values), async close() { await pool.end(); }, async transaction(work) {
-  const client = await pool.connect(); try { await client.query('BEGIN'); const value = await work({ query: (text, values) => client.query(text, values) }); await client.query('COMMIT'); return value; }
-  catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
-} };
+const isolatedUrl = new URL(connectionString);
+isolatedUrl.searchParams.set('options', `-c search_path=${schema}`);
+const db = new PgDatabase(isolatedUrl.toString());
+const pool = db.pool;
 try {
   await pool.query(`CREATE SCHEMA ${schema}`);
   await pool.query(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
