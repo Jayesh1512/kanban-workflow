@@ -57,6 +57,7 @@ After baseline integration, PM approved B's narrow transactional analysis-mappin
 ## Evidence
 
 - M1 architectural P1s (real isolated PostgreSQL/Vikunja reproductions): lock callbacks exhaust8-session pool by borrowing additional sessions; stale full task details PUT with done=false can undo a concurrent approved Completed move while returning success; checked-out PostgreSQL connection termination during lock callback emits unhandled error57P01/process exit1. Architect owns bounded repairs to src/platform/database.ts + src/vikunja/adapter.ts, minimal shared session-lock seam and regressions. Builder A keeps M2 and avoids these files until handoff. M1 cannot pass before repaired real repros and independent QA.
+- Independent QA reproduced all3 on canonical06374d3 in its own isolated stack: 3/3 race regression tests FAIL, including concurrent existing projection timeout, delayed details reverting Completed, and checked-out termination process exit1. Clean canonical boot/original5 real tests/native offline/restart/recreate/read-only config/outage checks pass so far. Gate remains held; exact independent regressions must rerun on committed repair.
 - M2 exact mtcute finding: notifyLoggedIn starts updates automatically. A implements updates-disabled authentication/resume, binds actual account before update processing, closes auth storage, then reopens live catchUp client with handlers. Independent implementation continues while M1 defects are fixed.
 
 - Initial requirements committed as `bf76f1b`.
