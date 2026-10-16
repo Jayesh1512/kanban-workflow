@@ -72,10 +72,12 @@ export function jevProvider(
         if (!config.model || !config.apiKey) return failed(r, 'missing_config');
         body = wireBody(r, config.model);
       } catch (error) {
-        return failed(
-          input,
-          error instanceof Error && error.message === 'context_limit' ? 'context_limit' : 'invalid_response',
-        );
+        const code = error instanceof Error && error.message === 'context_limit' ? 'context_limit' : 'invalid_response';
+        if (state !== 'blocked') {
+          state = 'degraded';
+          reason = code;
+        }
+        return failed(input, code);
       }
       const deadline = deps.now().getTime() + config.maxAttempts * config.timeoutMs + (config.maxAttempts - 1) * 1000;
       for (let n = 0; n < config.maxAttempts; n++) {

@@ -170,6 +170,7 @@ for (const mode of ['general-excerpt', 'movement-excerpt', 'response'] as const)
     const failure = listReview(h.ctx).find((r) => r.kind === 'model_failed');
     assert.ok(failure);
     assert.equal(failure.reason, 'context_limit');
+    if (mode === 'movement-excerpt') assert.equal(h.app.pipeline.status().movement.reason, 'context_limit');
     assert.equal(failure.canAccept, false);
     assert.equal(getBoard(h.ctx).lanes[0]?.cards.length, 0);
   });

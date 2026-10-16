@@ -76,10 +76,8 @@ function changes(p: ReviewProposal): ReviewChange['to'][] {
     case 'new_card':
     case 'attach':
     case 'is_work':
-    case 'model_failed':
-      return ['new_card', 'card'];
-    case 'move':
-      return ['stage'];
+      for (const m of ids) attachMessage(ctx, m, null, { setBy: 'human' });
+      return null;
     case 'contact_company':
       return ['company'];
     case 'contact_role':

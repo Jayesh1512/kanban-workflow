@@ -206,6 +206,11 @@ for (const mode of ['review', 'low', 'fail', 'wrong-evidence'] as const)
     assert.equal(review.canAccept, false);
     assert.equal((await h.post(`/review/${review.id}/accept`)).status, 409);
     assert.equal((await h.post(`/review/${review.id}/dismiss`)).status, 303);
+    assert.equal(
+      h.db.get<{ card_id: number }>('SELECT card_id FROM card_message')?.card_id,
+      card.id,
+      'dismissing a movement-only failure preserves the valid unrelated attachment',
+    );
     assert.equal(h.calls.filter((c) => c.url.includes('openai')).length, 1);
   });
 
