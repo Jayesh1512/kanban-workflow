@@ -147,7 +147,8 @@ export function commitDecision(
   }
   for (const o of outcomes) outcome(o);
   if (genericCrossLane) outcome({ do: 'refuse', why: 'invalid_move' });
-  else if (unownedWorkflowMove) outcome({ do: 'refuse', why: 'workflow_stage_requires_jev' });
+  else if (unownedWorkflowMove && !outcomes.some((o) => o.do === 'refuse'))
+    outcome({ do: 'refuse', why: 'workflow_stage_requires_jev' });
   // This refusal only rejects optional company text, after judge's shared
   // identifier/evidence checks. It must not discard a valid disposition. Every
   // other refusal still fences the join, including unoffered contacts and moves.
