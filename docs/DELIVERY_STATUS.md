@@ -45,6 +45,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M4: pending M3 interfaces/implementation handoff.
 - M5: acceptance plan/corpus integrated; independent M0 QA running, product acceptance awaits implementation.
 - Final demo video: user requested a polished recording after complete implementation/end-to-end testing. Added to M5 QA deliverables; use synthetic data, readable capture/captions, actual approval-to-board workflow and Hermes, with explicit labels for any simulated/blocked integration. Capture deferred until final working build.
+- Existing Hermes terminal access explicitly authorized by user. PM independently verified command/version/MCP help: `/Users/jys/.local/bin/hermes`, v0.21.3/upstream6cd25026; MCP add/test and one-shot execution available. Builder B/QA informed; actual backend MCP connection remains pending M4, no existing profile changed.
 
 ## M0 review disposition
 
