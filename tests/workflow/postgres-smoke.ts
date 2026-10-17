@@ -17,6 +17,7 @@ const pool = db.pool;
 try {
   await pool.query(`CREATE SCHEMA ${schema}`);
   await pool.query(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
+  await pool.query(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
   await pool.query('INSERT INTO telegram_account(self_user_id) VALUES(99)');
   const message = inputFixture().messages[0]!;
   for (const id of ['-1001', '-1002']) {

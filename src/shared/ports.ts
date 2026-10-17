@@ -154,7 +154,7 @@ export interface RecordsService {
   listTickets(input: PageInput & { companyId?: UUID; lane?: Lane }): Promise<Page<Ticket>>;
   getTicket(id: UUID): Promise<Ticket>;
   ensureTicket(chatId: TelegramChatId): Promise<Ticket>; // included + confirmed only, unique chat, initial lane only
-  getContext(input: { ticketId: UUID; limit: number }): Promise<{ ticket: Ticket; chat: Chat; company: Company; contacts: ContactDetail[]; evidence: Evidence[]; messages: Message[]; facts: BusinessFact[]; outreach?: import('./domain.js').OutreachContext }>;
+  getContext(input: { ticketId: UUID; limit: number }): Promise<{ ticket: Ticket; chat: Chat; company: Company | null; contacts: ContactDetail[]; evidence: Evidence[]; messages: Message[]; facts: BusinessFact[]; outreach?: import('./domain.js').OutreachContext }>;
   getEvidence(ids: UUID[]): Promise<Evidence[]>;
   updateActions(input: UpdateActionsInput): Promise<Ticket>;
   listFacts(input: PageInput & { ticketId: UUID }): Promise<Page<BusinessFact>>;
@@ -185,7 +185,7 @@ export interface AnalysisQueue {
   saveExtraction(checkpoint: ExtractionCheckpoint, claimToken: string): Promise<void>; // persist before Jev; validate versions/hash and live claim
   complete(jobId: UUID, decision: JevDecision, provenance: ProviderProvenance, claimToken: string): Promise<void>; // uses saved extraction; recheck versions and live claim
   fail(jobId: UUID, error: Extract<ProviderResult<never>, { ok: false }>, claimToken: string): Promise<void>;
-  replayUnavailable(input: { idempotencyKey: string; chatId?: TelegramChatId }): Promise<{ queued: number }>;
+  replayUnavailable(input: { idempotencyKey: string; chatId?: TelegramChatId; includeCompletedUnmapped?: boolean }): Promise<{ queued: number }>;
 }
 export interface ProposalService {
   propose(input: ProposeLaneInput): Promise<Proposal>;

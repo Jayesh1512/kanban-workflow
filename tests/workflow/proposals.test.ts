@@ -60,7 +60,7 @@ it('atomically records Jev proposal intent with successful analysis and replays 
   const queue = new SqlAnalysisQueue(h.db, h.clock, 'Asia/Kolkata', { onDecision: (tx, input) => h.proposals.recordAnalysisDecisionTx(tx, input) });
   await seedJob(h.db, randomUUID()); const job = (await queue.claim({ workerId: 'analysis', leaseMs: 60000 }))!; const input = await queue.loadInput(job.id);
   await queue.saveExtraction({ jobId: job.id, inputHash: inputHash(input), extraction: extractionFixture(h.evidenceId), provenance: provenance() }, job.claimToken);
-  const decision = decisionFixture(h.evidenceId); decision.companyMatch = { outcome: 'matched', companyId: h.ticket.companyId, confidence: 1 }; decision.lane = { outcome: 'propose', targetLane: 'Integrations', evidenceIds: [h.evidenceId], reason: 'Synthetic actual pilot evidence', nextAction: null };
+  const decision = decisionFixture(h.evidenceId); decision.companyMatch = { outcome: 'matched', companyId: h.ticket.companyId!, confidence: 1 }; decision.lane = { outcome: 'propose', targetLane: 'Integrations', evidenceIds: [h.evidenceId], reason: 'Synthetic actual pilot evidence', nextAction: null };
   await queue.complete(job.id, decision, provenance('vercel'), job.claimToken); await h.proposals.recoverDecisionIntents(); await h.proposals.recoverDecisionIntents();
   const proposals = await h.proposals.list({}); expect(proposals.items).toHaveLength(1); expect(proposals.items[0]).toMatchObject({ origin: 'jev', decision: 'pending', applyState: 'not_requested', lastError: 'control_chat_missing' });
   expect((await h.db.query('SELECT status FROM analysis_jobs WHERE id=$1', [job.id])).rows[0]!.status).toBe('completed'); expect(h.moves()).toBe(0);

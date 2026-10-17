@@ -90,7 +90,7 @@ describe.skipIf(!project)('QA M3.2 independent approval boundary, actual PG/Viku
     h = await fixture(); const jobId = await enqueue(h.db, h.source.chat.id, h.source.messages[0]!.id);
     const queue = new SqlAnalysisQueue(h.db, h.clock, h.config.timezone, { onDecision: (tx, input) => h!.proposals.recordAnalysisDecisionTx(tx, input) });
     const job = (await queue.claim({ workerId: 'qa-authored-inference', leaseMs: 60000 }))!; expect(job.id).toBe(jobId);
-    const saved = await checkpoint(queue, job), current = await h.local(); const inference = decision(saved.input, current.companyId);
+    const saved = await checkpoint(queue, job), current = await h.local(); const inference = decision(saved.input, current.companyId!);
     inference.lane = outcome === 'propose' ? { outcome, targetLane: 'Integrations', evidenceIds: saved.input.evidence.map((x) => x.id), reason: 'Synthetic sourced testing evidence', nextAction: null } : { outcome, reason: 'Synthetic no permission to move', evidenceIds: saved.input.evidence.map((x) => x.id) };
     await queue.complete(job.id, inference, provenance('vercel'), job.claimToken);
     const proposals = (await h.service.list({})).items;

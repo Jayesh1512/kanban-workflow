@@ -4,7 +4,7 @@ import type { AnalysisJob, AnalysisQueue, Clock, Database, ProviderResult, SqlEx
 import { validateExtraction, EXTRACTION_VERSION } from '../intelligence/validation.js';
 import { strongChoice } from '../intelligence/jev.js';
 import { assert, assertEvidence, chatRow, command, companyRow, evidenceRow, hash, links, messageRow, ticketRow, type Row } from './sql.js';
-import { ensureTicketTx, getCompanyTx, getContactTx, refreshInferredActions, replaceDates, writeCompanyTx, writeContactTx } from './records.js';
+import { ensureContactProspectTx, ensureTicketTx, getCompanyTx, getContactTx, refreshInferredActions, replaceDates, writeCompanyTx, writeContactTx } from './records.js';
 
 export function inputHash(input: AnalysisInput): string { return hash({ ...input, jobId: null, schemaVersion: EXTRACTION_VERSION }); }
 const idFrom = (value: unknown) => { const h = hash(value); return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`; };
@@ -12,10 +12,11 @@ export interface AnalysisHooks {
   onDecision?: (tx: SqlExecutor, input: { jobId: string; ticketId: string; expectedStageVersion: number; decision: JevDecision }) => Promise<void>;
   onReplay?: (tx: SqlExecutor) => Promise<void>;
 }
+export interface AnalysisClaimOptions { workerId: string; leaseMs: number; recentOutboundOnly?: boolean }
 
 export class SqlAnalysisQueue implements AnalysisQueue {
   constructor(readonly db: Database, readonly clock: Clock = { now: () => new Date() }, readonly timezone = 'Asia/Kolkata', readonly hooks: AnalysisHooks = {}) {}
-  async claim(input: { workerId: string; leaseMs: number }): Promise<AnalysisJob | null> {
+  async claim(input: AnalysisClaimOptions): Promise<AnalysisJob | null> {
     assert(input.workerId.length > 0 && Number.isFinite(input.leaseMs) && input.leaseMs > 0 && input.leaseMs <= 3_600_000, 'validation', 'Invalid analysis lease');
     const now = this.clock.now(); const token = randomUUID();
     return this.db.transaction(async (tx) => {
@@ -23,8 +24,8 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       // Keep the phase durable and locked so restart/concurrent claimers cannot
       // reset fairness or claim the same priority slot independently.
       const dispatchKey = 'workflow:analysis:dispatch';
-      await tx.query("INSERT INTO app_settings(key,value) VALUES($1,'0'::jsonb) ON CONFLICT DO NOTHING", [dispatchKey]);
-      const savedPhase = (await tx.query<{ value: unknown }>('SELECT value FROM app_settings WHERE key=$1 FOR UPDATE', [dispatchKey])).rows[0]?.value;
+      if (!input.recentOutboundOnly) await tx.query("INSERT INTO app_settings(key,value) VALUES($1,'0'::jsonb) ON CONFLICT DO NOTHING", [dispatchKey]);
+      const savedPhase = input.recentOutboundOnly ? 0 : (await tx.query<{ value: unknown }>('SELECT value FROM app_settings WHERE key=$1 FOR UPDATE', [dispatchKey])).rows[0]?.value;
       const phase = typeof savedPhase === 'number' && Number.isInteger(savedPhase) && savedPhase >= 0 && savedPhase < 5 ? savedPhase : 0;
       const recentSince = new Date(now.getTime() - 60 * 60 * 1000);
       await tx.query(`UPDATE analysis_jobs j SET status='cancelled',worker_id=NULL,lease_until=NULL,last_error='source_changed'
@@ -41,13 +42,14 @@ export class SqlAnalysisQueue implements AnalysisQueue {
         ) fresh ON true
         WHERE c.inclusion='included' AND NOT c.is_control AND j.policy_version=c.policy_version AND j.mapping_version=c.mapping_version
         AND ((j.status IN ('pending','retry') AND (j.retry_at IS NULL OR j.retry_at<=$1)) OR (j.status='running' AND j.lease_until<=$1))
+        AND (NOT $4::boolean OR (j.attempts<3 AND fresh.latest IS NOT NULL))
         ORDER BY CASE WHEN $2::boolean AND j.attempts<3 AND fresh.latest IS NOT NULL THEN 0 ELSE 1 END,
           CASE WHEN $2::boolean AND j.attempts<3 THEN fresh.latest END DESC NULLS LAST,
-          j.created_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [now, phase !== 4, recentSince])).rows[0];
+          j.created_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [now, phase !== 4, recentSince, !!input.recentOutboundOnly])).rows[0];
       if (!row) return null;
       const lease = new Date(now.getTime() + input.leaseMs);
       await tx.query("UPDATE analysis_jobs SET status='running',worker_id=$2,lease_until=$3,attempts=attempts+1,updated_at=$4 WHERE id=$1", [row.id, token, lease, now]);
-      await tx.query('UPDATE app_settings SET value=$2::jsonb,updated_at=$3 WHERE key=$1', [dispatchKey, JSON.stringify((phase + 1) % 5), now]);
+      if (!input.recentOutboundOnly) await tx.query('UPDATE app_settings SET value=$2::jsonb,updated_at=$3 WHERE key=$1', [dispatchKey, JSON.stringify((phase + 1) % 5), now]);
       return { id: String(row.id), chatId: String(row.chat_id), policyVersion: Number(row.policy_version), mappingVersion: Number(row.mapping_version), status: 'running',
         claimToken: token, attempts: Number(row.attempts) + 1, leaseUntil: lease.toISOString(), retryAt: null, lastError: row.last_error as string | null };
     });
@@ -147,7 +149,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       const job = await this.fenced(tx, jobId, claimToken); const input = await this.load(tx, jobId);
       assert(job.extraction && job.extraction_input_hash === inputHash(input), 'conflict', 'Current extraction checkpoint is required');
       const extraction = validateExtraction(job.extraction, input);
-      const supportedProvider = provenance.provider === 'vercel' || (provenance.provider === 'openai' && provenance.model === 'gpt-6-luna' && provenance.schemaVersion === 'openai.decisions.antseed.v1');
+      const supportedProvider = provenance.provider === 'vercel' || (provenance.provider === 'openai' && provenance.model === 'gpt-6-luna' && ['openai.decisions.antseed.v1', 'openai.decisions.antseed.v2'].includes(provenance.schemaVersion));
       assert(supportedProvider && decision.model === provenance.model, 'validation', 'Decision provenance does not match the configured decision model');
       const evidenceIds = [...new Set(extraction.evidenceIds)]; await assertEvidence(tx, [...evidenceIds, ...decision.lane.evidenceIds], input.chat.id);
       const match = decision.companyMatch;
@@ -173,22 +175,30 @@ export class SqlAnalysisQueue implements AnalysisQueue {
         await links(tx, 'mapping_history_evidence', 'history_id', history.id, evidenceIds);
         await tx.query("UPDATE analysis_jobs SET status='cancelled',lease_until=NULL,worker_id=NULL,last_error='mapping_changed' WHERE chat_id=$1 AND id<>$2 AND status<>'completed'", [input.chat.id, jobId]);
         await tx.query("UPDATE proposals SET apply_state='stale',last_error='mapping_changed' WHERE ticket_id IN(SELECT id FROM tickets WHERE chat_id=$1) AND apply_state<>'applied'", [input.chat.id]);
-        if (input.ticket && input.ticket.companyId !== companyId) {
+        if (input.ticket && input.ticket.companyId !== null && input.ticket.companyId !== companyId) {
           await tx.query('DELETE FROM ticket_contacts WHERE ticket_id=$1', [input.ticket.id]); await tx.query('DELETE FROM ticket_evidence WHERE ticket_id=$1', [input.ticket.id]);
           await tx.query('UPDATE facts SET ticket_id=NULL WHERE ticket_id=$1 AND job_id<>$2', [input.ticket.id, jobId]);
         }
       }
-      if (canConfirm) {
-        const ticket = await ensureTicketTx(tx, input.chat.id);
-        const selectedCompany = await getCompanyTx(tx, ticket.companyId);
-        const extracted = extraction.companies.find((c) => c.canonicalName.toLowerCase() === selectedCompany.canonicalName.toLowerCase());
-        if (extracted) await writeCompanyTx(tx, { ...selectedCompany, idempotencyKey: jobId, aliases: [...new Set([...selectedCompany.aliases, ...extracted.aliases])], domains: [...new Set([...selectedCompany.domains, ...extracted.domains])], buyerIds: [...new Set([...selectedCompany.buyerIds, ...extracted.buyerIds])], providerIds: [...new Set([...selectedCompany.providerIds, ...extracted.providerIds])], workstream: decision.workstream ?? selectedCompany.workstream, evidenceIds: [...new Set([...selectedCompany.evidenceIds, ...extracted.evidenceIds])] }, selectedCompany.id, selectedCompany.version);
+      const enquiry = decision.outreach, nativeEnquiry = decision.diagnostics.answers.outbound_enquiry;
+      const sourcedEnquiry = enquiry?.outcome === 'enquiry' && enquiry.probability >= 0.9 && nativeEnquiry?.type === 'noul'
+        && nativeEnquiry.noul >= 0.9 && Math.abs(nativeEnquiry.noul - enquiry.probability) < 0.000001 && enquiry.evidenceIds.length > 0
+        && enquiry.evidenceIds.every(id => extraction.evidenceIds.includes(id) && input.evidence.some(e => e.id === id && !e.invalidatedAt
+          && input.messages.some(m => m.chatId === e.chatId && m.id === e.messageId && m.version === e.messageVersion && input.accountSelfId
+            && m.senderId === input.accountSelfId && m.sender.kind === 'user' && !m.deletedAt && !m.forward.isForwarded && m.text.trim())));
+      const canProspect = !canConfirm && input.chat.companyId === null && ['unresolved', 'ambiguous'].includes(input.chat.mappingStatus)
+        && decision.relevance !== 'non_company' && (sourcedEnquiry || input.ticket?.kind === 'contact_prospect');
+      if (canConfirm || canProspect) {
+        const ticket = canConfirm ? await ensureTicketTx(tx, input.chat.id) : await ensureContactProspectTx(tx, input.chat.id);
+        const selectedCompany = ticket.companyId ? await getCompanyTx(tx, ticket.companyId) : null;
+        const extracted = selectedCompany ? extraction.companies.find((c) => c.canonicalName.toLowerCase() === selectedCompany.canonicalName.toLowerCase()) : null;
+        if (extracted && selectedCompany) await writeCompanyTx(tx, { ...selectedCompany, idempotencyKey: jobId, aliases: [...new Set([...selectedCompany.aliases, ...extracted.aliases])], domains: [...new Set([...selectedCompany.domains, ...extracted.domains])], buyerIds: [...new Set([...selectedCompany.buyerIds, ...extracted.buyerIds])], providerIds: [...new Set([...selectedCompany.providerIds, ...extracted.providerIds])], workstream: decision.workstream ?? selectedCompany.workstream, evidenceIds: [...new Set([...selectedCompany.evidenceIds, ...extracted.evidenceIds])] }, selectedCompany.id, selectedCompany.version);
         for (const contact of extraction.contacts) {
           if (!contact.telegramUserIds.length) continue; // no guessed merge on display name
           const existingIds = (await tx.query<{ contact_id: string }>('SELECT DISTINCT contact_id FROM contact_telegram_ids WHERE telegram_user_id=ANY($1::bigint[])', [contact.telegramUserIds])).rows;
           if (existingIds.length > 1) continue;
           const existing = existingIds[0] ? await getContactTx(tx, existingIds[0].contact_id) : null;
-          const roles = contact.roles.filter((r) => [selectedCompany.canonicalName, ...selectedCompany.aliases].some((name) => name.toLowerCase() === r.companyName.toLowerCase())).map((r) => ({ companyId: selectedCompany.id, role: r.role, evidenceIds: r.evidenceIds }));
+          const roles = selectedCompany ? contact.roles.filter((r) => [selectedCompany.canonicalName, ...selectedCompany.aliases].some((name) => name.toLowerCase() === r.companyName.toLowerCase())).map((r) => ({ companyId: selectedCompany.id, role: r.role, evidenceIds: r.evidenceIds })) : [];
           const mergedRoles = [...(existing?.roles ?? []), ...roles].map((r) => ({ companyId: r.companyId, role: r.role, evidenceIds: r.evidenceIds }));
           const value = await writeContactTx(tx, { ...contact, idempotencyKey: jobId, telegramUserIds: [...new Set([...(existing?.telegramUserIds ?? []), ...contact.telegramUserIds])],
             names: [...new Set([...(existing?.names ?? []), ...contact.names])], usernames: [...new Set([...(existing?.usernames ?? []), ...contact.usernames])], phones: [...new Set([...(existing?.phones ?? []), ...contact.phones])], emails: [...new Set([...(existing?.emails ?? []), ...contact.emails])],
@@ -229,15 +239,18 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       assert(updated.rows.length === 1, 'conflict', 'Analysis lease expired during failure handling');
     });
   }
-  async replayUnavailable(input: { idempotencyKey: string; chatId?: string }): Promise<{ queued: number }> {
+  async replayUnavailable(input: { idempotencyKey: string; chatId?: string; includeCompletedUnmapped?: boolean }): Promise<{ queued: number }> {
+    assert(!input.includeCompletedUnmapped || !!input.chatId, 'validation', 'Completed unmapped replay requires one explicit chat');
     return command(this.db, 'analysis:replay', input.idempotencyKey, input, async (tx) => {
       await this.hooks.onReplay?.(tx);
       // Changed mappings/policies are never revived under obsolete job snapshots.
-      const result = await tx.query(`UPDATE analysis_jobs j SET status='pending',retry_at=NULL,last_error=NULL WHERE j.status='provider_unavailable'
+      const result = await tx.query(`UPDATE analysis_jobs j SET status='pending',retry_at=NULL,last_error=NULL,decision=NULL,jev_provenance=NULL,jev_diagnostics=NULL
+        WHERE (j.status='provider_unavailable' OR ($2::boolean AND j.status='completed' AND NOT EXISTS(SELECT 1 FROM tickets t WHERE t.chat_id=j.chat_id)
+          AND EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND c.mapping_status IN ('unresolved','ambiguous') AND c.company_id IS NULL)))
         AND ($1::bigint IS NULL OR j.chat_id=$1) AND EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND c.inclusion='included' AND NOT c.is_control
         AND c.policy_version=j.policy_version AND c.mapping_version=j.mapping_version)
         AND NOT EXISTS(SELECT 1 FROM analysis_job_messages s LEFT JOIN messages m ON m.chat_id=s.chat_id AND m.id=s.message_id
-          WHERE s.job_id=j.id AND (m.version IS NULL OR m.version<>s.message_version OR m.deleted_at IS NOT NULL)) RETURNING j.id`, [input.chatId ?? null]);
+          WHERE s.job_id=j.id AND (m.version IS NULL OR m.version<>s.message_version OR m.deleted_at IS NOT NULL)) RETURNING j.id`, [input.chatId ?? null, !!input.includeCompletedUnmapped]);
       return { queued: result.rows.length };
     });
   }

@@ -113,6 +113,21 @@ setup, current proposals are rechecked and queued for delivery.
 
 ## Proposals, decisions and actual application
 
+Outbound enquiries can appear before the recipient's company is known. A sourced
+AI classification of business outreach creates a contact prospect such as
+“Harsh — company unknown” in To be started. The company stays null; no placeholder
+company is created. Personal messages, forwarded pitches and uncertain outreach
+do not qualify. Source changes and exclusions still fence analysis and proposals.
+When the company is confirmed later, the same ticket and Vikunja task are updated;
+their lane/stage and manual actions are preserved. Contact prospects use the same
+explicit human approval flow as company tickets.
+
+A reserved live analysis slot handles fresh outbound conversations and their
+replies; it never falls back to historical jobs. A separate general slot retains
+durable fair queue ordering. Projection/control work runs independently of either
+provider request, so a slow historical extraction cannot block new card processing
+or approved movement. Stop aborts and drains both slots before closing the database.
+
 AI and Hermes recommendations create pending proposals; they do not move a ticket.
 Inspect proposal decision and apply state through the HTTP/MCP proposal operations.
 Reply to the actual proposal message in the control group with `approve`, `reject`,

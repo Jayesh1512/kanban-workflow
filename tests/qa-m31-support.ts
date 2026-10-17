@@ -38,7 +38,7 @@ export async function isolatedDatabase(project: string, allMigrations = false) {
   url.searchParams.set('options', `-c search_path=${schema}`);
   let db = new PgDatabase(url.toString());
   if (allMigrations) await migrate(db);
-  else await db.query(readFileSync(new URL('../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
+  else { await db.query(readFileSync(new URL('../db/migrations/001_initial.sql', import.meta.url), 'utf8')); await db.query(readFileSync(new URL('../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8')); }
   await db.query('INSERT INTO telegram_account(self_user_id) VALUES(990000099)');
   const peers: PgDatabase[] = [];
   return { get db() { return db; }, peer() { const p = new PgDatabase(url.toString()); peers.push(p); return p; }, async reopen() { await db.close(); db = new PgDatabase(url.toString()); return db; }, async close() { await Promise.all(peers.map((p) => p.close())); await db.close(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.close(); } };

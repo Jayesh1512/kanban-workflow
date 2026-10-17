@@ -35,6 +35,15 @@ it('also prioritizes the fresh recipient reply in a recent outbound conversation
   const incoming = await freshMessage(3, '7', now);
   expect((await queue().claim({ workerId: 'worker', leaseMs: 60000 }))?.id).toBe(incoming);
 });
+it('reserves live capacity instead of letting its empty poll take historical work or consume fairness', async () => {
+  expect(await queue().claim({ workerId: 'live', leaseMs: 60000, recentOutboundOnly: true })).toBeNull();
+  expect((await db.query('SELECT value FROM app_settings WHERE key=$1', ['workflow:analysis:dispatch'])).rows).toHaveLength(0);
+  await db.query("INSERT INTO app_settings(key,value) VALUES('workflow:analysis:dispatch','4'::jsonb)");
+  const fresh = await freshMessage(2);
+  expect((await queue().claim({ workerId: 'live', leaseMs: 60000, recentOutboundOnly: true }))?.id).toBe(fresh);
+  expect((await db.query('SELECT value FROM app_settings WHERE key=$1', ['workflow:analysis:dispatch'])).rows[0]?.value).toBe(4);
+  expect((await queue().claim({ workerId: 'general', leaseMs: 60000 }))?.id).toBe(jobId);
+});
 it.each(['old', 'forwarded', 'incoming_only', 'delayed_retry', 'repeated_retry', 'excluded'])('does not let %s work jump ahead of the backlog', async kind => {
   const fresh = await freshMessage(2, kind === 'incoming_only' ? '7' : '99', kind === 'old' ? new Date(now.getTime()-7200000) : now, kind === 'forwarded');
   if (kind === 'delayed_retry') await db.query("UPDATE analysis_jobs SET status='retry',retry_at=$2 WHERE id=$1", [fresh, new Date(now.getTime()+60000)]);

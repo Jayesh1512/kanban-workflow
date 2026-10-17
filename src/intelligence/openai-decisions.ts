@@ -6,7 +6,7 @@ import { ProviderHttp, type HttpOptions } from './http.js';
 import { usageProjection } from './openai.js';
 import { validateExtraction } from './validation.js';
 
-export const OPENAI_DECISIONS_VERSION = 'openai.decisions.antseed.v1';
+export const OPENAI_DECISIONS_VERSION = 'openai.decisions.antseed.v2';
 const probability = z.number().min(0).max(1);
 const nativeResponse = z.object({ model: z.literal('gpt-6-luna'), usage: z.unknown().optional(), answers: z.array(z.discriminatedUnion('type', [
   z.object({ type: z.literal('predicate'), name: z.string(), probability }),
