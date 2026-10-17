@@ -28,7 +28,7 @@ describe.skipIf(!project)('real PostgreSQL and pinned Vikunja M1 integration', (
     expect((await db.query('SELECT name FROM lane_definitions ORDER BY position')).rows.map((r) => r['name'])).toEqual([...LANES]);
     expect((await db.query('SELECT name FROM workstream_definitions ORDER BY name')).rows.map((r) => r['name'])).toEqual([...WORKSTREAMS].sort());
     expect((await db.query('SELECT datname FROM pg_database WHERE datname IN ($1,$2)', ['antseed', 'vikunja'])).rowCount).toBe(2);
-    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map((r) => r['version'])).toEqual(['001_initial.sql', '202610170001_telegram_operations.sql']);
+    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map((r) => r['version'])).toEqual(['001_initial.sql', '202610170001_telegram_operations.sql', '202610170002_decision_origins.sql']);
   });
   it('rolls transactions back on one checked-out connection', async () => {
     const key = `test-${randomUUID()}`;

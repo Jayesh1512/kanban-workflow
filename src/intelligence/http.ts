@@ -34,7 +34,7 @@ export class ProviderHttp {
         const response = await (this.options.fetch ?? fetch)(endpoint, { method: 'POST', redirect: 'error', signal: combined,
           headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!response.ok) {
-          const code: ProviderFailure['code'] = response.status === 401 || response.status === 403 ? 'entitlement' : response.status === 429 ? 'rate_limited' : response.status >= 500 ? 'unavailable' : 'invalid_response';
+          const code: ProviderFailure['code'] = [401, 402, 403].includes(response.status) ? 'entitlement' : response.status === 429 ? 'rate_limited' : response.status >= 500 ? 'unavailable' : 'invalid_response';
           const retryAfter = response.headers.get('retry-after');
           const seconds = retryAfter === null ? NaN : Number(retryAfter);
           const retryTime = Number.isFinite(seconds) ? this.clock.now().getTime() + Math.max(0, seconds) * 1000 : Date.parse(retryAfter ?? '');

@@ -129,7 +129,8 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       const job = await this.fenced(tx, jobId, claimToken); const input = await this.load(tx, jobId);
       assert(job.extraction && job.extraction_input_hash === inputHash(input), 'conflict', 'Current extraction checkpoint is required');
       const extraction = validateExtraction(job.extraction, input);
-      assert(provenance.provider === 'vercel' && decision.model === provenance.model, 'validation', 'Jev provenance does not match decision');
+      const supportedProvider = provenance.provider === 'vercel' || (provenance.provider === 'openai' && provenance.model === 'gpt-6-luna' && provenance.schemaVersion === 'openai.decisions.antseed.v1');
+      assert(supportedProvider && decision.model === provenance.model, 'validation', 'Decision provenance does not match the configured decision model');
       const evidenceIds = [...new Set(extraction.evidenceIds)]; await assertEvidence(tx, [...evidenceIds, ...decision.lane.evidenceIds], input.chat.id);
       const match = decision.companyMatch;
       let companyId = input.chat.companyId;

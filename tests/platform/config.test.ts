@@ -9,6 +9,15 @@ import { buildApp } from '../../src/app.js';
 const directories: string[] = [];
 afterEach(async () => { await Promise.all(directories.splice(0).map((d) => rm(d, { recursive: true, force: true }))); });
 describe('runtime configuration and M1 status', () => {
+  it('uses the existing OpenAI key for native gpt-6-luna decisions without Gateway credentials', async () => {
+    const config = await loadRuntimeConfig({ AI_ENV_PATH: '/missing', MOVEMENT_PROVIDER: 'openai', JEV_ENDPOINT: '', JEV_MODEL: '', OPENAI_API_KEY: 'synthetic-openai', AI_GATEWAY_API_KEY: 'synthetic-old-gateway' });
+    expect(config.jev).toMatchObject({ provider: 'openai', model: 'gpt-6-luna', endpoint: 'https://api.openai.com/v1/decisions', apiKey: 'synthetic-openai' });
+    expect(config.extraction.provider).toBe('openai');
+    expect((await loadRuntimeConfig({ AI_ENV_PATH: '/missing', MOVEMENT_PROVIDER: 'openai', AI_GATEWAY_API_KEY: 'synthetic-old-gateway' })).jev.apiKey).toBeNull();
+  });
+  it.each([{ JEV_MODEL: 'gpt-6.1-sol' }, { JEV_ENDPOINT: 'https://openrouter.ai/api/v1/systemone' }])('rejects unsupported native decision configuration: %j', async input => {
+    await expect(loadRuntimeConfig({ AI_ENV_PATH: '/missing', MOVEMENT_PROVIDER: 'openai', ...input })).rejects.toThrow();
+  });
   it('parses runtime files without executing them; env overrides; blank Jev key uses Gateway', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'antseed-config-')); directories.push(dir);
     const file = join(dir, 'ai.env'), runtime = join(dir, 'runtime.env');

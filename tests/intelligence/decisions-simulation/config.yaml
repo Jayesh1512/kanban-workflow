@@ -1,0 +1,9 @@
+version: 1
+name: antseed-openai-decisions
+slug: antseed-openai-decisions
+protocol: http
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.cjs
+    default: true

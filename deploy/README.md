@@ -135,18 +135,38 @@ for receipt/operator investigation. No synthetic receipt or lane success is inve
 
 ## Provider pause, status and restoration
 
-OpenAI extracts evidence; Jev uses **Vercel AI Gateway only** at the configured
-endpoint/model. The recorded real Gateway 403 paid-credit restriction seeds a
+OpenAI extracts evidence. Native **GPT-6 Luna Decisions** can handle company,
+workstream, lane and urgency judgments using the same private `OPENAI_API_KEY`.
+The personal deployment selects it with these nonsecret `.env` settings:
+
+```dotenv
+MOVEMENT_PROVIDER=openai
+JEV_ENDPOINT=https://api.openai.com/v1/decisions
+JEV_MODEL=gpt-6-luna
+```
+
+`JEV_*` names and the API's `components.jev` key are retained for compatibility;
+they now configure the selected decision layer. The UI calls it Decision model.
+Recreate only the backend with `docker compose up --build -d --no-deps backend`.
+No OpenRouter or Vercel key is needed for this selection. Typed native probabilities,
+raw native diagnostics and OpenAI provenance are retained. New automatic proposals
+have origin `openai`; they remain pending until an explicit operator decision.
+Refusals, malformed distributions and unexpected models never become lane writes.
+
+Existing deployments may continue selecting `MOVEMENT_PROVIDER=vercel` with its
+original endpoint/model. The recorded real Gateway 403 paid-credit restriction seeds a
 durable Jev pause across jobs/processes/restarts. Extraction already saved for a
 current input can be reused; messages and pending analysis remain stored. New jobs
 do not repeatedly probe a known entitlement failure. Key presence or a green local
 container does not establish successful live Jev inference.
 
-After fixing Gateway credit/access, explicitly use `POST /api/analysis/replay` or
+After fixing the selected provider credit/access, explicitly use `POST /api/analysis/replay` or
 the `replay_analysis` MCP tool with an idempotency key (optionally scoped to a chat).
 This can resume paid provider calls. Credential-file edits/remounts or restarting
-alone do not clear the pause. If access still fails, Jev pauses again; no direct
-TypeSafe or substitute-model fallback is used.
+alone do not clear the pause. Deliberately selecting the OpenAI Decisions endpoint
+and model changes the provider revision, so the historical Vercel restriction does
+not carry over. Any new credential/credit failure still pauses the selected provider. If access still fails, the selected decision provider pauses again; no implicit
+provider or substitute-model fallback is used.
 
 `/health/live` is process health. `/health/ready` aggregates actual module state and
 can return 503 while onboarding is reachable, including missing Telegram or paused

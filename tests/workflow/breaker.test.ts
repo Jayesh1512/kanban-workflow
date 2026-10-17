@@ -46,6 +46,15 @@ it('deliberate nonsecret endpoint/model change releases an old configuration pau
   const changed = { ...h.config, jev: { ...h.config.jev, model: 'deliberate-different-model' } };
   await withDurableJevBreaker(h.db, h.provider, changed, h.clock).decide(h.input); expect(h.calls()).toBe(2);
 });
+it('selecting native OpenAI decisions does not inherit or seed the known Vercel credit restriction', async () => {
+  const h = await setup(); await seedKnownJevRestriction(h.db, h.config, h.clock);
+  const config = { ...h.config, jev: { ...h.config.jev, provider: 'openai' as const, endpoint: 'https://api.openai.com/v1/decisions', model: 'gpt-6-luna' } };
+  await seedKnownJevRestriction(h.db, config, h.clock);
+  const adapter = withDurableJevBreaker(h.db, h.provider, config, h.clock);
+  await adapter.decide(h.input); expect(h.calls()).toBe(1);
+  await adapter.decide(h.input); expect(h.calls()).toBe(1);
+  expect(await adapter.status()).toMatchObject({ state: 'unavailable', code: 'provider_entitlement' });
+});
 it('unexpected dispatch crash retains a conservative durable pause', async () => {
   const h = await setup(); const broken: JevPort = { ...h.provider, async decide() { throw new Error('Synthetic process interruption'); } };
   await expect(withDurableJevBreaker(h.db, broken, h.config, h.clock).decide(h.input)).rejects.toThrow();

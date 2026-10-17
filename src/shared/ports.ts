@@ -27,7 +27,7 @@ export interface RuntimeConfig {
   telegram: { apiId: number | null; apiHash: string | null; sessionPath: string; historyBatchSize: number; historyMaxBatches: number };
   vikunja: { baseUrl: string; apiToken: string | null; username: string; password: string | null; projectTitle: string };
   extraction: { provider: 'openai'; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number; maxOutputTokens: number };
-  jev: { provider: 'vercel'; endpoint: string; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number };
+  jev: { provider: 'vercel' | 'openai'; endpoint: string; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number };
 }
 export type LoadRuntimeConfig = (env?: NodeJS.ProcessEnv) => Promise<RuntimeConfig>;
 export interface OperationsStatus {

@@ -59,6 +59,9 @@ services:
       PORT: "3000"
       RUNTIME_ENV_PATH: /run/antseed/runtime.env
       AI_ENV_PATH: /run/config/ai.env
+      MOVEMENT_PROVIDER: ${MOVEMENT_PROVIDER:-}
+      JEV_ENDPOINT: ${JEV_ENDPOINT:-}
+      JEV_MODEL: ${JEV_MODEL:-}
       VIKUNJA_URL: http://vikunja:3456
       TELEGRAM_SESSION_PATH: /data/telegram/client.session
       TELEGRAM_APPLICATION_PROFILE: ${TELEGRAM_APPLICATION_PROFILE:-}

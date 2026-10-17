@@ -198,7 +198,7 @@ export type JevAnswer =
   | { type: 'noul'; noul: number }
   | { type: 'choice'; choice: string; probabilities: Record<string, number>; confidence: number }
   | { type: 'score'; score: number; legend: Record<string, string>; probabilities: Record<string, number>; confidence: number };
-export interface JevDiagnostics { rubricVersion: string; answers: Record<string, JevAnswer> }
+export interface JevDiagnostics { rubricVersion: string; answers: Record<string, JevAnswer>; native?: Json }
 export interface ProviderProvenance { provider: 'openai' | 'vercel'; model: string; requestId: string | null; schemaVersion: string; completedAt: ISODateTime; usage: Json }
 export interface ExtractionCheckpoint { jobId: UUID; extraction: Extraction; provenance: ProviderProvenance; inputHash: string }
 export type ProposalDecision = 'pending' | 'approved' | 'rejected' | 'corrected';
@@ -214,7 +214,7 @@ export interface Proposal {
   evidenceIds: UUID[];
   reason: string;
   nextAction: string | null;
-  origin: 'jev' | 'hermes' | 'manual';
+  origin: 'jev' | 'openai' | 'hermes' | 'manual';
   decision: ProposalDecision;
   applyState: ApplyState;
   correctionOf: UUID | null;

@@ -2,6 +2,18 @@
 
 Status: bounded M0 design and executable foundation. This document and the exported TypeScript files are the integration baseline for two builders. `docs/PROJECT_BRIEF.md` is authoritative. No complete Telegram, Vikunja, inference, proposal, domain-route or MCP implementation ships in M0.
 
+## Current provider amendment (2026-10-17)
+
+The user's later instruction selects native OpenAI Decisions (`gpt-6-luna`) in
+place of Jev for company/stage/workstream/urgency judgments. This supersedes the
+original Vercel-only requirement below. The existing `jev` port/config/status
+key and JevDecision shape are compatibility seams; native OpenAI answers are
+validated and structurally normalized, with original typed answers retained in
+diagnostics. OpenAI decision provenance remains distinct from extraction by
+model/schema version. Additive migration202610170002 permits proposal origin
+`openai` without rewriting historical origins or initial migration checksums.
+No implicit fallback or automatic approval is introduced.
+
 ## Runtime and current executable behavior
 
 Use TypeScript ESM, Fastify 5, PostgreSQL 17, `pg`, Zod 4 and the official MCP TypeScript SDK. Use native `fetch` for upstream HTTP adapters; avoid inventing compatibility endpoints. Deploy as one backend process with durable PostgreSQL queues, not Redis or a second worker service. Run the process on pinned `node:22.23.3-bookworm-slim`; Builder A verified mtcute/native SQLite on Linux ARM64. Host Node 26 also installs and runs the foundation. AMD64 container verification remains a later QA gate.

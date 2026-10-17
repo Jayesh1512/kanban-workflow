@@ -22,7 +22,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   const ai = await readEnv(aiEnvPath);
   const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...env };
   // Compose's optional blank fields must not erase mounted Telegram credentials.
-  for (const key of ['TELEGRAM_APPLICATION_PROFILE', 'TELEGRAM_API_ID', 'TELEGRAM_API_HASH']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
+  for (const key of ['TELEGRAM_APPLICATION_PROFILE', 'TELEGRAM_API_ID', 'TELEGRAM_API_HASH', 'MOVEMENT_PROVIDER', 'JEV_ENDPOINT', 'JEV_MODEL']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
   const str = (key: string, fallback: string) => nonblank(values[key]) ?? fallback;
   const int = (key: string, fallback: number, max = 2_147_483_647) => {
     const raw = nonblank(values[key]);
@@ -37,9 +37,14 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     return raw;
   };
   if (str('MODEL_PROVIDER', 'openai') !== 'openai') throw new Error('MODEL_PROVIDER must be openai');
-  if (!['jev', 'vercel'].includes(str('MOVEMENT_PROVIDER', 'jev'))) throw new Error('MOVEMENT_PROVIDER must select Jev through Vercel');
-  const endpoint = url('JEV_ENDPOINT', 'https://ai-gateway.vercel.sh/typesafe/v1/systemone', ['https:']);
-  if (new URL(endpoint).hostname !== 'ai-gateway.vercel.sh') throw new Error('JEV_ENDPOINT must use Vercel AI Gateway');
+  const movement = str('MOVEMENT_PROVIDER', 'jev');
+  if (!['jev', 'vercel', 'openai'].includes(movement)) throw new Error('MOVEMENT_PROVIDER must select openai or vercel');
+  const provider = movement === 'openai' ? 'openai' : 'vercel';
+  const expectedEndpoint = provider === 'openai' ? 'https://api.openai.com/v1/decisions' : 'https://ai-gateway.vercel.sh/typesafe/v1/systemone';
+  const endpoint = url('JEV_ENDPOINT', expectedEndpoint, ['https:']);
+  if (endpoint !== expectedEndpoint) throw new Error('JEV_ENDPOINT must match the selected decision provider endpoint');
+  const model = str('JEV_MODEL', provider === 'openai' ? 'gpt-6-luna' : 'typesafe-ai/jev');
+  if (provider === 'openai' && model !== 'gpt-6-luna') throw new Error('OpenAI Decisions requires JEV_MODEL=gpt-6-luna');
   const timezone = str('TIMEZONE', 'Asia/Kolkata');
   try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); }
   catch { throw new Error('Invalid TIMEZONE'); }
@@ -57,7 +62,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
       password: nonblank(values['VIKUNJA_PASSWORD']), projectTitle: str('VIKUNJA_PROJECT_TITLE', 'AntSeed'),
     },
     extraction: { provider: 'openai', model: str('OPENAI_MODEL', 'gpt-6.1-sol'), apiKey: nonblank(values['OPENAI_API_KEY']), timeoutMs: int('OPENAI_TIMEOUT_MS', 30_000), maxAttempts: int('OPENAI_MAX_ATTEMPTS', 2, 10), maxOutputTokens: int('OPENAI_MAX_OUTPUT_TOKENS', 4096, 100_000) },
-    jev: { provider: 'vercel', endpoint, model: str('JEV_MODEL', 'typesafe-ai/jev'), apiKey: nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },
+    jev: { provider, endpoint, model, apiKey: provider === 'openai' ? nonblank(values['OPENAI_API_KEY']) : nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },
   };
   metadata.set(config, { aiEnvReadable: ai !== null });
   return config;
