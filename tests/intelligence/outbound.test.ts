@@ -48,4 +48,16 @@ describe('outbound-first source and deterministic stage rules', () => {
     input.accountSelfId = '7'; // A different account must not authorize this contact's affiliation.
     expect(() => validateExtraction(input.extraction, input)).toThrow('Internal affiliation');
   });
+  it('accepts the first-enquiry template self-introduction even when the profile display name differs', () => {
+    const input = outbound(), m = input.messages[0]!;
+    m.sender.names = ['Jayesh']; m.text = 'Hi Mira, Ravi here from AntSeed. Would Cedar Labs like to evaluate our API?';
+    input.evidence[0]!.excerpt = m.text;
+    input.extraction.contacts = [{ telegramUserIds: ['99'], names: ['Ravi'], usernames: [], phones: [], emails: [], roles: [], affiliation: 'internal', evidenceIds: [input.evidence[0]!.id] }];
+    expect(validateExtraction(input.extraction, input).contacts[0]!.names).toEqual(['Ravi']);
+    m.text = 'Hi Mira, I spoke with Ravi here from AntSeed about Cedar Labs.'; input.evidence[0]!.excerpt = m.text;
+    expect(() => validateExtraction(input.extraction, input)).toThrow('Contact name');
+    m.text = 'Hi Mira, Ravi here from AntSeed. Would Cedar Labs like to evaluate our API?'; input.evidence[0]!.excerpt = m.text;
+    input.extraction.contacts[0]!.telegramUserIds = ['7'];
+    expect(() => validateExtraction(input.extraction, input)).toThrow('Contact name');
+  });
 });
