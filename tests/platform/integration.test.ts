@@ -10,6 +10,7 @@ import { loadRuntimeConfig } from '../../src/platform/config.js';
 import { VikunjaAdapter } from '../../src/vikunja/adapter.js';
 import type { RuntimeConfig } from '../../src/shared/ports.js';
 import { LANES, WORKSTREAMS } from '../../src/shared/domain.js';
+import { testVikunjaToken } from '../vikunja-test-auth.js';
 
 // Explicit opt-in; ordinary npm test does not touch Docker or existing upstream services.
 const project = process.env['PLATFORM_TEST_PROJECT'];
@@ -20,6 +21,7 @@ describe.skipIf(!project)('real PostgreSQL and pinned Vikunja M1 integration', (
     // Captured only in test memory, never printed or written to reports.
     const bundle = parse(compose('exec', '-T', 'backend', 'cat', '/run/antseed/runtime.env'));
     config = await loadRuntimeConfig({ ...bundle, AI_ENV_PATH: '/not-present', DATABASE_URL: bundle['DATABASE_URL']!.replace('postgres:5432', `127.0.0.1:${process.env['PLATFORM_TEST_PG_PORT'] ?? '18432'}`), VIKUNJA_URL: process.env['PLATFORM_TEST_VIKUNJA_URL'] ?? 'http://127.0.0.1:18381' });
+    await testVikunjaToken(config.vikunja);
     db = new PgDatabase(config.databaseUrl); adapter = new VikunjaAdapter(config.vikunja, db);
   });
   afterAll(async () => { await db?.close(); });
@@ -71,8 +73,7 @@ describe.skipIf(!project)('real PostgreSQL and pinned Vikunja M1 integration', (
       await tx.query('DELETE FROM board_labels');
     });
     expect(await adapter.ensureBoard()).toEqual(first);
-    const login = await fetch(`${config.vikunja.baseUrl}/api/v2/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: config.vikunja.username, password: config.vikunja.password }) });
-    const { token } = await login.json() as { token: string };
+    const token = await testVikunjaToken(config.vikunja);
     const read = async (path: string) => {
       const r = await fetch(`${config.vikunja.baseUrl}/api/v2${path}`, { headers: { Authorization: `Bearer ${token}` } });
       expect(r.status).toBe(200); return r.json();
@@ -91,7 +92,7 @@ describe.skipIf(!project)('real PostgreSQL and pinned Vikunja M1 integration', (
     await db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status,company_id) VALUES($1,'group','M1 synthetic fixture','included','confirmed',$2) ON CONFLICT(id) DO NOTHING", [chatId, company]);
     const ticket = (await db.query('INSERT INTO tickets(chat_id,company_id) VALUES($1,$2) ON CONFLICT(chat_id) DO UPDATE SET company_id=$2 RETURNING id', [chatId, company])).rows[0]?.['id'] as string;
     const board = await adapter.ensureBoard();
-    const auth = await fetch(`${config.vikunja.baseUrl}/api/v2/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: config.vikunja.username, password: config.vikunja.password }) }).then((r) => r.json()) as { token: string };
+    const auth = {token:await testVikunjaToken(config.vikunja)};
     const rawTask = async (taskId: string) => fetch(`${config.vikunja.baseUrl}/api/v2/tasks/${taskId}`, { headers: { Authorization: `Bearer ${auth.token}` } }).then((r) => r.json()) as Promise<{ done: boolean; labels: { title: string }[] }>;
     const input = { ticketId: ticket, title: 'M1 synthetic ticket', description: 'Isolated integration only', workstream: 'Buyer' as const };
     const first = await adapter.ensureTask(input); expect(first.bucketId).toBe(board.buckets['To be started']);

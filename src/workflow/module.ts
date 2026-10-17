@@ -6,6 +6,7 @@ import { DomainError } from '../shared/api.js';
 import type { ApplicationModule, PlatformServices } from '../shared/ports.js';
 import type { ServiceStatus } from '../shared/domain.js';
 import { createOpenAIExtractor } from '../intelligence/openai.js';
+import {LARGE_EXTRACTION_TIMEOUT_MS}from'../intelligence/extraction-budget.js';
 import { createOpenAIDecisions } from '../intelligence/openai-decisions.js';
 import { createJevAdapter } from '../intelligence/jev.js';
 import { SqlAnalysisQueue, type AnalysisClaimOptions } from './analysis.js';
@@ -47,8 +48,8 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   let state: ServiceStatus = { state: 'connecting', code: 'not_started', detail: 'Workflow has not started', checkedAt: platform.clock.now().toISOString() };
   async function migrationsReady(): Promise<'pending' | 'ready' | 'drift'> {
     return platform.db.transaction(async (tx) => {
-      const lock = (await tx.query<{ ready: boolean }>("SELECT pg_try_advisory_xact_lock(hashtextextended('antseed:migrations',0)) AS ready")).rows[0]; if (!lock?.ready) return 'pending';
-      if (!(await tx.query<{ name: string | null }>("SELECT to_regclass('schema_migrations')::text AS name")).rows[0]?.name) return 'pending';
+      const lock = (await tx.query<{ ready: boolean }>("SELECT pg_try_advisory_xact_lock_shared(hashtextextended('antseed:migrations',0)) AS ready")).rows[0]; if (!lock?.ready) return 'pending';
+      if (!(await tx.query<{ name: string | null }>("SELECT to_regclass(quote_ident(current_schema())||'.schema_migrations')::text AS name")).rows[0]?.name) return 'pending';
       const applied = (await tx.query<{ version: string; checksum: string }>('SELECT version,checksum FROM schema_migrations')).rows;
       if (applied.some((row) => expectedMigrations.get(row.version) !== row.checksum)) return 'drift';
       return applied.length === expectedMigrations.size ? 'ready' : 'pending';
@@ -101,7 +102,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         await seedKnownJevRestriction(platform.db, platform.config, platform.clock);
         abort.signal.throwIfAborted();
         await services.processOnce({ workerId: slot === 0 ? 'workflow:history' : 'workflow:outbound', recentOutboundOnly: slot === 1,
-          leaseMs: Math.max(120000, platform.config.extraction.timeoutMs * platform.config.extraction.maxAttempts + platform.config.jev.timeoutMs * platform.config.jev.maxAttempts + 60000), signal: abort.signal });
+          leaseMs: Math.max(120000, Math.max(platform.config.extraction.timeoutMs,LARGE_EXTRACTION_TIMEOUT_MS) * platform.config.extraction.maxAttempts + platform.config.jev.timeoutMs * platform.config.jev.maxAttempts + 60000), signal: abort.signal });
         analysisFailed[slot] = false;
       } catch { if (!abort.signal.aborted) analysisFailed[slot] = true; }
     })();

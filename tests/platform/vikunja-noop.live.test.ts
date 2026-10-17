@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { testVikunjaToken } from '../vikunja-test-auth.js';
 import { describe, expect, it, vi } from 'vitest';
 import { PgDatabase, migrate } from '../../src/platform/database.js';
 import { VikunjaAdapter } from '../../src/vikunja/adapter.js';
@@ -9,7 +10,8 @@ describe.skipIf(!url)('actual isolated Vikunja 2.7.0 no-op Merge Patch/readback'
     const admin = new PgDatabase(url!), schema = `vikunja_noop_${randomUUID().replaceAll('-', '')}`;
     await admin.query(`CREATE SCHEMA ${schema}`); const uri = new URL(url!); uri.searchParams.set('options', `-c search_path=${schema},public`); const db = new PgDatabase(uri.toString());
     const baseUrl = process.env['VIKUNJA_NOOP_URL']!, password = process.env['VIKUNJA_NOOP_PASSWORD']!, username = process.env['VIKUNJA_NOOP_USERNAME']!;
-    const adapter = new VikunjaAdapter({ baseUrl, password, username, apiToken: null, projectTitle: `Isolated noop ${schema}` }, db);
+    const config={baseUrl,password,username,apiToken:null as string|null,projectTitle:`Isolated noop ${schema}`};await testVikunjaToken(config);
+    const adapter = new VikunjaAdapter(config, db);
     const observed304: string[] = [], fetcher = globalThis.fetch.bind(globalThis);
     const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => { const response = await fetcher(input, init); if (response.status === 304) observed304.push(`${init?.method} ${new URL(String(input)).pathname}`); return response; });
     try {

@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { parse } from 'dotenv';
 import { describe, expect, it, vi } from 'vitest';
 import { loadRuntimeConfig } from '../src/platform/config.js';
+import { testVikunjaToken } from './vikunja-test-auth.js';
 import { VikunjaAdapter } from '../src/vikunja/adapter.js';
 import { company, isolatedDatabase, seed, sourceInput } from './qa-m31-support.js';
 
@@ -10,7 +11,8 @@ describe.skipIf(!project)('independent M1 follow-up, actual pinned Vikunja no-op
   it('reads back two native304s, updates labels and preserves Completed plus unrelated fields',async()=> {
     const fixture=await isolatedDatabase(project!);
     const bundle=parse(execFileSync('docker',['compose','-p',project!,'-f','compose.yaml','exec','-T','backend','cat','/run/antseed/runtime.env'],{encoding:'utf8',stdio:['pipe','pipe','pipe']}));
-    const config=await loadRuntimeConfig({...bundle,AI_ENV_PATH:'/qa-no-provider-env',VIKUNJA_URL:'http://127.0.0.1:18081'});
+    const config=await loadRuntimeConfig({...bundle,AI_ENV_PATH:'/qa-no-provider-env',VIKUNJA_URL:process.env['QA_M32_VIKUNJA_URL']??'http://127.0.0.1:18081'});
+    await testVikunjaToken(config.vikunja);
     const adapter=new VikunjaAdapter(config.vikunja,fixture.db), native=globalThis.fetch.bind(globalThis);
     const seen: Array<{path:string;status:number}>=[];
     const spy=vi.spyOn(globalThis,'fetch').mockImplementation(async(input,init)=> { const res=await native(input,init); if(init?.method==='PATCH') seen.push({path:new URL(String(input)).pathname,status:res.status}); return res; });
@@ -20,8 +22,7 @@ describe.skipIf(!project)('independent M1 follow-up, actual pinned Vikunja no-op
       expect(res.ok,`${method} ${path} status ${res.status}`).toBe(true); return res.status===204?{}:await res.json();
     }
     try {
-      const login=await native(`${config.vikunja.baseUrl}/api/v2/login`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:config.vikunja.username,password:config.vikunja.password})});
-      expect(login.status).toBe(200); token=(await login.json() as {token:string}).token;
+      token=await testVikunjaToken(config.vikunja);
       const src=sourceInput('rel-035'); await seed(fixture.db,src); const c=await company(fixture.db,src.chat.id);
       const t=(await fixture.db.query('INSERT INTO tickets(chat_id,company_id) VALUES($1,$2) RETURNING id',[src.chat.id,c])).rows[0]!;
       const board=await adapter.ensureBoard(),task=await adapter.ensureTask({ticketId:String(t.id),title:'QA304 synthetic company',description:'Independent no-op repro',workstream:'Buyer'}); taskId=task.id;

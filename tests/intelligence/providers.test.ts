@@ -38,6 +38,11 @@ describe('real HTTP adapter paths against local documented-contract stand-ins (n
       output: [{ type: 'message', content: [{ type: mode === 'refusal' ? 'refusal' : 'output_text', text: mode === 'invalid_json' ? '{' : JSON.stringify(extraction) }] }] });
     expect(await createOpenAIExtractor(config, { fetch: localFetch }).extract(inputFixture())).toMatchObject({ ok: false, code: 'invalid_response' });
   });
+  it('records omission of an unsourced optional alias without a second model call, retaining valid facts and identity',async()=>{
+    requests.length=0;const extraction=extractionFixture();extraction.contacts[0]!.names.push('Invented unseen alias');
+    handler=(_,res)=>reply(res,{model:config.model,status:'completed',error:null,incomplete_details:null,output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(extraction)}]}]});
+    const result=await createOpenAIExtractor(config,{fetch:localFetch}).extract(inputFixture());expect(result).toMatchObject({ok:true,provenance:{validation:{omittedContactNames:1}}});if(result.ok)expect(result.value).toEqual(extractionFixture());expect(requests).toHaveLength(1);
+  });
   it('sends Vercel systemone typed questions and keeps native diagnostics', async () => {
     requests.length = 0; handler = (_, res) => reply(res, responseFixture());
     const result = await createJevAdapter(jevConfig, { fetch: localFetch }).decide({ ...inputFixture(), extraction: extractionFixture() });

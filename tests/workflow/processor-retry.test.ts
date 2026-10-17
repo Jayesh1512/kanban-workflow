@@ -4,6 +4,7 @@ import { SqlAnalysisQueue } from '../../src/workflow/analysis.js';
 import { processAnalysisOnce } from '../../src/workflow/processor.js';
 import { extractionFixture, provenance } from '../intelligence/fixtures.js';
 import { fixtureDatabase } from './database.js';
+import {ProviderHttp}from'../../src/intelligence/http.js';
 const cleanups: (() => Promise<void>)[] = []; afterEach(async () => { await Promise.all(cleanups.splice(0).map((close) => close())); });
 it.each(['40P01', '40001', '08006'])('requeues SQL %s with the original captured claim instead of blaming a model', async (code) => {
   const db = await fixtureDatabase(); cleanups.push(() => db.close()); let instant = new Date('2026-10-17T00:00:00Z'); const queue = new SqlAnalysisQueue(db, { now: () => instant });
@@ -16,4 +17,11 @@ it('keeps an explicit validation error distinct from infrastructure interruption
   const db = await fixtureDatabase(); cleanups.push(() => db.close()); const queue = new SqlAnalysisQueue(db, { now: () => new Date('2026-10-17T00:00:00Z') }); vi.spyOn(queue, 'saveExtraction').mockRejectedValueOnce(new DomainError('validation', 'Synthetic validation error'));
   await processAnalysisOnce({ queue, extraction: { async extract(input) { return { ok: true, value: extractionFixture(input.evidence[0]!.id), provenance: provenance() }; }, async status() { throw new Error('unused'); } }, jev: { async decide() { throw new Error('unused'); }, async status() { throw new Error('unused'); } } }, { workerId: 'worker', leaseMs: 60000 });
   expect((await db.query('SELECT status,last_error FROM analysis_jobs')).rows[0]).toMatchObject({ status: 'provider_unavailable', last_error: 'provider_invalid_response' });
+});
+it('a real HTTP cancellation during worker stop leaves analysis retryable for the next process',async()=>{
+  const db=await fixtureDatabase();cleanups.push(()=>db.close());let now=new Date('2026-10-17T00:00:00Z');const queue=new SqlAnalysisQueue(db,{now:()=>now}),abort=new AbortController();let enter!:()=>void;const entered=new Promise<void>(r=>{enter=r;});
+  const http=new ProviderHttp({apiKey:'synthetic-key',timeoutMs:1000,maxAttempts:2},{fetch:async(_url,init)=>{enter();await new Promise<void>((_,reject)=>init!.signal!.addEventListener('abort',()=>reject(Error('Synthetic worker stop')),{once:true}));throw Error('unreachable');}});
+  const running=processAnalysisOnce({queue,extraction:{async extract(_input,signal){const result=await http.post('https://example.invalid',{},signal);if(result.ok)throw Error('Unexpected success');return result;},async status(){return http.status();}},jev:{async decide(){throw Error('No decision after cancelled extraction');},async status(){throw Error('unused');}}},{workerId:'restart-test',leaseMs:60000,signal:abort.signal});
+  await entered;abort.abort();await running;expect((await db.query('SELECT status,last_error FROM analysis_jobs')).rows[0]).toMatchObject({status:'retry',last_error:'provider_timeout'});
+  now=new Date(now.getTime()+60001);expect(await queue.claim({workerId:'restart-test',leaseMs:60000})).not.toBeNull();
 });

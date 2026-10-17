@@ -13,6 +13,7 @@ import { TicketProjector } from '../src/workflow/projection.js';
 import { ProposalWorkflow } from '../src/workflow/apply.js';
 import { SqlAnalysisQueue } from '../src/workflow/analysis.js';
 import { company, isolatedDatabase, seed, sourceInput } from './qa-m31-support.js';
+import { testVikunjaToken } from './vikunja-test-auth.js';
 
 export const project = process.env['QA_M32_PROJECT'];
 let configured: Promise<RuntimeConfig> | undefined;
@@ -21,10 +22,8 @@ export function configuration(): Promise<RuntimeConfig> {
   return configured ??= (async () => {
     if (!project || !/^antseed-qa-m1-[a-z0-9-]+$/.test(project)) throw new Error('Explicit retained QA project required');
     const env = parse(execFileSync('docker', ['compose', '-p', project, '-f', 'compose.yaml', 'exec', '-T', 'backend', 'cat', '/run/antseed/runtime.env'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }));
-    const c = await loadRuntimeConfig({ ...env, AI_ENV_PATH: '/qa-m32-no-provider-file', OPENAI_API_KEY: '', AI_GATEWAY_API_KEY: '', JEV_API_KEY: '', VIKUNJA_URL: 'http://127.0.0.1:18081' });
-    const r = await fetch(`${c.vikunja.baseUrl}/api/v2/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: c.vikunja.username, password: c.vikunja.password }) });
-    if (r.status !== 200) throw new Error(`QA service login HTTP ${r.status}`);
-    c.vikunja.apiToken = (await r.json() as { token: string }).token;
+    const c = await loadRuntimeConfig({ ...env, AI_ENV_PATH: '/qa-m32-no-provider-file', OPENAI_API_KEY: '', AI_GATEWAY_API_KEY: '', JEV_API_KEY: '', VIKUNJA_URL: process.env['QA_M32_VIKUNJA_URL'] ?? 'http://127.0.0.1:18081' });
+    await testVikunjaToken(c.vikunja);
     return c;
   })();
 }

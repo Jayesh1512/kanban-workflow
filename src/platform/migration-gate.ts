@@ -10,9 +10,10 @@ export async function createMigrationGate(db: Database, directory = defaultMigra
   const expected = new Map(await Promise.all(names.map(async (name) => [name, createHash('sha256').update(await readFile(join(directory, name))).digest('hex')] as const)));
   if (!expected.size) throw new Error('Migration manifest is empty');
   return () => db.transaction(async (tx) => {
-    const lock = (await tx.query<{ ready: boolean }>("SELECT pg_try_advisory_xact_lock(hashtextextended('antseed:migrations',0)) AS ready")).rows[0];
+    // Readiness readers may coexist; only a real migration writer excludes them.
+    const lock = (await tx.query<{ ready: boolean }>("SELECT pg_try_advisory_xact_lock_shared(hashtextextended('antseed:migrations',0)) AS ready")).rows[0];
     if (!lock?.ready) return 'pending';
-    if (!(await tx.query<{ name: string | null }>("SELECT to_regclass('schema_migrations')::text AS name")).rows[0]?.name) return 'pending';
+    if (!(await tx.query<{ name: string | null }>("SELECT to_regclass(quote_ident(current_schema())||'.schema_migrations')::text AS name")).rows[0]?.name) return 'pending';
     const rows = (await tx.query<{ version: string; checksum: string }>('SELECT version,checksum FROM schema_migrations')).rows;
     if (new Set(rows.map((row) => row.version)).size !== rows.length || rows.some((row) => expected.get(row.version) !== row.checksum)) return 'drift';
     return rows.length === expected.size ? 'ready' : 'pending';

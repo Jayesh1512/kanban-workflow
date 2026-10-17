@@ -12,14 +12,16 @@ import { buildApp } from '../../src/app.js';
 import { inputFixture, jobId, sourceText } from '../intelligence/fixtures.js';
 import { seedJob } from '../workflow/database.js';
 import { workflowHarness } from '../workflow/harness.js';
+import { testVikunjaToken } from '../vikunja-test-auth.js';
 
 /** Only explicitly owned disposable stack; generated service credentials stay in memory. */
 export async function nativeFixture() {
   const project = process.env['WORKFLOW_TEST_PROJECT'];
-  if (!project || !/^antseed-b-m4-[a-z0-9-]+$/.test(project)) throw new Error('Require an isolated Builder B M4 synthetic project');
+  if (!project || !/^antseed-(?:b-m4|qa-m1-system)-[a-z0-9-]+$/.test(project)) throw new Error('Require an explicitly isolated MCP/system synthetic project');
   const args = ['compose', '-p', project, '-f', 'compose.yaml']; if (process.env['WORKFLOW_TEST_COMPOSE_OVERRIDE']) args.push('-f', process.env['WORKFLOW_TEST_COMPOSE_OVERRIDE']);
   const bundle = parse(execFileSync('docker', [...args, 'exec', '-T', 'vikunja', 'cat', '/run/antseed/runtime.env'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
   const config = await loadRuntimeConfig({ ...bundle, AI_ENV_PATH: '/antseed-test-no-ai', OPENAI_API_KEY: '', JEV_API_KEY: '', AI_GATEWAY_API_KEY: 'synthetic-not-a-credential', DATABASE_URL: bundle['DATABASE_URL']!.replace('postgres:5432', `127.0.0.1:${process.env['WORKFLOW_TEST_PG_PORT']}`), VIKUNJA_URL: process.env['WORKFLOW_TEST_VIKUNJA_URL']! });
+  await testVikunjaToken(config.vikunja);
   const admin = new PgDatabase(config.databaseUrl); const schema = `m4_${randomUUID().replaceAll('-', '')}`; await admin.query(`CREATE SCHEMA ${schema}`);
   const url = new URL(config.databaseUrl); url.searchParams.set('options', `-c search_path=${schema}`); config.databaseUrl = url.toString();
   const dir = await mkdtemp(join(tmpdir(), 'antseed-m4-')); config.telegram.sessionPath = join(dir, 'session');

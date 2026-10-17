@@ -76,9 +76,9 @@ describe.skipIf(!project)('independent M2 actualPG durable events, synthetic Tel
     expect((await f.db.query('SELECT * FROM messages')).rows).toEqual([]);
   });
   it('persists unknown control creation before transport, forbids duplicate creation and reconciles one receipt after restart',async()=> {
-    let creates=0; const remoteId=-1000000005555;
+    let creates=0,receiptVisible=false; const remoteId=-1000000005555;
     const client={ async createSupergroup() { creates++; expect((await f.db.query('SELECT state FROM control_setup_operations')).rows).toEqual([{state:'remote_unknown'}]); throw Error('Synthetic accepted remotely then connection lost'); },
-      async *iterDialogs() { yield {peer:{id:remoteId,type:'chat',chatType:'supergroup',title:'QA control',username:null},isArchived:false}; },
+      async *iterDialogs() { if(receiptVisible)yield {peer:{id:remoteId,type:'chat',chatType:'supergroup',title:'QA control',username:null},isArchived:false}; },
       async getFullChat() { return {bio:`QA ${(await f.db.query('SELECT marker FROM control_setup_operations ORDER BY created_at LIMIT 1')).rows[0]!.marker}`}; }
     } as unknown as TelegramClient;
     let setup=new ControlSetupManager(f.db,store,()=>client); const request={operationKey:'qa-unknown-create',createPrivateSupergroup:true as const,title:'QA synthetic approvals'};
@@ -86,6 +86,9 @@ describe.skipIf(!project)('independent M2 actualPG durable events, synthetic Tel
     // Unknown -> reconcile reads only, even if a second key is supplied.
     await expect(setup.configure({...request,operationKey:'other-key'})).rejects.toMatchObject({code:'conflict'}); expect(creates).toBe(1);
     const db=await f.reopen(); store=new TelegramStore(db,qaTelegramConfig); setup=new ControlSetupManager(db,store,()=>client);
+    // Automatic readback was added after M2: keep the receipt genuinely hidden
+    // until restart to retain this test's unknown-outcome recovery window.
+    receiptVisible=true;
     expect(await setup.configure(request)).toMatchObject({state:'configured',chat:{id:String(remoteId)}}); expect(creates).toBe(1);
     expect((await store.list({})).items[0]).toMatchObject({id:String(remoteId),inclusion:'excluded',isControl:true});
     await expect(store.setInclusion({chatId:String(remoteId),expectedPolicyVersion:1,inclusion:'included',idempotencyKey:'control-must-stay-excluded'})).rejects.toMatchObject({code:'conflict'});

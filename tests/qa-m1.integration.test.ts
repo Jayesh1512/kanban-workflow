@@ -7,6 +7,7 @@ import { parse } from 'dotenv';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PgDatabase, migrate } from '../src/platform/database.js';
 import { loadRuntimeConfig } from '../src/platform/config.js';
+import { testVikunjaToken } from './vikunja-test-auth.js';
 import { VikunjaAdapter } from '../src/vikunja/adapter.js';
 import type { RuntimeConfig } from '../src/shared/ports.js';
 
@@ -36,14 +37,22 @@ describe.skipIf(!project)('independent QA M1 actual PostgreSQL/Vikunja and HTTP'
     secrets = Object.entries(bundle).filter(([k]) => /PASSWORD|SECRET/.test(k)).map(([, v]) => v);
     config = await loadRuntimeConfig({ ...bundle, AI_ENV_PATH: '/qa-not-present', DATABASE_URL: bundle['DATABASE_URL']!.replace('postgres:5432', `127.0.0.1:${process.env['QA_M1_PG_PORT'] ?? '18433'}`), VIKUNJA_URL: vikunja });
     db = new PgDatabase(config.databaseUrl);
+    token = await testVikunjaToken(config.vikunja);
     adapter = new VikunjaAdapter(config.vikunja, db);
-    const login = await fetch(`${vikunja}/api/v2/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: config.vikunja.username, password: config.vikunja.password }) });
-    expect(login.status).toBe(200);
-    token = (await login.json() as { token: string }).token;
   });
   afterAll(async () => { await db?.close(); });
 
-  it('serves canonical M1 health and honest setup/status without credentials', async () => {
+  it('serves canonical composed health and honest fresh setup/status without credentials', async () => {
+    // Other explicitly opted-in lifecycle tests may have just restarted this
+    // synthetic PostgreSQL. Wait for the composed workers' documented recovery,
+    // then retain the exact steady-state assertions below.
+    let recovered=false;
+    for(let i=0;i<100;i++){
+      const current=await fetch(`${backend}/api/status`).then(r=>r.json());
+      if(current.components.database.state==='ready'&&current.components.vikunja.state==='ready'&&current.components.workflow.code==='provider_pending_or_unavailable'){recovered=true;break;}
+      await new Promise(r=>setTimeout(r,50));
+    }
+    expect(recovered).toBe(true);
     const info = await api('/info');
     expect((info['auth'] as { local: { registration_enabled: boolean } }).local.registration_enabled).toBe(false);
     const registration = await fetch(`${vikunja}/api/v2/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'qa_must_not_register', email: 'qa-registration@localhost.invalid', password: 'QA-SYNTHETIC-NOT-A-REAL-PASSWORD' }) });
@@ -54,21 +63,21 @@ describe.skipIf(!project)('independent QA M1 actual PostgreSQL/Vikunja and HTTP'
     const ready = await fetch(`${backend}/health/ready`);
     expect(ready.status).toBe(503);
     const readiness = await ready.json() as { modules: Array<{ name: string; state: string; code: string }> };
-    expect(readiness.modules).toMatchObject([{ name: 'platform', state: 'degraded', code: 'telegram_m2_pending' }]);
+    expect(readiness.modules).toMatchObject([{ name: 'platform', state: 'degraded', code: 'login_required' },{name:'workflow',state:'degraded',code:'provider_pending_or_unavailable'}]);
     const statusResponse = await fetch(`${backend}/api/status`);
     expect(statusResponse.headers.get('cache-control')).toBe('no-store');
     const statusText = await statusResponse.text();
     const status = JSON.parse(statusText);
     expect(status.components.database.state).toBe('ready');
     expect(status.components.vikunja.state).toBe('ready');
-    expect(status.components.telegram.code).toBe('telegram_m2_pending');
-    for (const provider of ['extraction', 'jev']) expect(status.components[provider]).toMatchObject({ state: 'degraded', code: 'not_checked' });
+    expect(status.components.telegram).toMatchObject({state:'unconfigured',code:'login_required'});
+    for (const provider of ['extraction', 'jev']) expect(status.components[provider]).toMatchObject({ state: 'unconfigured', code: 'missing_key' });
     expect(status).toMatchObject({ accountBound: false, imports: [], replayPending: 0, analysisPending: 0, proposalsPending: 0 });
     const page = await fetch(`${backend}/`);
     expect(page.status).toBe(200);
     expect(page.headers.get('cache-control')).toBe('no-store');
     const pageText = await page.text();
-    expect(pageText).toContain('No Telegram messages are being read or sent.');
+    expect(pageText).toContain('Telegram onboarding');
     for (const secret of [...secrets, token]) expect((statusText + pageText).includes(secret), 'credential absent from public setup/status').toBe(false);
     const pending = await fetch(`${backend}/api/telegram/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ step: 'code', code: 'SYNTHETIC-NOT-A-REAL-CODE' }) });
     expect(pending.status).toBe(503);

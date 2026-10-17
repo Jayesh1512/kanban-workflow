@@ -19,6 +19,7 @@ import type { Database, PlatformServices, RuntimeConfig, SqlExecutor, TelegramPo
 import { inputFixture, jobId, sourceText } from '../intelligence/fixtures.js';
 import { seedJob } from './database.js';
 import { workflowHarness } from './harness.js';
+import { testVikunjaToken } from '../vikunja-test-auth.js';
 
 const project = process.env['WORKFLOW_TEST_PROJECT'];
 function deferred() { let resolve!: () => void; const promise = new Promise<void>((r) => { resolve = r; }); return { promise, resolve }; }
@@ -27,16 +28,14 @@ describe.skipIf(!project)('M3.2 actual PostgreSQL + pinned Vikunja', () => {
   let config: RuntimeConfig, admin: PgDatabase;
   const cleanup: (() => Promise<unknown>)[] = [];
   beforeAll(async () => {
-    if (!/^antseed-b-(?:m32|m4)-[a-z0-9-]+$/.test(project!)) throw new Error('Require an isolated Builder B M3.2 synthetic project');
+    if (!/^antseed-(?:b-(?:m32|m4)|qa-m1-system)-[a-z0-9-]+$/.test(project!)) throw new Error('Require an explicitly isolated workflow/system synthetic project');
     const args = ['compose', '-p', project!, '-f', 'compose.yaml']; const override = process.env['WORKFLOW_TEST_COMPOSE_OVERRIDE']; if (override) args.push('-f', override);
     // Capture runtime-generated test service secrets only in memory; never print them.
     const bundle = parse(execFileSync('docker', [...args, 'exec', '-T', 'vikunja', 'cat', '/run/antseed/runtime.env'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
     config = await loadRuntimeConfig({ ...bundle, AI_ENV_PATH: '/workflow-test-no-ai-file', DATABASE_URL: bundle['DATABASE_URL']!.replace('postgres:5432', `127.0.0.1:${process.env['WORKFLOW_TEST_PG_PORT']}`), VIKUNJA_URL: process.env['WORKFLOW_TEST_VIKUNJA_URL']! });
     // One login for this synthetic suite avoids hitting Vikunja's native login limiter
     // merely because isolated SQL schemas use separate adapter instances.
-    const response = await fetch(`${config.vikunja.baseUrl}/api/v2/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: config.vikunja.username, password: config.vikunja.password }) });
-    if (!response.ok) throw new Error(`Synthetic Vikunja fixture login failed HTTP ${response.status}`);
-    const login = await response.json() as { token: string }; config.vikunja.apiToken = login.token;
+    await testVikunjaToken(config.vikunja);
     admin = new PgDatabase(config.databaseUrl);
   });
   afterEach(async () => { for (const close of cleanup.splice(0)) await close(); });

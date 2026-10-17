@@ -15,6 +15,8 @@ const server = createServer(async (req, res) => {
   if (mode === 'gateway403') { res.statusCode = 403; res.end(JSON.stringify({ error: { message: 'QA-KEY-DO-NOT-REFLECT', type: 'no_providers_available', param: { name: 'RestrictedModelsError' } } })); return; }
   if (mode === 'echo') {
     const input = JSON.parse(body.input[1].content);
+    // Reconstruct omitted duplicate text independently from its scoped source.
+    for(const e of input.evidence)if(e.excerpt===undefined)e.excerpt=input.messages.find((m:any)=>m.chatId===e.chatId&&m.id===e.messageId&&m.version===e.messageVersion)?.text;
     // Authored stand-in copies source text; it is NOT an LLM or a semantic classifier.
     const output = JSON.stringify(echoExtraction(input));
     res.end(JSON.stringify({ model: body.model, status: 'completed', error: null, incomplete_details: null, output: [{ type: 'reasoning' }, { type: 'message', content: [{ type: 'output_text', text: output.slice(0, 40) }, { type: 'output_text', text: output.slice(40) }] }], usage: { input_tokens: 11, output_tokens: 9 } })); return;
