@@ -17,6 +17,17 @@ async function checkpoint() { const input = await queue.loadInput(job.id); const
 const entitlement = { ok: false as const, code: 'entitlement' as const, retryable: false, retryAt: null, detail: 'Never persist synthetic-key or raw body' };
 
 describe('durable analysis checkpoint and immutable lease fencing (isolated PGlite)', () => {
+  it('replays only the latest completed decision of an explicit chat, preserving its extraction and idempotency',async()=>{
+    let value=await checkpoint();await queue.saveExtraction(value,job.claimToken);await queue.complete(job.id,decisionFixture(value.extraction.evidenceIds[0]),provenance('vercel'),job.claimToken);
+    await seedJob(db,'00000000-0000-4000-8000-000000000099');job=(await queue.claim({workerId:'current',leaseMs:60000}))!;
+    value=await checkpoint();await queue.saveExtraction(value,job.claimToken);await queue.complete(job.id,decisionFixture(value.extraction.evidenceIds[0]),provenance('vercel'),job.claimToken);
+    await expect(queue.replayUnavailable({idempotencyKey:'bad-global',includeCompletedDecisions:true})).rejects.toThrow('one explicit chat');
+    const request={idempotencyKey:'rubric-repair',chatId:'-1001',includeCompletedDecisions:true};
+    expect(await queue.replayUnavailable(request)).toEqual({queued:1});expect(await queue.replayUnavailable(request)).toEqual({queued:1});
+    expect((await db.query('SELECT status,decision,extraction FROM analysis_jobs WHERE id=$1',[job.id])).rows[0]).toMatchObject({status:'pending',decision:null,extraction:value.extraction});
+    expect((await db.query("SELECT count(*)::int n FROM analysis_jobs WHERE status='pending'")).rows[0]!.n).toBe(1);
+    expect((await db.query('SELECT id FROM proposals')).rows).toHaveLength(0);expect((await db.query('SELECT id FROM mutations')).rows).toHaveLength(0);
+  });
   it('retains native OpenAI decision provenance and creates an OpenAI pending-only proposal after the additive migration', async () => {
     const migration = await readFile(new URL('../../db/migrations/202610170002_decision_origins.sql', import.meta.url), 'utf8');
     for (const statement of migration.split(';').filter(s => s.trim())) await db.query(statement);

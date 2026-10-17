@@ -1,11 +1,23 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { workflowHarness } from './harness.js';
 import type { ControlMessage } from '../../src/shared/ports.js';
+import { LANES } from '../../src/shared/domain.js';
+import { decisionFixture } from '../intelligence/fixtures.js';
+import { randomUUID } from 'node:crypto';
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => { await Promise.all(cleanups.splice(0).map((close) => close())); });
 async function setup() { const h = await workflowHarness(); cleanups.push(() => h.db.close()); return h; }
 
 describe('durable proposal decisions and control correlation', () => {
+  it.each(LANES)('durably notifies a pending %s recommendation without approving or moving (authored SQL intent)',async target=>{
+    const h=await setup();await h.configureControl();const from=target==='To be started'?'Work in progress':'To be started';await h.db.query('UPDATE tickets SET lane=$2 WHERE id=$1',[h.ticket.id,from]);
+    const decision=decisionFixture(h.evidenceId);decision.diagnostics.rubricVersion='openai.decisions.antseed.v3';decision.lane={outcome:'propose',targetLane:target,evidenceIds:[h.evidenceId],reason:'Caller-authored stage recommendation, not model classification',nextAction:null};
+    const input={jobId:randomUUID(),ticketId:h.ticket.id,expectedStageVersion:0,decision};
+    await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,input));await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,input));
+    const rows=(await h.db.query('SELECT p.decision,p.apply_state,p.origin,o.state,o.text FROM proposals p JOIN control_outbox o ON o.proposal_id=p.id')).rows;
+    expect(rows).toHaveLength(1);expect(rows[0]).toMatchObject({decision:'pending',apply_state:'not_requested',origin:'openai',state:'pending'});expect(rows[0]!.text).toContain(`${from} → ${target}`);expect(rows[0]!.text).toContain('Reply approve');
+    expect((await h.records.getTicket(h.ticket.id)).lane).toBe(from);expect(await h.service.applyNext()).toBeNull();expect(h.moves()).toBe(0);expect((await h.db.query('SELECT id FROM mutations')).rows).toHaveLength(0);
+  });
   it('retains missing-control proposals, later enqueues one stable marked intent', async () => {
     const h = await setup(); const p = await h.propose(); expect(p).toMatchObject({ decision: 'pending', applyState: 'not_requested', lastError: 'control_chat_missing' });
     expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(0);

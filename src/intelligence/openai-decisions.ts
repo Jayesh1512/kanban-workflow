@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import type { AnalysisInput, Extraction, JevDecision, Json } from '../shared/domain.js';
+import { LANES, type AnalysisInput, type Extraction, type JevDecision, type Json } from '../shared/domain.js';
 import type { JevPort, ProviderResult, RuntimeConfig } from '../shared/ports.js';
 import { buildJevRequest, decisionFromAnswers, validateAnswers } from './jev.js';
 import { ProviderHttp, type HttpOptions } from './http.js';
 import { usageProjection } from './openai.js';
 import { validateExtraction } from './validation.js';
 
-export const OPENAI_DECISIONS_VERSION = 'openai.decisions.antseed.v2';
+export const OPENAI_DECISIONS_VERSION = 'openai.decisions.antseed.v3';
 const probability = z.number().min(0).max(1);
 const nativeResponse = z.object({ model: z.literal('gpt-6-luna'), usage: z.unknown().optional(), answers: z.array(z.discriminatedUnion('type', [
   z.object({ type: z.literal('predicate'), name: z.string(), probability }),
@@ -21,10 +21,16 @@ export function buildOpenAIDecisionsRequest(input: AnalysisInput & { extraction:
   const rubric = buildJevRequest(input, 'gpt-6-luna');
   const questions = Object.entries(rubric.questions).map(([name, q]) => {
     if (q.type === 'noul') return { name, type: 'predicate' as const, instructions: q.instructions };
-    if (q.type === 'choice') return { name, type: 'choice' as const, instructions: q.instructions, choices: Object.entries(q.criteria).map(([value, description]) => ({ value, description })) };
+    if (q.type === 'choice') return { name, type: 'choice' as const, instructions: q.instructions, choices: Object.entries(q.criteria).map(([value, description]) => ({ value:name==='lane'&&/^lane_\d+$/.test(value)?LANES[Number(value.slice(5))]!:value, description })) };
     return { name, type: 'score' as const, instructions: q.instructions, levels: q.criteria.map(label => ({ label })) };
   });
-  return { model: 'gpt-6-luna' as const, input: JSON.stringify({ state: rubric.state }), questions };
+  // Keep original text and provenance, but put the direct conversation before
+  // directory/SQL scaffolding. Large evidence DTOs otherwise repeat each quote
+  // and obscure the short recipient response being classified.
+  const cited=new Set(input.extraction.evidenceIds);
+  const messages=input.messages.filter(m=>!m.deletedAt&&input.evidence.some(e=>cited.has(e.id)&&!e.invalidatedAt&&e.chatId===m.chatId&&e.messageId===m.id&&e.messageVersion===m.version)).sort((a,b)=>Date.parse(a.sentAt)-Date.parse(b.sentAt)||a.id-b.id);
+  const conversation=messages.map(m=>({messageId:m.id,sentAt:m.sentAt,author:m.senderId===input.accountSelfId?'AntSeed connected account':input.extraction.contacts.some(c=>c.affiliation==='internal'&&c.telegramUserIds.includes(m.senderId??''))?'AntSeed teammate':'Other participant',senderId:m.senderId,forwarded:m.forward.isForwarded,text:m.text}));
+  return { model: 'gpt-6-luna' as const, input: JSON.stringify({state:{currentLane:rubric.state.currentLane,conversation,accountSelfId:input.accountSelfId??null,outreach:rubric.state.outreach,chat:input.chat,ticket:input.ticket,companies:input.companies,extraction:input.extraction,stagePolicy:rubric.state.stagePolicy,messages:input.messages,rubricVersion:OPENAI_DECISIONS_VERSION}}), questions };
 }
 
 export function parseOpenAIDecisions(raw: unknown, input: AnalysisInput & { extraction: Extraction }): JevDecision {
@@ -39,7 +45,14 @@ export function parseOpenAIDecisions(raw: unknown, input: AnalysisInput & { extr
     if (q.type === 'noul' && a.type === 'predicate') answers[name] = { type: 'noul', noul: a.probability };
     else if (q.type === 'choice' && a.type === 'choice') {
       if (new Set(a.probabilities.map(p => p.value)).size !== a.probabilities.length) throw new Error('Duplicate choice probabilities');
-      answers[name] = { type: 'choice', choice: a.choice, confidence: a.confidence, probabilities: Object.fromEntries(a.probabilities.map(p => [p.value, p.probability])) };
+      const compatibilityValue=(value:string)=>{
+        if(name!=='lane')return value;
+        const index=LANES.findIndex(lane=>lane===value);
+        if(index>=0)return 'lane_'+index;
+        if(value==='no_change'||value==='uncertain')return value;
+        throw new Error('Invalid native lane label');
+      };
+      answers[name] = { type: 'choice', choice: compatibilityValue(a.choice), confidence: a.confidence, probabilities: Object.fromEntries(a.probabilities.map(p => [compatibilityValue(p.value), p.probability])) };
     } else if (q.type === 'score' && a.type === 'score') {
       if (new Set(a.probabilities.map(p => p.value)).size !== a.probabilities.length || a.probabilities.some(p => q.criteria[p.value] !== p.label)) throw new Error('Invalid score labels/levels');
       answers[name] = { type: 'score', score: a.score, confidence: a.confidence, probabilities: Object.fromEntries(a.probabilities.map(p => [String(p.value), p.probability])), legend: Object.fromEntries(a.probabilities.map(p => [String(p.value), p.label])) };

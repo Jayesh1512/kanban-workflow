@@ -1,0 +1,1281 @@
+{
+  "at": "2026-10-17T16:14:22.722Z",
+  "synthetic": true,
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "rubricVersion": "openai.decisions.antseed.v3",
+  "total": 47,
+  "passed": 47,
+  "limits": "Authored synthetic extraction and conversation, actual Decisions API. No Telegram, database, board, or approval calls. Bounded sample, not exhaustive model accuracy.",
+  "cases": [
+    {
+      "id": "own-followup",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.11,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.89,
+          "uncertain": 0
+        },
+        "confidence": 0.87
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_9fb6eaae9b1847718af84badc5e832fb"
+    },
+    {
+      "id": "outbound-only",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.09,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.91,
+          "uncertain": 0
+        },
+        "confidence": 0.9
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_a1781b55fe7a486c9a4930fef6d73505"
+    },
+    {
+      "id": "exact-short-interest",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_9055d21351e845ca8caa9184b9a7ee09"
+    },
+    {
+      "id": "positive-interest",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_16dda75abe8a45fa838d27142f42170e"
+    },
+    {
+      "id": "pricing-question",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_5cbdb4a38d28410381e8975eb286bd7d"
+    },
+    {
+      "id": "docs-request",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_bfb8ad6c913d40419835a644c4d91cd1"
+    },
+    {
+      "id": "engineering-review",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_f1fa41a2d4914f35b0661f968eeeb5c8"
+    },
+    {
+      "id": "hindi-interest",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_5662f5a98d024e43912e43b1adeedeb9"
+    },
+    {
+      "id": "hinglish-interest",
+      "from": "To be started",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_b16e75da149f45b6ae22460d54b5f23e"
+    },
+    {
+      "id": "ack-ok",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.23,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.77,
+          "uncertain": 0
+        },
+        "confidence": 0.74
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_5266836e28444930a3af268f1b341e20"
+    },
+    {
+      "id": "ack-thanks",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.12,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.88,
+          "uncertain": 0
+        },
+        "confidence": 0.86
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_9a0fd7669b39416c91f7d5abddb12f32"
+    },
+    {
+      "id": "ack-emoji",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.24,
+          "lane_1": 0.01,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.75,
+          "uncertain": 0
+        },
+        "confidence": 0.71
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_689e34612519409281bcc518adb8e174"
+    },
+    {
+      "id": "silence-ownfollowup",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.12,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.88,
+          "uncertain": 0
+        },
+        "confidence": 0.86
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_bf7a5bbf395a4ed28888e6c187ca2114"
+    },
+    {
+      "id": "internal-interest",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0.05,
+          "lane_1": 0.69,
+          "lane_2": 0.01,
+          "lane_3": 0.01,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.16,
+          "uncertain": 0.08
+        },
+        "confidence": 0.65
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_ee01420fe20c4e75be022fc9a6e3801f"
+    },
+    {
+      "id": "forwarded-live-claim",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.1,
+          "lane_1": 0.01,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.88,
+          "uncertain": 0.01
+        },
+        "confidence": 0.86
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_9de77c7aef724dbd80b5ab5a36129fba"
+    },
+    {
+      "id": "deleted-interest",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.15,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0.01,
+          "lane_5": 0,
+          "no_change": 0.84,
+          "uncertain": 0
+        },
+        "confidence": 0.82
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.01
+      },
+      "requestId": "req_bce48169c5fa45209304df00de4fa533"
+    },
+    {
+      "id": "uncited-interest",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 1,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_dccc6a50ca6549f78a6cb432d21c4895"
+    },
+    {
+      "id": "old-social-reply",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.25,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.75,
+          "uncertain": 0
+        },
+        "confidence": 0.71
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_0afd604a126b4265a71a7b023036e3bb"
+    },
+    {
+      "id": "review-still-wip",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.16,
+          "lane_2": 0.07,
+          "lane_3": 0,
+          "lane_4": 0.01,
+          "lane_5": 0,
+          "no_change": 0.75,
+          "uncertain": 0
+        },
+        "confidence": 0.71
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.06
+      },
+      "requestId": "req_cb8e109fbc4a4e3a92817f7defce80b1"
+    },
+    {
+      "id": "future-testing",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0.02,
+          "lane_2": 0.04,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.94,
+          "uncertain": 0
+        },
+        "confidence": 0.93
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.14
+      },
+      "requestId": "req_817ab96884224b9986c045c0bfe01e05"
+    },
+    {
+      "id": "actual-testing",
+      "from": "Work in progress",
+      "expected": "Integrations",
+      "actual": "Integrations",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.01,
+          "lane_2": 0.93,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.05,
+          "uncertain": 0
+        },
+        "confidence": 0.92
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_8c260c6239c446dd92b357f23fd1e76b"
+    },
+    {
+      "id": "hindi-testing",
+      "from": "Work in progress",
+      "expected": "Integrations",
+      "actual": "Integrations",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0.99,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.01,
+          "uncertain": 0
+        },
+        "confidence": 0.99
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_e58944bf2f714b7c8fe82f5383a62b5b"
+    },
+    {
+      "id": "hinglish-testing",
+      "from": "Work in progress",
+      "expected": "Integrations",
+      "actual": "Integrations",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0.98,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.02,
+          "uncertain": 0
+        },
+        "confidence": 0.98
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_dfc75620c8a94767b474bc242a371d67"
+    },
+    {
+      "id": "testing-direct-from-prospect",
+      "from": "To be started",
+      "expected": "Integrations",
+      "actual": "Integrations",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 1,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_a3a0170b05fd4801847a672cfce3e12e"
+    },
+    {
+      "id": "negative-testing",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.02,
+          "lane_1": 0.27,
+          "lane_2": 0.08,
+          "lane_3": 0.15,
+          "lane_4": 0.03,
+          "lane_5": 0.03,
+          "no_change": 0.41,
+          "uncertain": 0.01
+        },
+        "confidence": 0.33
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.46
+      },
+      "requestId": "req_eb81acd343fb4468977188af359366a4"
+    },
+    {
+      "id": "buyer-id-only",
+      "from": "Integrations",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0.02,
+          "lane_1": 0.13,
+          "lane_2": 0.57,
+          "lane_3": 0.01,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.25,
+          "uncertain": 0.02
+        },
+        "confidence": 0.51
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.6
+      },
+      "requestId": "req_58501ff55f5a4c3581dc5f95f49b17b5"
+    },
+    {
+      "id": "production-live",
+      "from": "Integrations",
+      "expected": "Completed",
+      "actual": "Completed",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_5",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.01,
+          "lane_2": 0.03,
+          "lane_3": 0.01,
+          "lane_4": 0,
+          "lane_5": 0.9,
+          "no_change": 0.03,
+          "uncertain": 0.01
+        },
+        "confidence": 0.89
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_e2a39b6067a848dea79a256b26928ab9"
+    },
+    {
+      "id": "production-not-live",
+      "from": "Integrations",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0,
+          "lane_2": 0.82,
+          "lane_3": 0.08,
+          "lane_4": 0.01,
+          "lane_5": 0.01,
+          "no_change": 0.06,
+          "uncertain": 0.01
+        },
+        "confidence": 0.79
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.06
+      },
+      "requestId": "req_1f2b7870016a48859425960f3e906f56"
+    },
+    {
+      "id": "promised-production",
+      "from": "Integrations",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0.04,
+          "lane_1": 0.32,
+          "lane_2": 0.41,
+          "lane_3": 0.01,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.2,
+          "uncertain": 0.02
+        },
+        "confidence": 0.33
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.67
+      },
+      "requestId": "req_a498bc028d6f47fdbd188cc5d9b83767"
+    },
+    {
+      "id": "hindi-production",
+      "from": "Integrations",
+      "expected": "Completed",
+      "actual": "Completed",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_5",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0.01,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0.99,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 0.99
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_d77fd82947904cc7b61adeccb45c3e0b"
+    },
+    {
+      "id": "comarketing-promised",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_5",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.12,
+          "lane_2": 0.09,
+          "lane_3": 0.02,
+          "lane_4": 0,
+          "lane_5": 0.44,
+          "no_change": 0.32,
+          "uncertain": 0
+        },
+        "confidence": 0.36
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.05
+      },
+      "requestId": "req_3fd163556ae948c0b48aea14afd2d5d0"
+    },
+    {
+      "id": "comarketing-complete",
+      "from": "Work in progress",
+      "expected": "Completed",
+      "actual": "Completed",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_5",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 1,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_ebe02a26d9a247ee82b8251eb44cd289"
+    },
+    {
+      "id": "payment-blocker",
+      "from": "Work in progress",
+      "expected": "Blocked",
+      "actual": "Blocked",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_3",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 1,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_b99b3d421e1841cc99712f7eea039ae6"
+    },
+    {
+      "id": "technical-blocker",
+      "from": "Integrations",
+      "expected": "Blocked",
+      "actual": "Blocked",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_3",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0,
+          "lane_2": 0.09,
+          "lane_3": 0.85,
+          "lane_4": 0.01,
+          "lane_5": 0,
+          "no_change": 0.04,
+          "uncertain": 0
+        },
+        "confidence": 0.83
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_f79a34d7a00c435d8b020ae4928cc02b"
+    },
+    {
+      "id": "hindi-blocker",
+      "from": "Integrations",
+      "expected": "Blocked",
+      "actual": "Blocked",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_3",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 1,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_6878183143d140a3bb08efaaebbb659a"
+    },
+    {
+      "id": "question-not-blocker",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.07,
+          "lane_2": 0.01,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.9,
+          "uncertain": 0.01
+        },
+        "confidence": 0.89
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.12
+      },
+      "requestId": "req_bdcf8f2459b943029846550be526ec1c"
+    },
+    {
+      "id": "blocked-still-blocked",
+      "from": "Blocked",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_3",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0.71,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.29,
+          "uncertain": 0
+        },
+        "confidence": 0.67
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.12
+      },
+      "requestId": "req_973ee365fbd6499b847fdbc8c1965828"
+    },
+    {
+      "id": "blocked-resume-review",
+      "from": "Blocked",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0.02,
+          "lane_1": 0.98,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 0.98
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_fdd3583e31d54dcdaebda61c334568ea"
+    },
+    {
+      "id": "blocked-resume-testing",
+      "from": "Blocked",
+      "expected": "Integrations",
+      "actual": "Integrations",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_2",
+        "probabilities": {
+          "lane_0": 0.02,
+          "lane_1": 0.03,
+          "lane_2": 0.88,
+          "lane_3": 0.01,
+          "lane_4": 0.01,
+          "lane_5": 0.01,
+          "no_change": 0.04,
+          "uncertain": 0
+        },
+        "confidence": 0.86
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_248bed029cca4ba9ba46e02ecd3ce579"
+    },
+    {
+      "id": "blocked-future-fix",
+      "from": "Blocked",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0.01,
+          "lane_3": 0.15,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0.84,
+          "uncertain": 0
+        },
+        "confidence": 0.82
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "requestId": "req_3cecad44e88a4c47a70847e143119b86"
+    },
+    {
+      "id": "explicit-archive",
+      "from": "Work in progress",
+      "expected": "Archived",
+      "actual": "Archived",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_4",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 1,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_68a69fb5289142bba8923a7c6e65f4e4"
+    },
+    {
+      "id": "hindi-archive",
+      "from": "Work in progress",
+      "expected": "Archived",
+      "actual": "Archived",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_4",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 1,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_d9c079c36f43468ba31434b8d7887c07"
+    },
+    {
+      "id": "archive-reopen",
+      "from": "Archived",
+      "expected": "Work in progress",
+      "actual": "Work in progress",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_1",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.99,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 0.99
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_c18b4a5d38db4f2f940930ad4cd20475"
+    },
+    {
+      "id": "archived-ack",
+      "from": "Archived",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_0",
+        "probabilities": {
+          "lane_0": 0.72,
+          "lane_1": 0.02,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0.04,
+          "lane_5": 0,
+          "no_change": 0.22,
+          "uncertain": 0
+        },
+        "confidence": 0.68
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_7ccf5b8aadc748f8a2d20769694dfd08"
+    },
+    {
+      "id": "completed-no-regression",
+      "from": "Completed",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 0.01,
+          "lane_4": 0,
+          "lane_5": 0.34,
+          "no_change": 0.63,
+          "uncertain": 0.01
+        },
+        "confidence": 0.58
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.05
+      },
+      "requestId": "req_cffbe2a77e59425991c778ad05a44c3e"
+    },
+    {
+      "id": "completed-new-blocker",
+      "from": "Completed",
+      "expected": "Blocked",
+      "actual": "Blocked",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_3",
+        "probabilities": {
+          "lane_0": 0,
+          "lane_1": 0,
+          "lane_2": 0,
+          "lane_3": 1,
+          "lane_4": 0,
+          "lane_5": 0,
+          "no_change": 0,
+          "uncertain": 0
+        },
+        "confidence": 1
+      },
+      "support": {
+        "type": "noul",
+        "noul": 1
+      },
+      "requestId": "req_a93192ef581e4e699ef4f85b665113d5"
+    },
+    {
+      "id": "prompt-injection",
+      "from": "To be started",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.34,
+          "lane_1": 0.01,
+          "lane_2": 0,
+          "lane_3": 0,
+          "lane_4": 0.01,
+          "lane_5": 0,
+          "no_change": 0.64,
+          "uncertain": 0
+        },
+        "confidence": 0.59
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0
+      },
+      "requestId": "req_d6b524c9dab64e0f96da2d0c99895a98"
+    }
+  ]
+}

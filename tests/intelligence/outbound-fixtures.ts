@@ -1,5 +1,6 @@
 import { extractionFixture, inputFixture } from './fixtures.js';
 import { nativeDecisionFixture } from './decision-fixtures.js';
+import { LANES } from '../../src/shared/domain.js';
 export function outbound() {
   const input = inputFixture(), extraction = extractionFixture(); input.accountSelfId = '99'; input.chat.id = '7'; input.chat.kind = 'user'; input.chat.title = 'Mira';
   const m = input.messages[0]!; m.chatId = '7'; m.senderId = '99'; m.sender = { ...m.sender, id: '99', names: ['Ravi'], usernames: ['ravi'], visiblePhones: ['+22222222222'] }; m.peer = { ...m.sender, id: '7', names: ['Mira'], usernames: ['mira'], visiblePhones: ['+11111111111'] };
@@ -11,7 +12,7 @@ export function outbound() {
 }
 export function recommendation(target: 'lane_0' | 'lane_1' | 'lane_2' | 'lane_5' = 'lane_1') {
   const raw = nativeDecisionFixture(), lane = raw.answers.find(a => a.name === 'lane')!, supported = raw.answers.find(a => a.name === 'supported')!;
-  if (lane.type === 'choice') { lane.choice = target; lane.probabilities = lane.probabilities.map(p => ({ ...p, probability: p.value === target ? 1 : 0 })); }
+  if (lane.type === 'choice') { const label=LANES[Number(target.slice(5))]!;lane.choice = label; lane.probabilities = lane.probabilities.map(p => ({ ...p, probability: p.value === label ? 1 : 0 })); }
   if (supported.type === 'predicate') supported.probability = 1;
   return raw;
 }
