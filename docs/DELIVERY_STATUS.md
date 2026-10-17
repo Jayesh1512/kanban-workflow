@@ -371,7 +371,23 @@ in6files, including the durable end-to-end case. Strict TS/build passed again. D
 OrbStack reports Running but Docker daemon queries and personal backend liveness
 time out. No global engine restart or unrelated stack action was attempted.
 
-The code is complete and committed for review; deployment awaits explicit user
-approval to restart the unresponsive OrbStack engine, because doing so would
-briefly interrupt unrelated local Docker/Kubernetes workloads. No global restart
-was performed without that approval.
+The user subsequently approved “Restart and deploy.” OrbStack was gracefully
+stopped and started without force; Docker recovered and the previously running
+Compose projects resumed. Only the personal backend was rebuilt/recreated with
+`docker compose -p antseed-personal up -d --build --no-deps backend`. No volumes
+were removed or other project services recreated. Deployment of6f11aa9 completed
+on2026-10-17; running image
+`sha256:99c21e5b4af68fac0d5248e8a82a82762f347a8e095246a0c53de3930c67ebbf`
+is healthy. Its three changed compiled outreach/decision/analysis file hashes
+match the tested host build; an in-container synthetic outreach check reports
+AntSeed-initiated/awaiting-reply with captured-message coverage.
+
+At2026-10-17T15:10:10Z, PostgreSQL, Vikunja, Telegram login, sync and control were
+READY; the account remains bound and the original Approvals operation remains
+configured/excluded from business ingestion. Backend liveness and native Vikunja
+health return200. Extraction reports timeout; the decision provider has not yet
+been checked in the restarted worker and workflow remains in its first work
+phase, so readiness honestly returns503. No live enquiry, Telegram test send,
+approval or stage movement was performed for deployment verification. The source,
+SQL-engine and synthetic live-provider evidence above remains separate from
+an actual user outbound enquiry/reply acceptance test.
