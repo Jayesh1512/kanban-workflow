@@ -8,9 +8,12 @@ import { inputFixture, jobId, sourceText } from '../intelligence/fixtures.js';
 export async function fixtureDatabase() {
   const engine = new PGlite();
   await engine.exec(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
+  await engine.exec(await readFile(new URL('../../db/migrations/202610170001_telegram_operations.sql', import.meta.url), 'utf8'));
+  await engine.exec(await readFile(new URL('../../db/migrations/202610170002_decision_origins.sql', import.meta.url), 'utf8'));
+  await engine.exec(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
   let tail: Promise<unknown> = Promise.resolve();
   const executor: SqlExecutor = { async query<R extends QueryResultRow = QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<R>> {
-    const result = await engine.query<R>(text, values); return { rows: result.rows, rowCount: result.affectedRows ?? result.rows.length, fields: [], command: '', oid: 0 };
+    const result = await engine.query<R>(text, values); return { rows: result.rows, rowCount: result.rows.length || result.affectedRows || 0, fields: [], command: '', oid: 0 };
   } };
   const db: Database = { ...executor, async transaction<T>(work: (tx: SqlExecutor) => Promise<T>) {
     const result = tail.then(async () => { await engine.exec('BEGIN'); try { const value = await work(executor); await engine.exec('COMMIT'); return value; } catch (error) { await engine.exec('ROLLBACK'); throw error; } }); tail = result.catch(() => {}); return result;

@@ -8,7 +8,7 @@ import type { ServiceStatus } from '../shared/domain.js';
 import { createOpenAIExtractor } from '../intelligence/openai.js';
 import { createOpenAIDecisions } from '../intelligence/openai-decisions.js';
 import { createJevAdapter } from '../intelligence/jev.js';
-import { SqlAnalysisQueue } from './analysis.js';
+import { SqlAnalysisQueue, type AnalysisClaimOptions } from './analysis.js';
 import { RecordsRepository } from './records.js';
 import { processAnalysisOnce } from './processor.js';
 import { ProposalRepository } from './proposals.js';
@@ -29,7 +29,7 @@ export function createWorkflowServices(platform: PlatformServices) {
   const extraction = createOpenAIExtractor(platform.config.extraction, { clock: platform.clock });
   const jev = withDurableJevBreaker(platform.db, (platform.config.jev.provider === 'openai' ? createOpenAIDecisions : createJevAdapter)(platform.config.jev, { clock: platform.clock }), platform.config, platform.clock);
   return { records, analysis, extraction, jev, proposals, proposalRecords, mutations, projector,
-    processOnce: (options: { workerId: string; leaseMs: number; signal?: AbortSignal }) => processAnalysisOnce({ queue: analysis, extraction, jev }, options) };
+    processOnce: (options: AnalysisClaimOptions & { signal?: AbortSignal }) => processAnalysisOnce({ queue: analysis, extraction, jev }, options) };
 }
 
 /** Register before platform start; run bounded work only after its complete migration ledger exists. */
@@ -40,6 +40,8 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   const expectedMigrations = new Map(await Promise.all(names.map(async (name) => [name, createHash('sha256').update(await readFile(new URL(name, directory))).digest('hex')] as const)));
   let stopping: Promise<void> | null = null;
   let started = false, stopped = false, timer: ReturnType<typeof setTimeout> | null = null, task: Promise<void> | null = null;
+  const analysisTasks = new Set<Promise<void>>(), analysisTimers = new Set<ReturnType<typeof setTimeout>>();
+  const analysisFailed = [false, false];
   let transports: ReturnType<typeof registerTransports> | null = null;
   let unsubscribe: (() => void) | null = null; const replies = new Set<Promise<void>>(); const abort = new AbortController();
   let state: ServiceStatus = { state: 'connecting', code: 'not_started', detail: 'Workflow has not started', checkedAt: platform.clock.now().toISOString() };
@@ -75,11 +77,11 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       await phase(() => services.proposalRecords.flushPendingControl(20));
       await phase(() => services.projector.projectBatch(5, abort.signal));
       await phase(() => services.proposals.applyNext(abort.signal));
-      await phase(() => services.processOnce({ workerId: 'workflow', leaseMs: Math.max(120000, platform.config.extraction.timeoutMs * platform.config.extraction.maxAttempts + platform.config.jev.timeoutMs * platform.config.jev.maxAttempts + 60000), signal: abort.signal }));
       const providers = await Promise.all([services.extraction.status(), services.jev.status()]);
       const waiting = (await platform.db.query("SELECT 1 FROM proposals WHERE decision='pending' AND last_error='control_chat_missing' LIMIT 1")).rows.length > 0;
-      const degraded = phaseFailed || waiting || providers.some((p) => p.state !== 'ready');
-      state = { state: degraded ? 'degraded' : 'ready', code: waiting ? 'control_chat_missing' : phaseFailed ? 'workflow_retry' : degraded ? 'provider_pending_or_unavailable' : null,
+      const workerFailed = phaseFailed || analysisFailed.some(Boolean);
+      const degraded = workerFailed || waiting || providers.some((p) => p.state !== 'ready');
+      state = { state: degraded ? 'degraded' : 'ready', code: waiting ? 'control_chat_missing' : workerFailed ? 'workflow_retry' : degraded ? 'provider_pending_or_unavailable' : null,
         detail: waiting ? 'Pending proposals await an explicitly configured control group' : degraded ? 'Workers running; provider configuration/access remains incomplete' : 'Workflow workers running', checkedAt: platform.clock.now().toISOString() };
     } catch {
       if (!abort.signal.aborted) state = { state: 'degraded', code: 'workflow_retry', detail: 'Bounded workflow task failed; durable state retained for retry', checkedAt: platform.clock.now().toISOString() };
@@ -89,14 +91,38 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
     if (stopped) return;
     task = tick().finally(() => { task = null; if (!stopped) { timer = setTimeout(schedule, 1000); timer.unref(); } });
   }
+  function scheduleAnalysis(slot: 0 | 1): void {
+    if (stopped) return;
+    // One reserved live slot cannot be occupied by imported historical work.
+    // The general slot still uses durable fair ordering and SKIP LOCKED claims.
+    const work = (async () => {
+      try {
+        if (await migrationsReady() !== 'ready' || abort.signal.aborted) return;
+        await seedKnownJevRestriction(platform.db, platform.config, platform.clock);
+        abort.signal.throwIfAborted();
+        await services.processOnce({ workerId: slot === 0 ? 'workflow:history' : 'workflow:outbound', recentOutboundOnly: slot === 1,
+          leaseMs: Math.max(120000, platform.config.extraction.timeoutMs * platform.config.extraction.maxAttempts + platform.config.jev.timeoutMs * platform.config.jev.maxAttempts + 60000), signal: abort.signal });
+        analysisFailed[slot] = false;
+      } catch { if (!abort.signal.aborted) analysisFailed[slot] = true; }
+    })();
+    analysisTasks.add(work);
+    void work.finally(() => {
+      analysisTasks.delete(work);
+      if (!stopped) {
+        const next = setTimeout(() => { analysisTimers.delete(next); scheduleAnalysis(slot); }, 1000);
+        analysisTimers.add(next); next.unref();
+      }
+    });
+  }
   function stop(): Promise<void> {
     if (stopping) return stopping;
     stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer);
+    for (const analysisTimer of analysisTimers) clearTimeout(analysisTimer); analysisTimers.clear();
     const errors: unknown[] = [];
     try { unsubscribe?.(); } catch (error) { errors.push(error); } finally { unsubscribe = null; }
     // Publish one shutdown promise for preClose, root onClose and direct callers.
     // All captured work drains even if an earlier cleanup action fails.
-    stopping = Promise.allSettled([transports?.close(), task, ...replies]).then((results) => {
+    stopping = Promise.allSettled([transports?.close(), task, ...analysisTasks, ...replies]).then((results) => {
       for (const result of results) if (result.status === 'rejected') errors.push(result.reason);
       if (errors.length) throw new AggregateError(errors, 'Workflow shutdown failed');
     });
@@ -126,7 +152,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         try { await reply; } finally { replies.delete(reply); }
       });
     },
-    async start() { if (started || stopped) return; started = true; schedule(); },
+    async start() { if (started || stopped) return; started = true; schedule(); scheduleAnalysis(0); scheduleAnalysis(1); },
     stop,
     async status() { return { ...state }; },
   };

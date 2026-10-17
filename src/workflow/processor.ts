@@ -1,9 +1,9 @@
 import type { AnalysisQueue, ExtractionPort, JevPort } from '../shared/ports.js';
 import { DomainError } from '../shared/api.js';
-import { inputHash } from './analysis.js';
+import { inputHash, type AnalysisClaimOptions } from './analysis.js';
 
 /** Bounded single job. Callers own scheduling/readiness; there is no hidden loop. */
-export async function processAnalysisOnce(services: { queue: AnalysisQueue; extraction: ExtractionPort; jev: JevPort }, options: { workerId: string; leaseMs: number; signal?: AbortSignal }): Promise<boolean> {
+export async function processAnalysisOnce(services: { queue: AnalysisQueue; extraction: ExtractionPort; jev: JevPort }, options: AnalysisClaimOptions & { signal?: AbortSignal }): Promise<boolean> {
   const job = await services.queue.claim(options); if (!job) return false;
   const token = job.claimToken; // Immutable closure value, never looked up again after reclaim.
   try {

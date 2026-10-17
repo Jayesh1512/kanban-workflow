@@ -4,6 +4,7 @@ import type { Clock, ControlBus, ControlMessage, Database, SqlExecutor } from '.
 import type { DecideProposalInput, ProposeLaneInput } from '../shared/schemas.js';
 import { decideProposalSchema, proposeLaneSchema, uuidSchema } from '../shared/schemas.js';
 import { DomainError } from '../shared/api.js';
+import { currentTicketMapping } from '../shared/ticket-mapping.js';
 import { assert, assertEvidence, command, iso, links, nullableIso, page, type Row } from './sql.js';
 
 export async function proposalRow(tx: SqlExecutor, row: Row): Promise<Proposal> {
@@ -26,7 +27,7 @@ export async function lockProposal(tx: SqlExecutor, id: string): Promise<{ propo
 export async function staleReason(tx: SqlExecutor, proposal: Proposal, ticket: Row, chat: Row): Promise<string | null> {
   if (!proposal.evidenceIds.length) return 'evidence_missing';
   if (chat.inclusion !== 'included' || chat.is_control || ticket.tracking_state !== 'active') return 'chat_not_tracked';
-  if (chat.mapping_status !== 'confirmed' || chat.company_id !== ticket.company_id || Number(chat.mapping_version) !== proposal.sourceMappingVersion) return 'mapping_changed';
+  if (!currentTicketMapping({ mappingStatus: chat.mapping_status as 'confirmed' | 'unresolved' | 'ambiguous' | 'non_company', companyId: chat.company_id as string | null }, { kind: ticket.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: ticket.company_id as string | null }) || Number(chat.mapping_version) !== proposal.sourceMappingVersion) return 'mapping_changed';
   if (Number(chat.policy_version) !== proposal.sourcePolicyVersion) return 'policy_changed';
   if (Number(ticket.stage_version) !== proposal.sourceStageVersion || ticket.lane !== proposal.sourceLane) return 'stage_changed';
   try { await assertEvidence(tx, proposal.evidenceIds, String(chat.id)); } catch (error) { if (error instanceof DomainError) return 'evidence_changed'; throw error; }
@@ -57,7 +58,7 @@ export class ProposalRepository {
     const chat = (await tx.query('SELECT c.* FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [input.ticketId])).rows[0]; assert(chat, 'not_found', 'Ticket not found');
     const ticket = (await tx.query('SELECT * FROM tickets WHERE id=$1 FOR UPDATE', [input.ticketId])).rows[0]!;
     assert(chat.inclusion === 'included' && !chat.is_control && ticket.tracking_state === 'active', 'excluded_chat', 'Ticket is not tracked business content');
-    assert(chat.mapping_status === 'confirmed' && chat.company_id === ticket.company_id, 'ambiguous_mapping', 'Ticket company is not confirmed');
+    assert(currentTicketMapping({ mappingStatus: chat.mapping_status as 'confirmed' | 'unresolved' | 'ambiguous' | 'non_company', companyId: chat.company_id as string | null }, { kind: ticket.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: ticket.company_id as string | null }), 'ambiguous_mapping', 'Ticket relationship mapping changed');
     assert(Number(ticket.stage_version) === input.expectedStageVersion, 'stale_proposal', 'Source stage version changed');
     assert(ticket.lane !== input.targetLane, 'validation', 'Target lane equals current lane'); await assertEvidence(tx, input.evidenceIds, String(chat.id));
     const row = (await tx.query(`INSERT INTO proposals(ticket_id,source_lane,source_stage_version,source_mapping_version,source_policy_version,target_lane,reason,next_action,origin,correction_of)
@@ -74,7 +75,7 @@ export class ProposalRepository {
     if ((await tx.query('SELECT 1 FROM app_settings WHERE key=$1', [key])).rows.length) return;
     const lane = input.decision.lane;
     const proposal = await this.proposeTx(tx, { idempotencyKey: `analysis:${input.jobId}`, ticketId: input.ticketId, expectedStageVersion: input.expectedStageVersion,
-      targetLane: lane.targetLane, evidenceIds: lane.evidenceIds, reason: lane.reason, nextAction: lane.nextAction, origin: input.decision.diagnostics.rubricVersion === 'openai.decisions.antseed.v1' ? 'openai' : 'jev' });
+      targetLane: lane.targetLane, evidenceIds: lane.evidenceIds, reason: lane.reason, nextAction: lane.nextAction, origin: input.decision.diagnostics.rubricVersion.startsWith('openai.decisions.antseed.') ? 'openai' : 'jev' });
     await tx.query('INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb)', [key, JSON.stringify({ proposalId: proposal.id })]);
   }
   async recoverDecisionIntents(limit = 10): Promise<void> {

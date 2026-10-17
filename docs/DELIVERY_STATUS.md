@@ -477,3 +477,63 @@ and zero pending proposals. No manual company/ticket creation, authored AI resul
 approval or direct lane write was used to populate it. Final running healthy image:
 `sha256:d1ad8ca8e60c4ee3417782ae67ccb08fe3602563149cd51b84ee716e36d4f21d`.
 Five changed/new files passed private configured-credential comparison with0matches.
+
+## Unknown-company prospects and reserved live processing
+
+The second user enquiry was captured immediately but initially waited behind an
+active historical extraction. Queue priority cannot preempt a request already in
+flight: at inspection, one historical batch had held the single worker for179s.
+After analysis completed, the chat still had no ticket because the enquiry named
+the individual and AntSeed, but no external company; the original company-only
+contract intentionally left it unresolved. The user explicitly requested contact
+prospect cards for this case.
+
+The current contract is in CONTACT_PROSPECTS.md. Additive migration003 preserves
+company-linked tickets and permits explicit contact_prospect tickets with null
+company. A v2 native outbound-enquiry predicate classifies business outreach
+independently from company identification. Current cited self-authored/nonforwarded
+evidence and native probability support are required. Companies/affiliations are
+not fabricated. Exclusion, source/mapping versions, contacts, manual actions and
+human approval operate on both ticket kinds. Later company confirmation upgrades
+the same ticket/task, preserving its existing stage.
+
+The workflow now has one reserved fresh-outbound analysis slot and one general
+slot; the reserved slot cannot claim historical jobs or consume general fairness.
+Projection, control and approval application run independently of provider requests.
+All loops retain exact migration gates; shutdown stops/aborts/drains both analysis
+tasks before platform cleanup. Held synthetic extraction + actual module/local SQL
+tests prove live processing and projection continue while history is held, and
+stop waits for both tasks. Original SDK/HTTP/SIGTERM lifecycle tests remain green.
+
+Final bounded default suite338PASS/144 opt-in SKIP; strict TS PASS; target-native
+production image build/SQLite+mtcute offline probe PASS. An initial full run had
+337PASS/one failed fixture assertion: setup already created the durable dispatch
+counter before a wrong-checksum test. The assertion now compares exact workflow
+state before/after startup rather than assuming no pre-existing state; the wrong
+ledger still permits zero domain writes. The final full run is green.
+
+Two additional zero-skip actual PostgreSQL17.11/Vikunja2.7 checks PASS in owned
+antseed-prospects-check-20261017 (19580/19581/19533): source-backed unknown-company
+card, exclusions/reinclusion, pending-only recommendation, explicit synthetic
+operator approval/readback to WIP, and sourced company upgrade of the same task
+with stage1 preserved; plus reserved/general/concurrent claims with distinct tokens
+and preserved FIFO phase. These are authored-inference integration fixtures, not
+live model or Telegram evidence. Early failures in these new tests were harness
+issues (PGlite migration execution/SELECT rowCount and wrong ingestion method),
+corrected before the passing runs; assertions were retained.
+
+Only the personal backend was deployed, preserving volumes, login and Approvals.
+Its healthy running image is
+`sha256:130456b853dd9e68363813cf5effa23ed4ea7e65e81d796f57160ebb6228d40d`.
+One canonical scoped replay with includeCompletedUnmapped=true requeued two
+eligible jobs in the original enquiry's chat. The actual saved enquiry completed
+with native v2 outreach outcome=enquiry; actual Vikunja adapter readback confirms
+task2, contact_prospect, To be started, stageVersion0, company=null, two sourced
+contacts, awaiting reply, one ticket for the chat and zero pending proposals. This
+is real deployed native-model/readback evidence, separate from the synthetic tests.
+No test message, fake company/ticket, synthetic inference result or approval was
+inserted into the personal dataset for this verification. Stored provenance is
+gpt-6-luna/openai.decisions.antseed.v2 with native enquiry probability1. The owned
+synthetic Compose project and all four owned volumes were removed after label
+verification; personal and previously retained stacks were preserved. All38
+changed/new files passed private configured-key comparison with0matches.

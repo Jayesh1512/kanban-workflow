@@ -31,7 +31,19 @@ export async function ensureTicketTx(tx: SqlExecutor, chatId: string): Promise<T
   assert(r.mapping_status === 'confirmed' && r.company_id, 'ambiguous_mapping', 'Chat has no confirmed company');
   const company = await getCompanyTx(tx, String(r.company_id));
   const ticket = (await tx.query(`INSERT INTO tickets(chat_id,company_id,workstream) VALUES($1,$2,$3)
-    ON CONFLICT(chat_id) DO UPDATE SET company_id=EXCLUDED.company_id,tracking_state='active',updated_at=now() RETURNING *`, [chatId, r.company_id, company.workstream ?? 'Others'])).rows[0]!;
+    ON CONFLICT(chat_id) DO UPDATE SET company_id=EXCLUDED.company_id,kind='company',tracking_state='active',updated_at=now() RETURNING *`, [chatId, r.company_id, company.workstream ?? 'Others'])).rows[0]!;
+  return ticketRow(tx, ticket);
+}
+/** Called only after sourced AI outbound-enquiry validation in analysis completion. */
+export async function ensureContactProspectTx(tx: SqlExecutor, chatId: string): Promise<Ticket> {
+  const chat = (await tx.query('SELECT * FROM chats WHERE id=$1 FOR UPDATE', [chatId])).rows[0];
+  assert(chat, 'not_found', 'Chat not found');
+  assert(chat.inclusion === 'included' && !chat.is_control, 'excluded_chat', 'Chat is not included business content');
+  assert(chat.company_id === null && ['unresolved', 'ambiguous'].includes(String(chat.mapping_status)), 'ambiguous_mapping', 'Contact prospect requires an explicitly unknown company');
+  const ticket = (await tx.query(`INSERT INTO tickets(chat_id,company_id,kind) VALUES($1,NULL,'contact_prospect')
+    ON CONFLICT(chat_id) DO UPDATE SET tracking_state='active',updated_at=now()
+      WHERE tickets.kind='contact_prospect' AND tickets.company_id IS NULL RETURNING *`, [chatId])).rows[0];
+  assert(ticket, 'conflict', 'Existing company ticket cannot be replaced by a contact prospect');
   return ticketRow(tx, ticket);
 }
 export async function writeCompanyTx(tx: SqlExecutor, input: CompanyWrite, id?: string, expectedVersion?: number) {
@@ -137,7 +149,7 @@ export class RecordsRepository implements RecordsService {
     const evidence = (await this.db.query(`SELECT e.* FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
       WHERE e.chat_id=$1 AND e.message_id=ANY($2::int[]) AND e.message_version=m.version AND e.invalidated_at IS NULL AND m.deleted_at IS NULL ORDER BY e.observed_at DESC,e.id`, [chat.id, messages.map((m) => m.id)])).rows.map(evidenceRow);
     const account = (await this.db.query<{ self_user_id: string }>('SELECT self_user_id::text FROM telegram_account WHERE singleton')).rows[0];
-    return { ticket, chat, outreach: outreachContext(messages, account?.self_user_id), company: await this.getCompany(ticket.companyId), contacts: await Promise.all(ticket.contactIds.map((id) => this.getContact(id))), evidence,
+    return { ticket, chat, outreach: outreachContext(messages, account?.self_user_id), company: ticket.companyId ? await this.getCompany(ticket.companyId) : null, contacts: await Promise.all(ticket.contactIds.map((id) => this.getContact(id))), evidence,
       messages, facts: (await this.listFacts({ ticketId: ticket.id, limit: input.limit })).items };
   }
   async updateActions(raw: Parameters<RecordsService['updateActions']>[0]) {

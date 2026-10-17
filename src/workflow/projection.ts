@@ -1,6 +1,7 @@
 import type { Ticket } from '../shared/domain.js';
 import type { Clock, Database, VikunjaPort } from '../shared/ports.js';
 import { DomainError } from '../shared/api.js';
+import { currentTicketMapping } from '../shared/ticket-mapping.js';
 import { assert, hash } from './sql.js';
 import { RecordsRepository } from './records.js';
 import { observeRemoteTx, ticketLockKey } from './mutations.js';
@@ -14,10 +15,10 @@ export class TicketProjector {
       if (active) return null;
       const context = await this.records.getContext({ ticketId, limit: 100 });
       const { ticket, chat, company, contacts, facts } = context;
-      assert(chat.mappingStatus === 'confirmed' && chat.companyId === ticket.companyId, 'ambiguous_mapping', 'Projection requires the current confirmed company association');
-      const title = `${company.canonicalName} — ${chat.title}`.slice(0, 500);
+      assert(currentTicketMapping(chat, ticket), 'ambiguous_mapping', 'Projection requires the current company or contact-prospect mapping');
+      const title = (company ? `${company.canonicalName} — ${chat.title}` : `${chat.title} — company unknown`).slice(0, 500);
       const description = [
-        `Company: ${company.canonicalName}`, `Chat: ${chat.title} (${chat.id})`, `Workstream: ${ticket.workstream}`,
+        `Company: ${company?.canonicalName ?? 'Unknown (contact prospect)'}`, `Chat: ${chat.title} (${chat.id})`, `Workstream: ${ticket.workstream}`,
         `Contacts: ${contacts.map((c) => `${c.names.join('/')} ${c.roles.map((r) => r.role).join('/')}`).join('; ')}`,
         ...(context.outreach?.lastOutgoingAt ? [`Outreach (captured messages): ${context.outreach.waitingForReply ? 'Awaiting reply' : 'Reply received'}`, `Last outreach: ${context.outreach.lastOutgoingAt}`, `Last incoming message: ${context.outreach.lastIncomingAt ?? 'None captured'}`] : []),
         `Summary: ${ticket.summary}`, `Latest substantive interaction: ${ticket.latestSubstantiveAt ?? 'Unknown'}`,
@@ -40,8 +41,8 @@ export class TicketProjector {
         remote = await this.vikunja.updateTaskDetails({ taskId: remote.id, title, description, workstream: ticket.workstream }); scoped.throwIfAborted();
       }
       await this.db.transaction(async (tx) => {
-        const current = (await tx.query('SELECT c.policy_version,c.mapping_version,c.mapping_status,c.company_id,c.inclusion,c.is_control,t.tracking_state FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [ticketId])).rows[0];
-        assert(current && current.inclusion === 'included' && !current.is_control && current.mapping_status === 'confirmed' && current.company_id === ticket.companyId && current.tracking_state === 'active' && Number(current.policy_version) === chat.policyVersion && Number(current.mapping_version) === chat.mappingVersion, 'conflict', 'Projection source policy/mapping changed');
+        const current = (await tx.query('SELECT c.policy_version,c.mapping_version,c.mapping_status,c.company_id,c.inclusion,c.is_control,t.tracking_state,t.kind,t.company_id AS ticket_company_id FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [ticketId])).rows[0];
+        assert(current && current.inclusion === 'included' && !current.is_control && currentTicketMapping({ mappingStatus: current.mapping_status as typeof chat.mappingStatus, companyId: current.company_id as string | null }, { kind: current.kind as typeof ticket.kind, companyId: current.ticket_company_id as string | null }) && current.kind === ticket.kind && current.ticket_company_id === ticket.companyId && current.tracking_state === 'active' && Number(current.policy_version) === chat.policyVersion && Number(current.mapping_version) === chat.mappingVersion, 'conflict', 'Projection source policy/mapping changed');
         scoped.throwIfAborted();
         await tx.query('UPDATE tickets SET vikunja_task_id=$2 WHERE id=$1 AND (vikunja_task_id IS NULL OR vikunja_task_id=$2)', [ticketId, remote!.id]);
         await tx.query(`INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=now()`, [stateKey, JSON.stringify({ state: 'ready', hash: signature, checkedAt: this.clock.now().toISOString() })]);
@@ -51,7 +52,9 @@ export class TicketProjector {
   }
   async projectBatch(limit = 10, signal?: AbortSignal): Promise<number> {
     const rows = (await this.db.query<{ id: string }>(`SELECT t.id FROM tickets t JOIN chats c ON c.id=t.chat_id LEFT JOIN app_settings s ON s.key='workflow:projection:'||t.id::text
-      WHERE c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active' AND c.mapping_status='confirmed' AND c.company_id=t.company_id
+      WHERE c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active' AND (
+        (t.kind='company' AND c.mapping_status='confirmed' AND c.company_id=t.company_id) OR
+        (t.kind='contact_prospect' AND t.company_id IS NULL AND c.company_id IS NULL AND c.mapping_status IN ('unresolved','ambiguous')))
       ORDER BY s.updated_at ASC NULLS FIRST,t.id LIMIT $1`, [limit])).rows;
     let count = 0;
     for (const row of rows) {

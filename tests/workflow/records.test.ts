@@ -33,10 +33,10 @@ describe('records, contact roles, manual precedence and priorities (isolated Pos
     await db.query("UPDATE chats SET inclusion='excluded',is_control=true"); await expect(records.ensureTicket('-1001')).rejects.toThrow('included'); await expect(records.getContext({ ticketId: first.id, limit: 50 })).rejects.toThrow('not tracked');
   });
   it('creates roles without preallocated contact ID, reads them back, and refuses Telegram identity collisions', async () => {
-    const { ticket, evidence } = await resolvedTicket(); const existing = (await records.listContacts({ companyId: ticket.companyId })).items[0]!;
-    expect(existing.roles).toMatchObject([{ companyId: ticket.companyId, contactId: existing.id, role: 'CTO' }]);
+    const { ticket, evidence } = await resolvedTicket(); const existing = (await records.listContacts({ companyId: ticket.companyId! })).items[0]!;
+    expect(existing.roles).toMatchObject([{ companyId: ticket.companyId!, contactId: existing.id, role: 'CTO' }]);
     await expect(records.createContact({ idempotencyKey: 'collision', names: ['Different Mira'], usernames: [], phones: [], emails: [], affiliation: 'unknown', evidenceIds: [], roles: [], telegramUserIds: ['7'] })).rejects.toThrow('assigned to another contact');
-    const updated = await records.updateContact(existing.id, existing.version, { idempotencyKey: 'role-update', telegramUserIds: existing.telegramUserIds, names: existing.names, usernames: existing.usernames, phones: [], emails: [], affiliation: 'external', evidenceIds: [evidence], roles: [{ companyId: ticket.companyId, role: 'CTO', evidenceIds: [evidence] }] });
+    const updated = await records.updateContact(existing.id, existing.version, { idempotencyKey: 'role-update', telegramUserIds: existing.telegramUserIds, names: existing.names, usernames: existing.usernames, phones: [], emails: [], affiliation: 'external', evidenceIds: [evidence], roles: [{ companyId: ticket.companyId!, role: 'CTO', evidenceIds: [evidence] }] });
     expect((await records.getContact(updated.id)).roles[0]!.evidenceIds).toEqual([evidence]);
   });
   it('preserves manual action dates and actor/fact lifecycle through re-analysis', async () => {
@@ -49,7 +49,7 @@ describe('records, contact roles, manual precedence and priorities (isolated Pos
     const newId = (await db.query<{ id: string }>("SELECT id FROM analysis_jobs WHERE dedupe_key='next'")).rows[0]!.id;
     await db.query('INSERT INTO analysis_job_messages SELECT $1,chat_id,id,version FROM messages', [newId]); const claimed = (await queue.claim({ workerId: 'worker', leaseMs: 60000 }))!; const input = await queue.loadInput(claimed.id); const extraction = extractionFixture(input.evidence[0]!.id);
     await queue.saveExtraction({ jobId: claimed.id, extraction, inputHash: inputHash(input), provenance: provenance() }, claimed.claimToken);
-    const decision = decisionFixture(input.evidence[0]!.id); decision.companyMatch = { outcome: 'matched', companyId: ticket.companyId, confidence: 1 };
+    const decision = decisionFixture(input.evidence[0]!.id); decision.companyMatch = { outcome: 'matched', companyId: ticket.companyId!, confidence: 1 };
     await queue.complete(claimed.id, decision, provenance('vercel'), claimed.claimToken);
     expect(await records.getTicket(ticket.id)).toMatchObject({ nextAction: 'Manual follow-up', followUpAt: '2026-10-20T04:00:00.000Z', actionsSource: 'manual' });
     expect((await records.listFacts({ ticketId: ticket.id })).items.find((f) => f.id === fact.id)).toMatchObject({ state: 'completed', source: 'manual' });

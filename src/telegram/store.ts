@@ -3,8 +3,8 @@ import type { QueryResultRow } from 'pg';
 import { DomainError } from '../shared/api.js';
 import type { Chat, CompanyCandidate, HistoryCursor, LiveCheckpoint, PageInput } from '../shared/domain.js';
 import type { ChatService, HistoryBatch, IngestionStore, RuntimeConfig, SqlExecutor, TelegramDialog, TelegramEvent, TelegramMessageInput } from '../shared/ports.js';
-import { chatIdSchema, correctMappingSchema, setInclusionSchema } from '../shared/schemas.js';
 import type { PgDatabase } from '../platform/database.js';
+import { chatIdSchema, correctMappingSchema, setInclusionSchema } from '../shared/schemas.js';
 
 type Row = QueryResultRow;
 const iso = (v: unknown): string | null => v == null ? null : new Date(v as string | Date).toISOString();
@@ -90,7 +90,9 @@ export class TelegramStore implements IngestionStore, ChatService {
       await tx.query('UPDATE live_checkpoints SET replay_required=true,generation=generation+1 WHERE chat_id=$1', [chat.id]);
       await tx.query("UPDATE history_cursors SET status=$2,generation=generation+1,worker_id=NULL,lease_until=NULL,updated_at=now() WHERE chat_id=$1", [chat.id, input.inclusion === 'excluded' ? 'paused' : 'pending']);
       await tx.query('UPDATE telegram_history_requests SET remaining_batches=$2 WHERE chat_id=$1', [chat.id, input.inclusion === 'excluded' ? 0 : this.config.historyMaxBatches]);
-      await tx.query('UPDATE tickets SET tracking_state=$2,updated_at=now() WHERE chat_id=$1', [chat.id, input.inclusion === 'included' && chat.mappingStatus === 'confirmed' ? 'active' : 'suspended']);
+      await tx.query(`UPDATE tickets SET tracking_state=CASE WHEN $2::boolean AND
+        ($3::text='confirmed' OR (kind='contact_prospect' AND company_id IS NULL AND $3 IN ('unresolved','ambiguous')))
+        THEN 'active' ELSE 'suspended' END,updated_at=now() WHERE chat_id=$1`, [chat.id, input.inclusion === 'included', chat.mappingStatus]);
       if (input.inclusion === 'included') await this.enqueue(tx, toChat(row));
       return toChat(row);
     });
@@ -111,7 +113,9 @@ export class TelegramStore implements IngestionStore, ChatService {
       const history = (await tx.query('INSERT INTO mapping_history(chat_id,company_id,mapping_status,version,reason,source) VALUES($1,$2,$3,$4,$5,$6) RETURNING id', [chat.id, input.companyId, input.status, row['mapping_version'], input.reason, input.source])).rows[0]!;
       for (const evidenceId of new Set(input.evidenceIds)) await tx.query('INSERT INTO mapping_history_evidence(history_id,evidence_id) VALUES($1,$2)', [history['id'], evidenceId]);
       await this.invalidateChat(tx, chat.id, 'chat_mapping_changed');
-      await tx.query("UPDATE tickets SET company_id=COALESCE($2::uuid,company_id),tracking_state=$3,updated_at=now() WHERE chat_id=$1", [chat.id, input.companyId, input.status === 'confirmed' && chat.inclusion === 'included' ? 'active' : 'suspended']);
+      await tx.query(`UPDATE tickets SET company_id=COALESCE($2::uuid,company_id),kind=CASE WHEN $2::uuid IS NOT NULL THEN 'company' ELSE kind END,
+        tracking_state=CASE WHEN $3::boolean AND ($4::text='confirmed' OR (kind='contact_prospect' AND company_id IS NULL AND $4 IN ('unresolved','ambiguous')))
+        THEN 'active' ELSE 'suspended' END,updated_at=now() WHERE chat_id=$1`, [chat.id, input.companyId, chat.inclusion === 'included', input.status]);
       if (allowed(toChat(row))) await this.enqueue(tx, toChat(row));
       return toChat(row);
     });

@@ -21,7 +21,7 @@ export function extractionFixture(id = evidenceId): Extraction {
 export function responseFixture(input = inputFixture(), extraction = extractionFixture()) {
   const request = buildJevRequest({ ...input, extraction }, 'typesafe-ai/jev');
   const chosen: Record<string, string> = { relevance: 'company', company_match: 'new_company', workstream: 'Buyer', lane: 'no_change' };
-  const answers = Object.fromEntries(Object.entries(request.questions).map(([id, q]) => [id, q.type === 'noul' ? { type: 'noul', noul: 0.98 }
+  const answers = Object.fromEntries(Object.entries(request.questions).map(([id, q]) => [id, q.type === 'noul' ? { type: 'noul', noul: id === 'outbound_enquiry' ? 0 : 0.98 }
     : q.type === 'score' ? { type: 'score', score: 1, confidence: 1, legend: Object.fromEntries(q.criteria.map((s, i) => [String(i), s])), probabilities: Object.fromEntries(q.criteria.map((_, i) => [String(i), i === 1 ? 1 : 0])) }
       : { type: 'choice', choice: chosen[id], confidence: 1, probabilities: Object.fromEntries(Object.keys(q.criteria).map((key) => [key, key === chosen[id] ? 1 : 0])) }]));
   return { model: 'typesafe-ai/jev', answers, usage: { input_tokens: 100, output_tokens: 30 } };

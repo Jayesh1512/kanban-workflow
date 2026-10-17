@@ -27,7 +27,8 @@ it('runs the native Decisions HTTP contract and preserves real provider/primitiv
   expect(result.value.diagnostics.native).toMatchObject({ provider: 'openai', answers: nativeDecisionFixture().answers });
   expect(requests[0]).toMatchObject({ path: '/v1/decisions', authorization: 'Bearer synthetic-native-key', body: { model: 'gpt-6-luna' } });
   const body = requests[0]!.body as ReturnType<typeof buildOpenAIDecisionsRequest>;
-  expect(body.questions).toHaveLength(6); expect(body.questions.find(q => q.name === 'supported')?.type).toBe('predicate');
+  expect(body.questions).toHaveLength(7); expect(body.questions.find(q => q.name === 'supported')?.type).toBe('predicate');
+  expect(body.questions.find(q => q.name === 'outbound_enquiry')?.type).toBe('predicate');
   expect(body).not.toHaveProperty('state'); expect(body).not.toHaveProperty('messages'); expect(JSON.parse(body.input).state.messages[0].text).toBe(input().messages[0]!.text);
 });
 it.each(['wrong_model', 'missing', 'order', 'duplicate', 'score_label', 'score_mean', 'refusal', 'boolean_choice'])('rejects unsafe/incomplete native %s without inventing probability fields', mode => {

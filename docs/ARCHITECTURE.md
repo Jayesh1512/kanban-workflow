@@ -2,6 +2,12 @@
 
 Status: bounded M0 design and executable foundation. This document and the exported TypeScript files are the integration baseline for two builders. `docs/PROJECT_BRIEF.md` is authoritative. No complete Telegram, Vikunja, inference, proposal, domain-route or MCP implementation ships in M0.
 
+## Current contact-prospect supplement
+
+Company-unknown outbound contacts and reserved live processing extend the original
+baseline below. See [CONTACT_PROSPECTS.md](CONTACT_PROSPECTS.md) for current nullable
+company/ticket-kind contracts, native v2 classification, replay and lifecycle rules.
+
 ## Current provider amendment (2026-10-17)
 
 The user's later instruction selects native OpenAI Decisions (`gpt-6-luna`) in

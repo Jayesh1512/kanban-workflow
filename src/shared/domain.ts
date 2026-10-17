@@ -107,7 +107,8 @@ export interface ContactDetail extends Contact { roles: ContactCompanyRole[] }
 export interface Ticket {
   id: UUID;
   chatId: TelegramChatId;
-  companyId: UUID;
+  kind: 'company' | 'contact_prospect';
+  companyId: UUID | null;
   vikunjaTaskId: RemoteId | null;
   lane: Lane;
   stageVersion: number;
@@ -196,6 +197,7 @@ export type LaneRecommendation =
   | { outcome: 'no_change' | 'uncertain'; reason: string; evidenceIds: UUID[] };
 export interface JevDecision {
   relevance: 'company' | 'non_company' | 'uncertain';
+  outreach?: { outcome: 'enquiry' | 'not_enquiry' | 'uncertain'; probability: number; evidenceIds: UUID[] };
   companyMatch: { outcome: 'matched'; companyId: UUID; confidence: number } | { outcome: 'ambiguous' | 'new_company' | 'none'; candidates: CompanyCandidate[] };
   workstream: Workstream | null;
   urgency: Urgency | null;

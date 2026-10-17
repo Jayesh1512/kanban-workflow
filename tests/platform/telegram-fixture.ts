@@ -8,6 +8,7 @@ export async function telegramFixture() {
   const engine = new PGlite();
   await engine.exec(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610170001_telegram_operations.sql', import.meta.url), 'utf8'));
+    await engine.exec(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
   const wrap = (client: Pick<PGlite, 'query'>): SqlExecutor => ({ async query<R extends QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<R>> {
     const r = await client.query<R>(text, values); return { rows: r.rows, rowCount: r.rows.length || r.affectedRows || 0, command: '', fields: [], oid: 0 };
   } });

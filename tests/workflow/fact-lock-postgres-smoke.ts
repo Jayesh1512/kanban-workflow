@@ -18,7 +18,7 @@ function observed(hook: (sql: string, tx: SqlExecutor, before: boolean) => Promi
     transaction: (work) => db.transaction(async (tx) => work({ async query<R extends QueryResultRow>(sql: string, values?: unknown[]) { await hook(sql, tx, true); const result = await tx.query<R>(sql, values); await hook(sql, tx, false); return result; } })) };
 }
 try {
-  await db.query(`CREATE SCHEMA ${schema}`); await db.query(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
+  await db.query(`CREATE SCHEMA ${schema}`); await db.query(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8')); await db.query(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
   await db.query('INSERT INTO telegram_account(self_user_id) VALUES(99)'); await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-1001,'supergroup','Synthetic Cedar Labs','included')"); const message = inputFixture().messages[0]!;
   await db.query('INSERT INTO messages(chat_id,id,sender_id,sent_at,text,sender_snapshot,peer_snapshot,forward_metadata) VALUES(-1001,1,7,$1,$2,$3,$4,$5)', [message.sentAt, message.text, message.sender, message.peer, message.forward]); await seedJob(db, jobId);
   const queue = new SqlAnalysisQueue(db); const first = (await queue.claim({ workerId: 'first', leaseMs: 60000 }))!; const input = await queue.loadInput(first.id); const extraction = extractionFixture(input.evidence[0]!.id);
