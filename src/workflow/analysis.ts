@@ -19,17 +19,35 @@ export class SqlAnalysisQueue implements AnalysisQueue {
     assert(input.workerId.length > 0 && Number.isFinite(input.leaseMs) && input.leaseMs > 0 && input.leaseMs <= 3_600_000, 'validation', 'Invalid analysis lease');
     const now = this.clock.now(); const token = randomUUID();
     return this.db.transaction(async (tx) => {
+      // Four fresh outbound-conversation slots, then one oldest eligible job.
+      // Keep the phase durable and locked so restart/concurrent claimers cannot
+      // reset fairness or claim the same priority slot independently.
+      const dispatchKey = 'workflow:analysis:dispatch';
+      await tx.query("INSERT INTO app_settings(key,value) VALUES($1,'0'::jsonb) ON CONFLICT DO NOTHING", [dispatchKey]);
+      const savedPhase = (await tx.query<{ value: unknown }>('SELECT value FROM app_settings WHERE key=$1 FOR UPDATE', [dispatchKey])).rows[0]?.value;
+      const phase = typeof savedPhase === 'number' && Number.isInteger(savedPhase) && savedPhase >= 0 && savedPhase < 5 ? savedPhase : 0;
+      const recentSince = new Date(now.getTime() - 60 * 60 * 1000);
       await tx.query(`UPDATE analysis_jobs j SET status='cancelled',worker_id=NULL,lease_until=NULL,last_error='source_changed'
         WHERE (j.status IN ('pending','retry','provider_unavailable') OR (j.status='running' AND j.lease_until<=$1)) AND (
         EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND (c.inclusion<>'included' OR c.is_control OR c.policy_version<>j.policy_version OR c.mapping_version<>j.mapping_version))
         OR EXISTS(SELECT 1 FROM analysis_job_messages s LEFT JOIN messages m ON m.chat_id=s.chat_id AND m.id=s.message_id WHERE s.job_id=j.id AND (m.version IS NULL OR m.version<>s.message_version OR m.deleted_at IS NOT NULL)))`, [now]);
       const row = (await tx.query(`SELECT j.* FROM analysis_jobs j JOIN chats c ON c.id=j.chat_id
+        LEFT JOIN LATERAL (
+          SELECT max(m.sent_at) AS latest FROM analysis_job_messages s JOIN messages m ON (m.chat_id,m.id)=(s.chat_id,s.message_id)
+          WHERE s.job_id=j.id AND s.message_version=m.version AND m.deleted_at IS NULL AND m.sent_at>=$3
+          AND EXISTS(SELECT 1 FROM messages own JOIN telegram_account a ON own.sender_id=a.self_user_id
+            WHERE own.chat_id=j.chat_id AND own.deleted_at IS NULL AND own.sent_at>=$3 AND btrim(own.text)<>''
+            AND NOT COALESCE((own.forward_metadata->>'isForwarded')::boolean,false))
+        ) fresh ON true
         WHERE c.inclusion='included' AND NOT c.is_control AND j.policy_version=c.policy_version AND j.mapping_version=c.mapping_version
         AND ((j.status IN ('pending','retry') AND (j.retry_at IS NULL OR j.retry_at<=$1)) OR (j.status='running' AND j.lease_until<=$1))
-        ORDER BY j.created_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [now])).rows[0];
+        ORDER BY CASE WHEN $2::boolean AND j.attempts<3 AND fresh.latest IS NOT NULL THEN 0 ELSE 1 END,
+          CASE WHEN $2::boolean AND j.attempts<3 THEN fresh.latest END DESC NULLS LAST,
+          j.created_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [now, phase !== 4, recentSince])).rows[0];
       if (!row) return null;
       const lease = new Date(now.getTime() + input.leaseMs);
       await tx.query("UPDATE analysis_jobs SET status='running',worker_id=$2,lease_until=$3,attempts=attempts+1,updated_at=$4 WHERE id=$1", [row.id, token, lease, now]);
+      await tx.query('UPDATE app_settings SET value=$2::jsonb,updated_at=$3 WHERE key=$1', [dispatchKey, JSON.stringify((phase + 1) % 5), now]);
       return { id: String(row.id), chatId: String(row.chat_id), policyVersion: Number(row.policy_version), mappingVersion: Number(row.mapping_version), status: 'running',
         claimToken: token, attempts: Number(row.attempts) + 1, leaseUntil: lease.toISOString(), retryAt: null, lastError: row.last_error as string | null };
     });

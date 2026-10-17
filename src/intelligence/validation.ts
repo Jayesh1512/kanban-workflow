@@ -116,7 +116,8 @@ export function validateExtraction(raw: unknown, input: AnalysisInput): Extracti
     const targeted = authors.filter((p) => c.telegramUserIds.length ? c.telegramUserIds.includes(p!.id ?? '') : [...p!.names, ...p!.usernames].some((v) => [...c.names, ...c.usernames].some((name) => normalize(name) === normalize(v))));
     const snapshots = targeted.flatMap((p) => p ? [p] : []);
     const quoted = c.evidenceIds.filter((id) => { const e = validEvidence.get(id)!; const m = sourceMessages.find((m) => m.id === e.messageId && m.chatId === e.chatId)!; return !c.telegramUserIds.length || c.telegramUserIds.includes(author(m)?.id ?? ''); }).map((id) => validEvidence.get(id)!.excerpt);
-    const selfName = (name: string, quote: string) => new RegExp(`(?:\\b(?:i am|i'm|my name is|this is|main)\\s+|मैं\\s+)${escape(name)}(?:\\b|$)`, 'iu').test(quote);
+    const selfName = (name: string, quote: string) => new RegExp(`(?:\\b(?:i am|i'm|my name is|this is|main)\\s+|मैं\\s+)${escape(name)}(?:\\b|$)`, 'iu').test(quote)
+      || new RegExp(`^(?:(?:hi|hello|hey)\\b[^\\n.!?;]{0,80}?,\\s*)?${escape(name)}\\s+here\\s+(?:from|at)\\s+\\S`, 'iu').test(quote.trim());
     const originNames = c.telegramUserIds.length ? [] : sourceMessages.filter((m) => m.forward.isForwarded && !m.forward.originPeer).flatMap((m) => m.forward.originName ? [m.forward.originName] : []);
     if (c.names.some((name) => ![...snapshots.flatMap((p) => p.names), ...originNames].some((v) => normalize(v) === normalize(name)) && !quoted.some((quote) => selfName(name, quote)))) throw new Error('Contact name absent from target identity evidence');
     const attributed = (quote: string, m: (typeof sourceMessages)[number]) => {

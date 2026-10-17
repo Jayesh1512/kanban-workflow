@@ -429,3 +429,51 @@ The running personal image is
 `sha256:fde45f6579fe7891448820fca2c8de595600c7c7619a3179fdc5a16b8045648c`.
 The backlog remains queued rather than being declared fully processed. No manual
 approval, test Telegram message or forced lane movement was used for this recovery.
+
+## Fresh outbound scheduling
+
+The user's actual first enquiry was captured within1second but remained pending
+behind165 older eligible jobs. Mapping was unresolved and no local/remote ticket
+existed; this was queue ordering, not an already-created card hidden by the UI.
+The previous globally oldest-first dispatcher did not meet outbound-first intent.
+
+Claim scheduling now prioritizes current source messages from the last hour in
+conversations with a genuine recent outgoing message from the bound account.
+Recipient replies in the same conversation qualify too. Older imported messages,
+forwarded-only claims and repeated retries do not get that priority. Existing
+policy/mapping/message versions, retry deadlines and immutable lease tokens remain
+required. A durable row-locked modulo-five phase reserves every fifth successful
+claim for the oldest eligible job, preserving backlog progress across restarts and
+concurrent claimers. Empty polls do not consume a slot. No model inference, mapping
+confirmation, evidence validation or human stage approval is bypassed.
+
+Nine new queue scenarios plus existing analysis/outbound integration tests24PASS;
+strict TS and production/native image build PASS. An owned disposable actual
+PostgreSQL17.11 probe verified fresh priority, persisted fifth-slot FIFO and seven
+concurrent distinct claims/tokens. An initial fixture UUID/text parameter typing
+error was corrected in the diagnostic script before that successful run; it was
+not a product query failure. Only that labeled tmpfs test container was removed.
+Only the personal backend was rebuilt/recreated, preserving session and volumes.
+After deployment the user's original enquiry changed from pending to running,
+attempt1, through the canonical scheduler. No manual ticket or synthetic AI result
+was inserted to make the board look populated.
+
+The first and explicitly replayed second attempts were conservatively parked as
+invalid extraction; a separate diagnostic extraction of the same small source
+passed in14.3seconds without writing its result as facts. The supplied enquiry
+template also exposed a deterministic source-name gap: “Hi Mira, Ravi here from
+AntSeed” was rejected when the visible sender profile used a different display
+name. Source validation now accepts that narrowly anchored self-introduction for
+the actual message author; incidental mentions and borrowing it for the recipient
+still reject. The template regression and prior provider/independent source tests
+96PASS. This does not prove which generated field caused each earlier opaque
+invalid-response result; no failed model output was invented or accepted.
+
+After deploying the introduction fix and one scoped canonical replay, the original
+user enquiry completed onattempt3 through the normal worker. Mapping is confirmed;
+the canonical projector created actual Vikunja task1. Independent adapter readback
+confirms To be started, local stageVersion0, AntSeed-initiated/awaiting-reply context
+and zero pending proposals. No manual company/ticket creation, authored AI result,
+approval or direct lane write was used to populate it. Final running healthy image:
+`sha256:d1ad8ca8e60c4ee3417782ae67ccb08fe3602563149cd51b84ee716e36d4f21d`.
+Five changed/new files passed private configured-credential comparison with0matches.
