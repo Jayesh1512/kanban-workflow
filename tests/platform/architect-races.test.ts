@@ -6,6 +6,7 @@ import { parse } from 'dotenv';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PgDatabase, migrate } from '../../src/platform/database.js';
 import { loadRuntimeConfig } from '../../src/platform/config.js';
+import { testVikunjaToken } from '../vikunja-test-auth.js';
 import { VikunjaAdapter } from '../../src/vikunja/adapter.js';
 import type { RuntimeConfig } from '../../src/shared/ports.js';
 
@@ -20,12 +21,13 @@ function deferred() {
 describe.skipIf(!project)('architect real session/projection regressions', () => {
   let db: PgDatabase, config: RuntimeConfig, adapter: VikunjaAdapter;
   beforeAll(async () => {
-    if (!/^antseed-arch-[a-z0-9-]+$/.test(project!)) throw new Error('Require an isolated antseed-arch-* test project');
+    if (!/^antseed-(?:arch|qa-m1-system)-[a-z0-9-]+$/.test(project!)) throw new Error('Require an explicitly isolated architect/system test project');
     const args = ['compose', '-p', project!, '-f', 'compose.yaml'];
     const override = process.env['ARCHITECT_TEST_COMPOSE_OVERRIDE'];
     if (override) args.push('-f', override);
     const bundle = parse(execFileSync('docker', [...args, 'exec', '-T', 'vikunja', 'cat', '/run/antseed/runtime.env'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
     config = await loadRuntimeConfig({ ...bundle, AI_ENV_PATH: '/architect-not-present', DATABASE_URL: bundle['DATABASE_URL']!.replace('postgres:5432', `127.0.0.1:${process.env['ARCHITECT_TEST_PG_PORT']}`), VIKUNJA_URL: process.env['ARCHITECT_TEST_VIKUNJA_URL']! });
+    await testVikunjaToken(config.vikunja);
     db = new PgDatabase(config.databaseUrl); adapter = new VikunjaAdapter(config.vikunja, db);
     await migrate(db); await adapter.ensureBoard();
   });
@@ -40,8 +42,7 @@ describe.skipIf(!project)('architect real session/projection regressions', () =>
     return { input, task: await adapter.ensureTask(input), board: await adapter.ensureBoard() };
   }
   async function rawMove(taskId: string, projectId: string, viewId: string, bucketId: string) {
-    const login = await fetch(`${config.vikunja.baseUrl}/api/v2/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: config.vikunja.username, password: config.vikunja.password }) });
-    const auth = await login.json() as { token: string };
+    const auth = {token:await testVikunjaToken(config.vikunja)};
     const result = await fetch(`${config.vikunja.baseUrl}/api/v2/projects/${projectId}/views/${viewId}/buckets/${bucketId}/tasks`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` }, body: JSON.stringify({ task_id: Number(taskId) }) });
     expect(result.ok).toBe(true); await result.body?.cancel();
   }

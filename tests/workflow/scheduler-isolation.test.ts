@@ -45,6 +45,10 @@ describe('actual workflow scheduler with local SQL and explicitly held synthetic
     }
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(-1002,2,$2,$1,'Synthetic live conversation')",[new Date(),mode==='outreach'?99:7]);
     await seedJob(h.db,randomUUID(),'-1002',2); await until(()=>liveStarted);
+    // Even this test's configured 1-second small-request timeout must reserve
+    // enough ownership for two extended large-context attempts plus drainage.
+    const leases=(await h.db.query("SELECT extract(epoch FROM (lease_until-updated_at))::int seconds FROM analysis_jobs WHERE status='running'")).rows;
+    expect(leases).toHaveLength(2);expect(leases.every(r=>Number(r.seconds)>=420)).toBe(true);
     expect(oldStarted).toBe(true); const phases = hooks.project.mock.calls.length; await delay(1150); expect(hooks.project.mock.calls.length).toBeGreaterThan(phases);
     const stopping = h.module.stop(); expect(h.module.stop()).toBe(stopping); let stopped=false; void stopping.then(()=>{stopped=true;});
     await delay(30); expect(stopped).toBe(false); expect(signals.every(s=>s.aborted)).toBe(true);

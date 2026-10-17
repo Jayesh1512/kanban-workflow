@@ -17,17 +17,18 @@ import { TicketProjector } from '../../src/workflow/projection.js';
 import { parseOpenAIDecisions, OPENAI_DECISIONS_VERSION } from '../../src/intelligence/openai-decisions.js';
 import { outbound, recommendation } from '../intelligence/outbound-fixtures.js';
 import { provenance } from '../intelligence/fixtures.js';
+import { testVikunjaToken } from '../vikunja-test-auth.js';
 const project=process.env['PROSPECT_TEST_PROJECT'];
 describe.skipIf(!project)('contact prospects: actual isolated PostgreSQL17/Vikunja2.7, authored inference only',()=>{
   let config:RuntimeConfig,admin:PgDatabase,db:PgDatabase,schema:string;
   beforeAll(async()=>{
-    if(!/^antseed-prospects-check-[a-z0-9-]+$/.test(project!))throw Error('Requires this task’s explicitly isolated synthetic project');
+    if(!/^antseed-(?:prospects-check|qa-m1-system)-[a-z0-9-]+$/.test(project!))throw Error('Requires an explicitly isolated prospect/system synthetic project');
     const container=project+'-postgres-1';
     const info=JSON.parse(execFileSync('docker',['inspect',container],{encoding:'utf8'}))[0];expect(info.Config.Labels['com.docker.compose.project']).toBe(project);
     const bundle=parse(execFileSync('docker',['exec',container,'cat','/run/antseed/runtime.env'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}));
     const url=new URL(bundle['DATABASE_URL']!);url.hostname='127.0.0.1';url.port=process.env['PROSPECT_TEST_PG_PORT']??'19533';
     config=await loadRuntimeConfig({...bundle,DATABASE_URL:url.toString(),VIKUNJA_URL:process.env['PROSPECT_TEST_VIKUNJA_URL']??'http://127.0.0.1:19581',MOVEMENT_PROVIDER:'openai',AI_ENV_PATH:'/no-private-provider-file',TELEGRAM_APPLICATION_PROFILE:'custom'});
-    const login=await fetch(config.vikunja.baseUrl+'/api/v2/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:config.vikunja.username,password:config.vikunja.password}),signal:AbortSignal.timeout(8000)});expect(login.status).toBe(200);config.vikunja.apiToken=(await login.json() as {token:string}).token;
+    await testVikunjaToken(config.vikunja);
     admin=new PgDatabase(config.databaseUrl);
   });
   afterEach(async()=>{if(db){await db.close();await admin.query('DROP SCHEMA IF EXISTS '+schema+' CASCADE');}});

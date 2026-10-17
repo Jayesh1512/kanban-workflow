@@ -64,14 +64,18 @@ describe.skipIf(!url)('platform HTTP migration gate against isolated actual Post
     await platform.services.db.query('DROP TABLE schema_migrations');
     const response = await app.inject({ method: 'PUT', url: '/api/chats/-10042/inclusion', payload: { idempotencyKey: 'absent-ledger', inclusion: 'excluded', expectedPolicyVersion: 0 } });
     expect(response.statusCode).toBe(503); expect(response.json().error.code).toBe('upstream_unavailable');
-    expect((await platform.services.db.query("SELECT to_regclass('schema_migrations') AS name")).rows[0]!['name']).toBeNull(); expect((await platform.services.chats.list({})).items[0]!.inclusion).toBe('included');
+    expect((await platform.services.db.query('SELECT to_regclass($1) AS name',[schema+'.schema_migrations'])).rows[0]!['name']).toBeNull(); expect((await platform.services.chats.list({})).items[0]!.inclusion).toBe('included');
   });
   it('returns pending while another session owns the migration lock', async () => {
     await admin.withSessionLock('antseed:migrations', async () => { await blocked(); });
     expect((await app.inject('/api/chats')).statusCode).toBe(200);
   });
   it('sanitizes an actual database outage while keeping onboarding/live/status reachable, then recovers', async () => {
-    const container = process.env['PLATFORM_GATE_TEST_CONTAINER']; if (!container || !/^antseed-a-gate-[a-z0-9-]+$/.test(container)) throw new Error('Require explicitly owned antseed-a-gate-* container');
+    const container = process.env['PLATFORM_GATE_TEST_CONTAINER']; if (!container || !/^antseed-(?:a-gate-[a-z0-9-]+|qa-m1-system-[a-z0-9-]+-postgres-1)$/.test(container)) throw new Error('Require an explicitly owned gate/system PostgreSQL container');
+    if(container.startsWith('antseed-qa-m1-system-')){
+      const project=execFileSync('docker',['inspect','--format','{{index .Config.Labels "com.docker.compose.project"}}',container],{encoding:'utf8'}).trim();
+      expect(project+'-postgres-1').toBe(container);
+    }
     const before = await snapshot(); execFileSync('docker', ['stop', container], { stdio: 'ignore' });
     try {
       const response = await app.inject({ method: 'PUT', url: '/api/chats/-10042/inclusion', payload: { idempotencyKey: 'db-outage', inclusion: 'excluded', expectedPolicyVersion: 0 } });

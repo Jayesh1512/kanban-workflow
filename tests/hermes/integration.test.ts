@@ -8,7 +8,7 @@ describe.skipIf(!process.env['WORKFLOW_TEST_PROJECT'])('actual HTTP + SDK + Post
   let h: Awaited<ReturnType<typeof nativeFixture>>, client: Awaited<ReturnType<typeof connectClient>>;
   beforeAll(async () => {
     h = await nativeFixture(); const url = await h.app.listen({ host: '127.0.0.1', port: 0 }); client = await connectClient(url);
-    for (let i = 0; i < 100; i++) { const p = (await h.app.inject('/api/status')).json(); if (p.components.database.state === 'ready' && p.components.jev.code === 'provider_entitlement') return; await delay(100); }
+    for (let i = 0; i < 100; i++) { const p = (await h.app.inject('/api/status')).json(); if (p.components.database.state === 'ready' && p.components.jev.code === 'provider_entitlement' && p.components.workflow.state === 'degraded') return; await delay(100); }
     throw new Error('Owned synthetic stack did not become ready/paused');
   }, 30000);
   afterAll(async () => { await client?.close(); await h?.close(); });

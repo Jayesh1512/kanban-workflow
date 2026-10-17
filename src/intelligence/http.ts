@@ -23,11 +23,12 @@ export class ProviderHttp {
   private makeStatus(state: ServiceStatus['state'], code: string | null): ServiceStatus { return { state, code, detail: null, checkedAt: this.clock.now().toISOString() }; }
   status(): ServiceStatus { return { ...this.latest }; }
   invalid(): ProviderFailure { const result: ProviderFailure = { ok: false, code: 'invalid_response', retryable: false, retryAt: null, detail: 'Provider response failed contract or evidence validation' }; this.latest = this.makeStatus('degraded', result.code); return result; }
-  async post(endpoint: string, body: unknown, signal?: AbortSignal): Promise<{ ok: true; data: unknown; requestId: string | null } | ProviderFailure> {
+  async post(endpoint: string, body: unknown, signal?: AbortSignal, timeoutOverrideMs?:number): Promise<{ ok: true; data: unknown; requestId: string | null } | ProviderFailure> {
     if (!this.config.apiKey?.trim()) return { ok: false, code: 'unconfigured', retryable: false, retryAt: null, detail: 'Provider credential is not configured' };
     const attempts = Math.min(5, Math.max(1, this.config.maxAttempts));
+    const timeoutMs=timeoutOverrideMs??this.config.timeoutMs;
     for (let attempt = 0; attempt < attempts; attempt++) {
-      const timed = AbortSignal.timeout(Math.max(1, this.config.timeoutMs));
+      const timed = AbortSignal.timeout(Math.max(1, timeoutMs));
       const combined = signal ? AbortSignal.any([signal, timed]) : timed;
       let failure: ProviderFailure;
       try {
@@ -54,13 +55,16 @@ export class ProviderHttp {
           this.latest = this.makeStatus('ready', null); return { ok: true, data, requestId };
         }
       } catch {
-        failure = { ok: false, code: timed.aborted || signal?.aborted ? 'timeout' : 'unavailable', retryable: !signal?.aborted, retryAt: null, detail: signal?.aborted ? 'Provider request cancelled' : timed.aborted ? 'Provider request timed out' : 'Provider connection unavailable' };
+        // Worker shutdown cancels this request, not the durable analysis job.
+        // The aborted-signal guard below prevents any local retry; a fresh
+        // worker may resume after restart under a new fenced queue claim.
+        failure = { ok: false, code: timed.aborted || signal?.aborted ? 'timeout' : 'unavailable', retryable: true, retryAt: null, detail: signal?.aborted ? 'Provider request cancelled' : timed.aborted ? 'Provider request timed out' : 'Provider connection unavailable' };
       }
       this.latest = this.makeStatus('unavailable', failure.code);
       if (!failure.retryable || attempt + 1 >= attempts || signal?.aborted) return failure;
       const wait = failure.retryAt ? Math.max(0, Date.parse(failure.retryAt) - this.clock.now().getTime()) : 100 * 2 ** attempt;
       // Long rate-limit delays belong to the durable queue, never an unbounded request loop.
-      if (wait > Math.min(this.config.timeoutMs, 5000)) return failure;
+      if (wait > Math.min(timeoutMs, 5000)) return failure;
       try { await (this.options.sleep ?? defaultSleep)(wait, signal); } catch { return failure; }
     }
     return this.invalid();

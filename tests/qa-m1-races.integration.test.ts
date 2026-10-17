@@ -7,6 +7,7 @@ import { parse } from 'dotenv';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PgDatabase } from '../src/platform/database.js';
 import { loadRuntimeConfig } from '../src/platform/config.js';
+import { testVikunjaToken } from './vikunja-test-auth.js';
 import { VikunjaAdapter } from '../src/vikunja/adapter.js';
 import type { RuntimeConfig } from '../src/shared/ports.js';
 
@@ -17,6 +18,7 @@ describe.skipIf(!project)('independent real M1 adversarial session/projection ch
     if (!/^antseed-qa-m1-[a-z0-9-]+$/.test(project!)) throw new Error('Require own isolated QA project');
     const bundle = parse(execFileSync('docker', ['compose', '-p', project!, '-f', 'compose.yaml', 'exec', '-T', 'backend', 'cat', '/run/antseed/runtime.env'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }));
     config = await loadRuntimeConfig({ ...bundle, AI_ENV_PATH: '/qa-not-present', DATABASE_URL: bundle['DATABASE_URL']!.replace('postgres:5432', `127.0.0.1:${process.env['QA_M1_PG_PORT'] ?? '18433'}`), VIKUNJA_URL: `http://127.0.0.1:${process.env['VIKUNJA_PORT'] ?? '18081'}` });
+    await testVikunjaToken(config.vikunja);
     db = new PgDatabase(config.databaseUrl); adapter = new VikunjaAdapter(config.vikunja, db);
   });
   afterAll(async () => { await db?.close(); });
@@ -99,8 +101,7 @@ describe.skipIf(!project)('independent real M1 adversarial session/projection ch
     try {
       details = delayed.updateTaskDetails({ taskId: task.id, title: 'QA hostile remote interleaving', description: 'Synthetic source fields only', workstream: 'Integration' });
       await Promise.race([delayedWrite, delay(5_000).then(() => { throw new Error('Descriptive write not intercepted'); })]);
-      const login = await fetch(`${config.vikunja.baseUrl}/api/v2/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: config.vikunja.username, password: config.vikunja.password }) });
-      expect(login.status).toBe(200); const { token } = await login.json() as { token: string };
+      const token = await testVikunjaToken(config.vikunja);
       const moved = await fetch(`${config.vikunja.baseUrl}/api/v2/projects/${board.projectId}/views/${board.viewId}/buckets/${board.buckets.Completed}/tasks`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ task_id: Number(task.id) }) });
       expect(moved.status).toBe(200); await moved.arrayBuffer();
       expect((await adapter.getTask(task.id))?.bucketId).toBe(board.buckets.Completed);
