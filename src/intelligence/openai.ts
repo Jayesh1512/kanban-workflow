@@ -22,6 +22,7 @@ export function createOpenAIExtractor(config: RuntimeConfig['extraction'], optio
       if (input.chat.isControl || input.chat.inclusion !== 'included') return http.invalid();
       const result = await http.post('https://api.openai.com/v1/responses', {
         model: config.model, store: false, max_output_tokens: config.maxOutputTokens,
+        ...(config.model === 'gpt-6.1-sol' ? { reasoning: { effort: 'low' } } : {}),
         input: [{ role: 'system', content: EXTRACTION_INSTRUCTIONS }, { role: 'user', content: JSON.stringify(input) }],
         text: { format: { type: 'json_schema', name: 'antseed_extraction', strict: true, schema: z.toJSONSchema(extractionSchema) } },
       }, signal);

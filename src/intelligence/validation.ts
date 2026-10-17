@@ -158,7 +158,10 @@ export function validateExtraction(raw: unknown, input: AnalysisInput): Extracti
         const match = new RegExp(`^${escape(name)}\\s+(?:from|at)\\s+([^.!?;\\n]{1,100}?)\\s+here\\b`, 'iu').exec(e.excerpt.trim()); return match ? [match[1]!.trim()] : [];
       });
     });
-    if (c.affiliation === 'internal' && !introducedCompanies.some((name) => normalize(name) === 'antseed') && !atCompany('AntSeed')) throw new Error('Internal affiliation lacks identity-attributed AntSeed evidence');
+    // The dataset explicitly binds this exact account to AntSeed. That trusted
+    // identity does not require a repeated self-introduction in every message.
+    const connectedAccount = !!input.accountSelfId && c.telegramUserIds.length === 1 && c.telegramUserIds[0] === input.accountSelfId;
+    if (c.affiliation === 'internal' && !connectedAccount && !introducedCompanies.some((name) => normalize(name) === 'antseed') && !atCompany('AntSeed')) throw new Error('Internal affiliation lacks identity-attributed AntSeed evidence');
     if (c.affiliation === 'external' && !introducedCompanies.some((name) => normalize(name) !== 'antseed') && !c.roles.some((r) => r.companyName.toLowerCase() !== 'antseed') && !value.companies.some((company) => company.canonicalName.toLowerCase() !== 'antseed' && atCompany(company.canonicalName))) throw new Error('External affiliation lacks identity-attributed company evidence');
   }
   const keys = new Set(value.facts.map((f) => f.localKey));

@@ -38,4 +38,14 @@ describe('outbound-first source and deterministic stage rules', () => {
     const input = outbound(); expect(outreachContext(input.messages)).toMatchObject({ initiatedBy: 'unknown', waitingForReply: false });
     input.messages[0]!.forward.isForwarded = true; expect(outreachContext(input.messages, input.accountSelfId)).toMatchObject({ initiatedBy: 'unknown', lastOutgoingAt: null });
   });
+  it('accepts the bound AntSeed account as internal without transferring affiliation to its recipient', () => {
+    const input = outbound(), m = input.messages[0]!;
+    m.text = 'Hello Mira, would Cedar Labs like to evaluate our API?'; input.evidence[0]!.excerpt = m.text;
+    input.extraction.contacts = [{ telegramUserIds: ['99'], names: ['Ravi'], usernames: ['ravi'], phones: [], emails: [], roles: [], affiliation: 'internal', evidenceIds: [input.evidence[0]!.id] }];
+    expect(validateExtraction(input.extraction, input).contacts[0]!.affiliation).toBe('internal');
+    delete input.accountSelfId;
+    expect(() => validateExtraction(input.extraction, input)).toThrow('Internal affiliation');
+    input.accountSelfId = '7'; // A different account must not authorize this contact's affiliation.
+    expect(() => validateExtraction(input.extraction, input)).toThrow('Internal affiliation');
+  });
 });

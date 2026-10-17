@@ -30,7 +30,7 @@ describe('real HTTP adapter paths against local documented-contract stand-ins (n
     expect(result.ok).toBe(true); if (!result.ok) return;
     expect(result.value).toEqual(extractionFixture()); expect(result.provenance.usage).toEqual({ input_tokens: 100, output_tokens: 30 });
     expect(requests[0]!.url).toBe('/v1/responses'); expect(requests[0]!.authorization).toBe('Bearer synthetic-test-key');
-    expect(requests[0]!.body).toMatchObject({ model: config.model, store: false, text: { format: { strict: true, type: 'json_schema' } } });
+    expect(requests[0]!.body).toMatchObject({ model: config.model, store: false, reasoning: { effort: 'low' }, text: { format: { strict: true, type: 'json_schema' } } });
   });
   it.each(['incomplete', 'refusal', 'invalid_json', 'foreign_evidence'])('rejects %s extraction', async (mode) => {
     const extraction = extractionFixture(); if (mode === 'foreign_evidence') extraction.evidenceIds = ['00000000-0000-4000-8000-999999999999'];

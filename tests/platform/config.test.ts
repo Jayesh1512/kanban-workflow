@@ -44,6 +44,14 @@ describe('runtime configuration and M1 status', () => {
     const override = await loadRuntimeConfig({ AI_ENV_PATH: file, TELEGRAM_API_ID: '456', TELEGRAM_API_HASH: 'synthetic-override' });
     expect(override.telegram.apiId).toBe(456); expect(override.telegram.apiHash).toBe('synthetic-override');
   });
+  it('allows per-deployment extraction limits without blank Compose fields erasing mounted settings', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'antseed-extraction-config-')); directories.push(dir); const file = join(dir, 'ai.env');
+    await writeFile(file, 'OPENAI_TIMEOUT_MS=30000\nOPENAI_MAX_OUTPUT_TOKENS=4096\n');
+    const mounted = await loadRuntimeConfig({ AI_ENV_PATH: file, OPENAI_TIMEOUT_MS: '', OPENAI_MAX_OUTPUT_TOKENS: ' ' });
+    expect(mounted.extraction).toMatchObject({ timeoutMs: 30000, maxOutputTokens: 4096 });
+    const override = await loadRuntimeConfig({ AI_ENV_PATH: file, OPENAI_TIMEOUT_MS: '90000', OPENAI_MAX_OUTPUT_TOKENS: '8192' });
+    expect(override.extraction).toMatchObject({ timeoutMs: 90000, maxOutputTokens: 8192, model: mounted.extraction.model });
+  });
   it('keeps onboarding reachable when configuration or database is unavailable', async () => {
     const config = await loadRuntimeConfig({ AI_ENV_PATH: '/missing/ai.env', DATABASE_URL: 'postgresql://u:p@127.0.0.1:1/none' });
     expect(configMetadata(config).aiEnvReadable).toBe(false);
