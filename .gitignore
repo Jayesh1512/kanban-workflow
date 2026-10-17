@@ -7,3 +7,6 @@ coverage/
 *.sqlite*
 .local/
 *.log
+/artifacts/demo/.render/
+/artifacts/demo/__pycache__/
+/artifacts/demo/*.mp4

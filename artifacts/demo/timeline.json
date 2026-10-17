@@ -1,0 +1,87 @@
+[
+  {
+    "name": "intro",
+    "start": 0,
+    "end": 8,
+    "duration": 8,
+    "narration": "AntSeed brings company conversations, contacts, and follow ups into one board. This recording uses synthetic messages and authored AI decisions.",
+    "source": "Clearly labelled title/evidence card"
+  },
+  {
+    "name": "board",
+    "start": 8,
+    "end": 23,
+    "duration": 15,
+    "narration": "The actual Vikunja board has six lanes, from To be started through Completed. Cedar is a Buyer. That workstream label is separate from its current progress.",
+    "source": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-fbd3158f-c6d6-4b5f-ace7-4b93bee7d23f-mp4.mp4"
+  },
+  {
+    "name": "contacts",
+    "start": 23,
+    "end": 51,
+    "duration": 28,
+    "narration": "Open the company ticket. Mira is the C T O, and Jo is the engineering lead. Both contacts belong to Cedar. The backend keeps source evidence beside the next action. AntSeed owes pricing and integration notes tomorrow. Jo owns a separate external review. Those commitments keep their original actor and calendar date, instead of inventing an exact time.",
+    "source": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-554a4c1b-0c32-4dd3-ade9-f7b31f440894-mp4.mp4"
+  },
+  {
+    "name": "chat_policy",
+    "start": 51,
+    "end": 71,
+    "duration": 20,
+    "narration": "The setup page exposes actual connection state, chat inclusion, and bounded history import. This demo contains one synthetic chat. An operator can exclude a chat or configure the operational group here. Live Telegram login is not shown in this recording.",
+    "source": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-10da58c3-754c-4f1c-962b-9c58e1ade7a1-mp4.mp4"
+  },
+  {
+    "name": "proposal",
+    "start": 71,
+    "end": 85,
+    "duration": 14,
+    "narration": "The recommendation proposes Work in progress, with evidence and a reason. Decision is pending, and apply state is not requested. The board has not moved. This recommendation is an authored fixture.",
+    "source": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-2ce44f09-4f47-43ca-bb21-59d7338b71b1-mp4.mp4"
+  },
+  {
+    "name": "approval",
+    "start": 85,
+    "end": 115,
+    "duration": 30,
+    "narration": "Now an explicit operator approval is submitted through the existing H T T P endpoint. Approval queues the operation. The normal backend worker handles the move and checks Vikunja. After refreshing the real board, Cedar is in Work in progress. Database readback confirms stage version one, one committed mutation, and an applied proposal. The helper did not move the task.",
+    "source": "/Users/jys/.t3/projects/kanban/artifacts/demo/.render/approval-real-cuts.mkv",
+    "sourceSegments": [
+      {
+        "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-a016a44d-55de-46d1-937e-9de1775a071a-mp4.mp4",
+        "start": 0,
+        "duration": 12
+      },
+      {
+        "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-0005e899-0924-42d7-83b4-83ad535243c7-mp4.mp4",
+        "start": 1,
+        "duration": 18
+      }
+    ],
+    "editNote": "Idle refresh cut to a later actual capture of the same approved task; no replay/reset."
+  },
+  {
+    "name": "priorities",
+    "start": 115,
+    "end": 135,
+    "duration": 20,
+    "narration": "The priorities endpoint returns the current ticket, next action, evidence, and an upcoming commitment. The date is interpreted in Asia Kolkata. AntSeed responsibilities remain distinct from the external contact review. These same records are available to Hermes through M C P.",
+    "source": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-e53898f9-fa87-4644-83c5-c4d0211fd3f9-mp4.mp4"
+  },
+  {
+    "name": "hermes",
+    "start": 135,
+    "end": 154,
+    "duration": 19,
+    "narration": "A separate recorded independent verification used the actual installed Nous Hermes agent. It discovered all twenty seven tools and called propose lane change. Real database readback found a pending Hermes proposal, while the board stayed unchanged, with stage zero and no mutations. No new model run was used for this video.",
+    "source": "Clearly labelled title/evidence card"
+  },
+  {
+    "name": "closing",
+    "start": 154,
+    "end": 169,
+    "duration": 15,
+    "narration": "Start everything with docker compose up. Local deployment, persistence, approvals, and Hermes have passed independent checks. Live Telegram onboarding remains outstanding, and successful Jev inference is blocked by Gateway credits. Those limits are separate from the working local demonstration.",
+    "source": "Clearly labelled title/evidence card"
+  }
+]

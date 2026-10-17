@@ -1,0 +1,27 @@
+{
+  "baseline": "26f0e937b03474b1f3b9ce72175e0d54791896f4",
+  "cliExit": 0,
+  "discovered27": true,
+  "tools": [
+    "mcp__antseed__propose_lane_change"
+  ],
+  "proposals": [
+    {
+      "id": "55a74014-681c-438e-ab06-6362b718da64",
+      "origin": "hermes",
+      "decision": "pending",
+      "apply_state": "not_requested",
+      "target_lane": "Work in progress"
+    }
+  ],
+  "local": {
+    "lane": "To be started",
+    "stageVersion": 0
+  },
+  "remoteUnchanged": true,
+  "mutations": 0,
+  "defaultConfigUnchanged": true,
+  "defaultEnvUnchanged": true,
+  "evidenceKind": "Recorded independent installed Hermes verification; synthetic company records; no new model invocation for video",
+  "client": "Nous Research Hermes Agent0.21.3/upstream6cd25026"
+}
