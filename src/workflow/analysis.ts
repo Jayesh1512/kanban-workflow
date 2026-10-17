@@ -12,7 +12,11 @@ export interface AnalysisHooks {
   onDecision?: (tx: SqlExecutor, input: { jobId: string; ticketId: string; expectedStageVersion: number; decision: JevDecision }) => Promise<void>;
   onReplay?: (tx: SqlExecutor) => Promise<void>;
 }
-export interface AnalysisClaimOptions { workerId: string; leaseMs: number; recentOutboundOnly?: boolean }
+export interface AnalysisClaimOptions {
+  workerId: string; leaseMs: number;
+  /** Reserved live slot: recent outbound conversations OR fresh replies on active cards. */
+  recentOutboundOnly?: boolean;
+}
 
 export class SqlAnalysisQueue implements AnalysisQueue {
   constructor(readonly db: Database, readonly clock: Clock = { now: () => new Date() }, readonly timezone = 'Asia/Kolkata', readonly hooks: AnalysisHooks = {}) {}
@@ -20,7 +24,8 @@ export class SqlAnalysisQueue implements AnalysisQueue {
     assert(input.workerId.length > 0 && Number.isFinite(input.leaseMs) && input.leaseMs > 0 && input.leaseMs <= 3_600_000, 'validation', 'Invalid analysis lease');
     const now = this.clock.now(); const token = randomUUID();
     return this.db.transaction(async (tx) => {
-      // Four fresh outbound-conversation slots, then one oldest eligible job.
+      // Four fresh conversation slots, then one oldest eligible job. Replies on
+      // active tracked cards remain live even when initial outreach is old.
       // Keep the phase durable and locked so restart/concurrent claimers cannot
       // reset fairness or claim the same priority slot independently.
       const dispatchKey = 'workflow:analysis:dispatch';
@@ -36,9 +41,10 @@ export class SqlAnalysisQueue implements AnalysisQueue {
         LEFT JOIN LATERAL (
           SELECT max(m.sent_at) AS latest FROM analysis_job_messages s JOIN messages m ON (m.chat_id,m.id)=(s.chat_id,s.message_id)
           WHERE s.job_id=j.id AND s.message_version=m.version AND m.deleted_at IS NULL AND m.sent_at>=$3
-          AND EXISTS(SELECT 1 FROM messages own JOIN telegram_account a ON own.sender_id=a.self_user_id
+          AND (EXISTS(SELECT 1 FROM tickets t WHERE t.chat_id=j.chat_id AND t.tracking_state='active')
+          OR EXISTS(SELECT 1 FROM messages own JOIN telegram_account a ON own.sender_id=a.self_user_id
             WHERE own.chat_id=j.chat_id AND own.deleted_at IS NULL AND own.sent_at>=$3 AND btrim(own.text)<>''
-            AND NOT COALESCE((own.forward_metadata->>'isForwarded')::boolean,false))
+            AND NOT COALESCE((own.forward_metadata->>'isForwarded')::boolean,false)))
         ) fresh ON true
         WHERE c.inclusion='included' AND NOT c.is_control AND j.policy_version=c.policy_version AND j.mapping_version=c.mapping_version
         AND ((j.status IN ('pending','retry') AND (j.retry_at IS NULL OR j.retry_at<=$1)) OR (j.status='running' AND j.lease_until<=$1))
