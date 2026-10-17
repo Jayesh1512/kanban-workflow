@@ -106,7 +106,8 @@ export function validateExtraction(raw: unknown, input: AnalysisInput): Extracti
     check(c.evidenceIds);
     const sourceMessages = c.evidenceIds.map((id) => { const e = validEvidence.get(id)!; return input.messages.find((m) => m.id === e.messageId && m.chatId === e.chatId)!; });
     const author = (m: (typeof sourceMessages)[number]) => m.forward.isForwarded ? m.forward.originPeer : m.sender;
-    const authors = sourceMessages.map(author).filter((p) => p?.kind === 'user');
+    const recipients = sourceMessages.filter(m => input.accountSelfId && m.senderId === input.accountSelfId && !m.forward.isForwarded && input.chat.kind === 'user' && m.peer.kind === 'user' && m.peer.id === input.chat.id && m.peer.id !== input.accountSelfId).map(m => m.peer);
+    const authors = [...sourceMessages.map(author).filter((p) => p?.kind === 'user'), ...recipients];
     const userIds = new Set(authors.map((p) => p!.id));
     if (c.telegramUserIds.some((id) => !userIds.has(id))) throw new Error('Contact identity absent from user snapshots');
     if (new Set(c.telegramUserIds).size > 1) throw new Error('Multiple Telegram identities require separate sourced contacts');

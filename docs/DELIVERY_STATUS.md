@@ -327,3 +327,51 @@ per case, bounded reconciliation, busy suppression, inline errors, no JS errors,
 and viewport-fitting feedback. Mobile capture visually inspected. Impeccable
 detector[], diffcheckPASS. Only personal backend rebuilt/recreated with preserved
 volumes/session; actual updated page and configured group readback verified.
+
+## Outbound-first tracking priority
+
+User explicitly prioritized outbound enquiries. Read-only review found that the
+pipeline captured outgoing messages but omitted the bound self ID from analysis
+and lacked a deterministic guard against treating our first pitch as engagement.
+Analysis now carries the immutable dataset self ID. Native questions distinguish
+AntSeed outreach from recipient intent, associate the addressed prospect rather
+than AntSeed, and treat targeting a prospective buyer separately from expressed
+interest. Native distributions and confidence remain unchanged.
+
+When the source lane is To be started (including a new ticket), our message alone
+cannot propose Work in progress, Integrations or Completed. A current cited,
+nonforwarded user reply is required; known internal teammates, deleted messages,
+uncited replies and forwarded claims do not satisfy that gate. The model must
+still judge substantive engagement and confidence. Replies do not themselves
+apply a stage; proposals remain pending. New-ticket To be started is recognized
+as its effective initial lane rather than a pointless same-lane proposal.
+
+Outbound direct-chat recipient profile details can now be sourced from that
+chat's visible peer snapshot, strictly when the connected account is the author.
+The recipient cannot borrow our profile phone or self-introduction; forwarding
+identity rules remain intact. No employment/role/date is invented. Context/Hermes
+receives structured outreach direction, account self ID, latest outgoing/incoming
+and awaiting-reply state. Board descriptions display outreach status. These fields
+explicitly cover captured messages, not an assertion of complete historic coverage.
+No arbitrary follow-up date or automatic archive-on-silence was added.
+
+Focused source/native-adapter suites66PASS. Durable SQL-engine end-to-end test
+PASS: outbound enquiry -> confirmed prospect + recipient contact + To be started
+stage0/awaiting reply/no proposal -> cited incoming interest -> pending OpenAI
+proposal, still stage0/not_requested/zero mutations. Updated outbound/native checks
+13PASS after initial-lane edge correction; strict TS/buildPASS. A bounded live
+synthetic two-provider request passed actual extraction and GPT-6 Luna decisions
+in16903ms: Cedar Labs identified, two contacts extracted, relevance company,
+new_company and uncertain lane (no unsupported advancement). This is one live
+fixture, not a general accuracy guarantee; no user's chat content was used.
+
+The broad run encountered four pre-existing test/hook timeouts during host stalls
+(309 passes/142 opt-in skips), rather than assertion differences. All four affected files plus the final outbound tests were rerun serially:46PASS
+in6files, including the durable end-to-end case. Strict TS/build passed again. Deployment is currently pending:
+OrbStack reports Running but Docker daemon queries and personal backend liveness
+time out. No global engine restart or unrelated stack action was attempted.
+
+The code is complete and committed for review; deployment awaits explicit user
+approval to restart the unresponsive OrbStack engine, because doing so would
+briefly interrupt unrelated local Docker/Kubernetes workloads. No global restart
+was performed without that approval.

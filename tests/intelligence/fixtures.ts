@@ -7,7 +7,7 @@ export const jobId = '00000000-0000-4000-8000-000000000002';
 export const sourceText = 'I am Mira, CTO at Cedar Labs. AntSeed will send notes tomorrow.';
 const snapshot = { id: '7', kind: 'user' as const, names: ['Mira'], usernames: ['mira'], visiblePhones: [], visibleEmails: [], observedAt: '2026-10-17T00:00:00.000Z' };
 export function inputFixture(): AnalysisInput {
-  return { jobId, chat: { id: '-1001', kind: 'supergroup', title: 'Cedar Labs', username: null, archived: false, inclusion: 'included', isControl: false, policyVersion: 0, mappingStatus: 'unresolved', companyId: null, mappingVersion: 0 },
+  return { jobId, accountSelfId: '99', chat: { id: '-1001', kind: 'supergroup', title: 'Cedar Labs', username: null, archived: false, inclusion: 'included', isControl: false, policyVersion: 0, mappingStatus: 'unresolved', companyId: null, mappingVersion: 0 },
     messages: [{ chatId: '-1001', id: 1, senderId: '7', sentAt: '2026-10-16T20:00:00.000Z', editedAt: null, deletedAt: null, text: sourceText, replyToId: null, sourceUrl: null, version: 1,
       sender: snapshot, peer: { ...snapshot, id: '-1001', kind: 'channel', names: ['Cedar Labs'] }, forward: { isForwarded: false, sourceKind: 'own', originPeer: null, originName: null, originDate: null, originMessageId: null } }],
     evidence: [{ id: evidenceId, chatId: '-1001', messageId: 1, messageVersion: 1, excerpt: sourceText, sourceUrl: null, observedAt: '2026-10-16T20:00:00.000Z', invalidatedAt: null }], companies: [], ticket: null, timezone: 'Asia/Kolkata' };

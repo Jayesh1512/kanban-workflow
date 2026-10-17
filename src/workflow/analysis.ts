@@ -73,7 +73,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
     const account = (await tx.query('SELECT self_user_id::text FROM telegram_account WHERE singleton')).rows[0];
     assert(account, 'not_configured', 'Telegram dataset account is not bound');
     // Singleton dataset account binding is immutable under the platform contract.
-    return { jobId: id, chat: chatRow(c), messages, evidence, companies, ticket: ticket ? await ticketRow(tx, ticket) : null, timezone: this.timezone };
+    return { jobId: id, accountSelfId: String(account.self_user_id), chat: chatRow(c), messages, evidence, companies, ticket: ticket ? await ticketRow(tx, ticket) : null, timezone: this.timezone };
   }
   async loadInput(jobId: string): Promise<AnalysisInput> { return this.db.transaction((tx) => this.load(tx, jobId)); }
   async getExtraction(jobId: string): Promise<ExtractionCheckpoint | null> {

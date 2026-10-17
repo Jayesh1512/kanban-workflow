@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { outreachContext } from '../shared/outreach.js';
 import type { BusinessFact, ContactDetail, DateFact, Page, Priority, Ticket } from '../shared/domain.js';
 import type { Clock, CompanyWrite, ContactWrite, Database, RecordsService, SqlExecutor } from '../shared/ports.js';
 import { updateActionsSchema, updateFactSchema, uuidSchema, workstreamSchema } from '../shared/schemas.js';
@@ -135,7 +136,8 @@ export class RecordsRepository implements RecordsService {
     const messages = (await this.db.query('SELECT * FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY sent_at DESC,id DESC LIMIT $2', [chat.id, input.limit])).rows.map(messageRow);
     const evidence = (await this.db.query(`SELECT e.* FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
       WHERE e.chat_id=$1 AND e.message_id=ANY($2::int[]) AND e.message_version=m.version AND e.invalidated_at IS NULL AND m.deleted_at IS NULL ORDER BY e.observed_at DESC,e.id`, [chat.id, messages.map((m) => m.id)])).rows.map(evidenceRow);
-    return { ticket, chat, company: await this.getCompany(ticket.companyId), contacts: await Promise.all(ticket.contactIds.map((id) => this.getContact(id))), evidence,
+    const account = (await this.db.query<{ self_user_id: string }>('SELECT self_user_id::text FROM telegram_account WHERE singleton')).rows[0];
+    return { ticket, chat, outreach: outreachContext(messages, account?.self_user_id), company: await this.getCompany(ticket.companyId), contacts: await Promise.all(ticket.contactIds.map((id) => this.getContact(id))), evidence,
       messages, facts: (await this.listFacts({ ticketId: ticket.id, limit: input.limit })).items };
   }
   async updateActions(raw: Parameters<RecordsService['updateActions']>[0]) {

@@ -19,6 +19,7 @@ export class TicketProjector {
       const description = [
         `Company: ${company.canonicalName}`, `Chat: ${chat.title} (${chat.id})`, `Workstream: ${ticket.workstream}`,
         `Contacts: ${contacts.map((c) => `${c.names.join('/')} ${c.roles.map((r) => r.role).join('/')}`).join('; ')}`,
+        ...(context.outreach?.lastOutgoingAt ? [`Outreach (captured messages): ${context.outreach.waitingForReply ? 'Awaiting reply' : 'Reply received'}`, `Last outreach: ${context.outreach.lastOutgoingAt}`, `Last incoming message: ${context.outreach.lastIncomingAt ?? 'None captured'}`] : []),
         `Summary: ${ticket.summary}`, `Latest substantive interaction: ${ticket.latestSubstantiveAt ?? 'Unknown'}`,
         `Next action: ${ticket.nextAction ?? 'Unspecified'}`, `Follow-up: ${ticket.followUpAt ?? 'See sourced date facts'}`, `ETA: ${ticket.etaAt ?? 'Unspecified'}`,
         `Blockers: ${ticket.blockers.join('; ') || 'None recorded'}`,
