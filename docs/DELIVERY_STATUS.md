@@ -298,3 +298,32 @@ Telegram/login, sync, extraction, decision and workflow were READY. Account rema
 bound. Control group remains missing; no proposals or mutations existed at that
 snapshot. No live approval/group send was claimed or attempted. Historical Vercel
 credit pause is scoped to its old endpoint/model and does not carry over.
+
+## Automatic control setup recovery
+
+Live operator creation of Approvals had succeeded in Telegram but exceeded the15s
+RPC response deadline. PM explicitly reconciled the original marker and bound the
+existing group; control became READY. No second group was created. User then
+requested the setup be fixed and completed by PM. The same original idempotent
+configure request now confirms configured/Approvals with lastErrornull; Telegram
+login and control remain READY after deploying the fix.
+
+Creation failure now performs one automatic marker readback while preserving the
+durable unknown journal. It never repeats createChannel. Failed readback retains
+unknown for subsequent recovery. The form now has immediate busy feedback,
+duplicate-submit suppression, inline errors and human-readable configured status;
+unknown results trigger at most two additional read-only checks. Technical setup
+JSON is in expandable details; existing configured status is visible on reload.
+No permission gate, authentication change, new group, or test Telegram message
+was introduced.
+
+Strict TS/build and9 focused real-SQL-engine/controlled-Telegram tests PASS,
+including automatic accepted-create/lost-response recovery, failed readback then
+later recovery, and no duplicate create. Native T3 preview became unavailable
+with an explicit no-automation-host error; fallback temporary Playwright-core
+used the existing cached headless Chromium against a synthetic loopback harness.
+Desktop1280/mobile390 success, still-unknown and HTTP409 flows PASS, one create
+per case, bounded reconciliation, busy suppression, inline errors, no JS errors,
+and viewport-fitting feedback. Mobile capture visually inspected. Impeccable
+detector[], diffcheckPASS. Only personal backend rebuilt/recreated with preserved
+volumes/session; actual updated page and configured group readback verified.

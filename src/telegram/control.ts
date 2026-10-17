@@ -61,6 +61,10 @@ export class ControlSetupManager {
         return await this.finish(input.operationKey, dialog.id);
       } catch {
         await this.db.query("UPDATE control_setup_operations SET last_error='Creation outcome is unknown; use reconcile, not another create request',updated_at=now() WHERE operation_key=$1", [input.operationKey]);
+        // A timeout can arrive after Telegram accepted the create. Recover only
+        // by marker readback; never issue another createChannel request.
+        try { return await this.reconcileUnlocked(input.operationKey); }
+        catch { /* Keep the durable unknown state for the next bounded readback. */ }
         return this.result(input.operationKey);
       }
     });
