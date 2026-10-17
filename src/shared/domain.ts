@@ -175,12 +175,21 @@ export interface Extraction {
 }
 export interface AnalysisInput {
   jobId: UUID;
+  accountSelfId?: TelegramUserId;
   chat: Chat;
   messages: Message[];
   evidence: Evidence[];
   companies: Company[];
   ticket: Ticket | null;
   timezone: string;
+}
+export interface OutreachContext {
+  accountSelfId: TelegramUserId | null;
+  coverage: 'captured_messages';
+  initiatedBy: 'antseed' | 'other' | 'unknown';
+  lastOutgoingAt: ISODateTime | null;
+  lastIncomingAt: ISODateTime | null;
+  waitingForReply: boolean;
 }
 export type LaneRecommendation =
   | { outcome: 'propose'; targetLane: Lane; evidenceIds: UUID[]; reason: string; nextAction: string | null }

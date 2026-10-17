@@ -154,7 +154,7 @@ export interface RecordsService {
   listTickets(input: PageInput & { companyId?: UUID; lane?: Lane }): Promise<Page<Ticket>>;
   getTicket(id: UUID): Promise<Ticket>;
   ensureTicket(chatId: TelegramChatId): Promise<Ticket>; // included + confirmed only, unique chat, initial lane only
-  getContext(input: { ticketId: UUID; limit: number }): Promise<{ ticket: Ticket; chat: Chat; company: Company; contacts: ContactDetail[]; evidence: Evidence[]; messages: Message[]; facts: BusinessFact[] }>;
+  getContext(input: { ticketId: UUID; limit: number }): Promise<{ ticket: Ticket; chat: Chat; company: Company; contacts: ContactDetail[]; evidence: Evidence[]; messages: Message[]; facts: BusinessFact[]; outreach?: import('./domain.js').OutreachContext }>;
   getEvidence(ids: UUID[]): Promise<Evidence[]>;
   updateActions(input: UpdateActionsInput): Promise<Ticket>;
   listFacts(input: PageInput & { ticketId: UUID }): Promise<Page<BusinessFact>>;
