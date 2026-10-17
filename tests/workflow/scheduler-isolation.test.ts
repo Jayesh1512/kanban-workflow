@@ -29,7 +29,7 @@ async function harness(drift = false) {
   app = Fastify(); await module.register(app); await module.start(); return { db, module };
 }
 describe('actual workflow scheduler with local SQL and explicitly held synthetic extraction', () => {
-  it('processes fresh outreach and keeps projection ticking while historical extraction is held; stop drains both', async () => {
+  it.each(['outreach','tracked reply'] as const)('processes fresh %s and keeps projection ticking while historical extraction is held; stop drains both', async mode => {
     const old = deferred(), live = deferred(); releases.push(old.resolve, live.resolve); let oldStarted = false, liveStarted = false; const signals: AbortSignal[] = [];
     hooks.project.mockResolvedValue(0);
     hooks.extract.mockImplementation(async (input: AnalysisInput, signal: AbortSignal): Promise<ProviderResult<never>> => {
@@ -39,7 +39,11 @@ describe('actual workflow scheduler with local SQL and explicitly held synthetic
     });
     const h = await harness(); await until(()=>oldStarted);
     await h.db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-1002,'group','Synthetic new prospect','included')");
-    await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(-1002,2,99,$1,'Synthetic outbound enquiry')",[new Date()]);
+    if(mode==='tracked reply'){
+      await h.db.query("INSERT INTO tickets(chat_id,company_id,kind,lane) VALUES(-1002,NULL,'contact_prospect','Work in progress')");
+      await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(-1002,1,99,$1,'Old synthetic outreach')",[new Date(Date.now()-7200000)]);
+    }
+    await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(-1002,2,$2,$1,'Synthetic live conversation')",[new Date(),mode==='outreach'?99:7]);
     await seedJob(h.db,randomUUID(),'-1002',2); await until(()=>liveStarted);
     expect(oldStarted).toBe(true); const phases = hooks.project.mock.calls.length; await delay(1150); expect(hooks.project.mock.calls.length).toBeGreaterThan(phases);
     const stopping = h.module.stop(); expect(h.module.stop()).toBe(stopping); let stopped=false; void stopping.then(()=>{stopped=true;});

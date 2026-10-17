@@ -35,6 +35,25 @@ it('also prioritizes the fresh recipient reply in a recent outbound conversation
   const incoming = await freshMessage(3, '7', now);
   expect((await queue().claim({ workerId: 'worker', leaseMs: 60000 }))?.id).toBe(incoming);
 });
+it.each(['company','contact_prospect'] as const)('keeps a fresh reply on an active %s live after initial outreach has aged out',async kind=>{
+  if(kind==='company'){
+    const company=(await db.query("INSERT INTO companies(canonical_name) VALUES('Synthetic tracked company') RETURNING id")).rows[0]!.id;
+    await db.query('INSERT INTO tickets(chat_id,company_id,kind,lane) VALUES(-1001,$1,\'company\',\'Work in progress\')',[company]);
+  }else await db.query("INSERT INTO tickets(chat_id,company_id,kind,lane) VALUES(-1001,NULL,'contact_prospect','Work in progress')");
+  const oldOwn=await freshMessage(2,'99',new Date(now.getTime()-7200000));await db.query("UPDATE analysis_jobs SET status='completed' WHERE id=$1",[oldOwn]);
+  const incoming=await freshMessage(3,'7',now);
+  expect((await queue().claim({workerId:'live',leaseMs:60000,recentOutboundOnly:true}))?.id).toBe(incoming);
+  expect((await db.query('SELECT status FROM analysis_jobs WHERE id=$1',[jobId])).rows[0]!.status).toBe('pending');
+  expect((await db.query("SELECT value FROM app_settings WHERE key='workflow:analysis:dispatch'")).rows).toHaveLength(0);
+});
+it('does not reserve stale history or suspended cards simply because a ticket exists',async()=>{
+  await db.query("INSERT INTO tickets(chat_id,company_id,kind,lane,tracking_state) VALUES(-1001,NULL,'contact_prospect','Work in progress','active')");
+  const old=await freshMessage(2,'7',new Date(now.getTime()-7200000));
+  expect(await queue().claim({workerId:'live',leaseMs:60000,recentOutboundOnly:true})).toBeNull();
+  await db.query("UPDATE tickets SET tracking_state='suspended'");const incoming=await freshMessage(3,'7',now);
+  expect(await queue().claim({workerId:'live',leaseMs:60000,recentOutboundOnly:true})).toBeNull();
+  expect((await db.query('SELECT status FROM analysis_jobs WHERE id=ANY($1::uuid[])',[[old,incoming]])).rows.every(r=>r.status==='pending')).toBe(true);
+});
 it('reserves live capacity instead of letting its empty poll take historical work or consume fairness', async () => {
   expect(await queue().claim({ workerId: 'live', leaseMs: 60000, recentOutboundOnly: true })).toBeNull();
   expect((await db.query('SELECT value FROM app_settings WHERE key=$1', ['workflow:analysis:dispatch'])).rows).toHaveLength(0);

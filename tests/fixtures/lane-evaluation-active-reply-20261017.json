@@ -1,0 +1,92 @@
+{
+  "at": "2026-10-17T17:21:28.442Z",
+  "synthetic": true,
+  "model": "gpt-6-luna",
+  "rubricVersion": "openai.decisions.antseed.v3",
+  "total": 3,
+  "passed": 3,
+  "cases": [
+    {
+      "id": "auth-howto-not-blocker",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.19,
+          "lane_2": 0.01,
+          "lane_3": 0.01,
+          "lane_4": 0,
+          "lane_5": 0.01,
+          "no_change": 0.77,
+          "uncertain": 0
+        },
+        "confidence": 0.74
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.39
+      },
+      "requestId": "req_cb2b66d67087426abfaae0f35e3aa08b"
+    },
+    {
+      "id": "short-auth-blocker-wip",
+      "from": "Work in progress",
+      "expected": "Blocked",
+      "actual": "Blocked",
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "lane_3",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.03,
+          "lane_2": 0.03,
+          "lane_3": 0.89,
+          "lane_4": 0.01,
+          "lane_5": 0,
+          "no_change": 0.03,
+          "uncertain": 0
+        },
+        "confidence": 0.87
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.96
+      },
+      "requestId": "req_02f10bb87e4645feb5c2e96b45f19d52"
+    },
+    {
+      "id": "auth-single-transient",
+      "from": "Work in progress",
+      "expected": null,
+      "actual": null,
+      "pass": true,
+      "lane": {
+        "type": "choice",
+        "choice": "no_change",
+        "probabilities": {
+          "lane_0": 0.01,
+          "lane_1": 0.15,
+          "lane_2": 0.13,
+          "lane_3": 0.07,
+          "lane_4": 0.02,
+          "lane_5": 0.01,
+          "no_change": 0.6,
+          "uncertain": 0.01
+        },
+        "confidence": 0.54
+      },
+      "support": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "requestId": "req_3e5021c4cd4f4131a7be974e7863f331"
+    }
+  ],
+  "limits": "Actual Decisions API, synthetic conversations and authored extraction. No Telegram/SQL/board actions."
+}
