@@ -1,0 +1,17 @@
+{
+  "project": "antseed-pm-demo-20261017",
+  "sourceBoundary": "SYNTHETIC AUTHORED DEMO: Telegram messages, extraction and Jev decision are fixtures; no live TG/OpenAI/Jev/Hermes call.",
+  "verified": "approved-and-worker-applied",
+  "ticketId": "2483cc08-8d5a-44ec-8885-dd2094564ef4",
+  "proposalId": "58310f97-4d65-4b9b-9bab-7fea3c0f026f",
+  "taskId": "1",
+  "localLane": "Work in progress",
+  "stageVersion": 1,
+  "remoteBucketId": "5",
+  "proposalDecision": "approved",
+  "applyState": "applied",
+  "mutationCount": 1,
+  "committedMutationCount": 1,
+  "contactCount": 2,
+  "evidenceCount": 3
+}

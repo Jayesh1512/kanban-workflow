@@ -1,0 +1,65 @@
+{
+  "createdAt": "2026-10-17T00:07:40.615754+00:00",
+  "sourceCommit": "84ec0c924106785d8866a8ceba283b91444cc9c3",
+  "demoImage": "sha256:de3d1f944a8d2c51d8cb5e9a4390bf6f724795b3e23c82fdb6bef1e25be85846",
+  "demoProject": "antseed-pm-demo-20261017",
+  "video": "antseed-kanban-demo.mp4",
+  "sha256": "df613a2e15f179f0a12a00d885a52004601320da3c5b9496f24c8fb23fa4516f",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "30/1"
+      },
+      {
+        "codec_name": "aac",
+        "r_frame_rate": "0/0"
+      }
+    ],
+    "format": {
+      "duration": "169.021333",
+      "size": "5800198"
+    }
+  },
+  "actual": [
+    "PostgreSQL17.11",
+    "Vikunja2.7.0 board and task readback",
+    "canonical backend worker projection and approved application",
+    "operator HTTP decision",
+    "browser capture",
+    "separate recorded installed Hermes model/MCP proposal-only verification"
+  ],
+  "synthetic": [
+    "Telegram source messages and account/chat profiles",
+    "OpenAI extraction checkpoint",
+    "Jev mapping/stage recommendation"
+  ],
+  "notEstablished": [
+    "authenticated Telegram login/import/control delivery",
+    "successful live Jev inference via Vercel; historical account-credit restriction remains"
+  ],
+  "editNote": "Idle refresh is cut to a later genuine capture of the same approved task. Source cuts recorded in timeline.json; no task reset or extra movement.",
+  "credentialVerification": {
+    "suppliedAIAndGeneratedServiceValueMatches": 0,
+    "scannedArtifactFiles": 70,
+    "finalArtifactAndHandoffFilesScanned": 76,
+    "finalCredentialMatches": 0
+  },
+  "persistentServices": {
+    "personal": "antseed-personal;19280/19281",
+    "demo": "antseed-pm-demo-20261017;19180/19181/19432",
+    "personalImage": "sha256:b0a87f884f9dddbe8ac7f87f399c2a841970440ed515a097efebaec076b0ac25"
+  },
+  "hermesPersonalProfile": {
+    "profile": "antseed",
+    "endpoint": "http://127.0.0.1:19280/mcp",
+    "discoveryExit": 0,
+    "modelInvokedDuringSetup": false,
+    "defaultConfigAndEnvUnchanged": true
+  },
+  "independentArtifactReview": "PASS; QA_REVIEW.md"
+}

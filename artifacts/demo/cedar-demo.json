@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "project": "antseed-pm-demo-20261017",
+  "sourceBoundary": "SYNTHETIC AUTHORED DEMO: Telegram messages, extraction and Jev decision are fixtures; no live TG/OpenAI/Jev/Hermes call.",
+  "seedAnchor": "2026-10-16T23:54:01.506Z",
+  "chatId": "-1001",
+  "companyId": "77006263-00e2-4db7-a288-de19b32e025e",
+  "ticketId": "2483cc08-8d5a-44ec-8885-dd2094564ef4",
+  "proposalId": "58310f97-4d65-4b9b-9bab-7fea3c0f026f",
+  "contactIds": [
+    "266bcd19-fc20-49ec-aad3-d90b7664efd9",
+    "7f39f78a-171f-45d6-bd3c-0949e5693067"
+  ],
+  "factIds": [
+    "0b41a581-82bf-5ce3-ae0d-191c897dd46f",
+    "7d5a5148-a890-573e-a547-5d81c1182cfd"
+  ],
+  "evidenceIds": [
+    "08cbc721-0673-5e3e-afea-c1cdcd34b4c6",
+    "832a9f92-77b0-5b9f-a6d5-eebfa783194f",
+    "d07c39e9-55de-5c91-ad6c-e00d3c218911"
+  ],
+  "followUpDate": "2026-10-18",
+  "initial": {
+    "lane": "To be started",
+    "stageVersion": 0,
+    "proposalDecision": "pending",
+    "applyState": "not_requested",
+    "mutationCount": 0,
+    "taskId": null
+  },
+  "urls": {
+    "backend": "http://127.0.0.1:19180",
+    "status": "http://127.0.0.1:19180/api/status",
+    "context": "http://127.0.0.1:19180/api/tickets/2483cc08-8d5a-44ec-8885-dd2094564ef4/context",
+    "proposal": "http://127.0.0.1:19180/api/proposals/58310f97-4d65-4b9b-9bab-7fea3c0f026f",
+    "priorities": "http://127.0.0.1:19180/api/priorities/today?timezone=Asia%2FKolkata",
+    "vikunja": "http://127.0.0.1:19181",
+    "board": "http://127.0.0.1:19181/projects/2/8",
+    "approval": "http://127.0.0.1:19180/api/proposals/58310f97-4d65-4b9b-9bab-7fea3c0f026f/decision"
+  },
+  "approvalBodyFile": "cedar-approval.json"
+}

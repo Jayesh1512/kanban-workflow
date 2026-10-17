@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-16T23:58:35.492348+00:00",
+  "http": 200,
+  "result": {
+    "proposal": {
+      "id": "58310f97-4d65-4b9b-9bab-7fea3c0f026f",
+      "ticketId": "2483cc08-8d5a-44ec-8885-dd2094564ef4",
+      "sourceLane": "To be started",
+      "sourceStageVersion": 0,
+      "sourceMappingVersion": 1,
+      "sourcePolicyVersion": 0,
+      "targetLane": "Work in progress",
+      "evidenceIds": [
+        "08cbc721-0673-5e3e-afea-c1cdcd34b4c6",
+        "832a9f92-77b0-5b9f-a6d5-eebfa783194f",
+        "d07c39e9-55de-5c91-ad6c-e00d3c218911"
+      ],
+      "reason": "SYNTHETIC AUTHORED DECISION: Cedar Labs explicitly reports pricing/API review; actual integration has not begun. Pending operator approval only.",
+      "nextAction": "Send Cedar Labs the pricing proposal and integration notes tomorrow.",
+      "origin": "jev",
+      "decision": "approved",
+      "applyState": "queued",
+      "correctionOf": null,
+      "decidedAt": "2026-10-16T23:58:35.481Z",
+      "appliedAt": null,
+      "lastError": null
+    },
+    "replacement": null
+  }
+}

@@ -19,7 +19,10 @@ Open [setup and status](http://localhost:3000/) and
 [Vikunja](http://localhost:3456/). Compose mounts the configured AI environment
 file read-only and generates persistent service credentials automatically.
 Complete Telegram phone/code/2FA onboarding on the setup page; the application
-uses its own persisted session. See [deployment and onboarding](deploy/README.md)
+uses its own persisted session. This workstation's configured personal instance
+uses [localhost:19280](http://localhost:19280/); see the
+[local handoff and Hermes command](docs/LOCAL_HANDOFF.md).
+See [deployment and onboarding](deploy/README.md)
 for port/configuration overrides, board access and volume persistence.
 
 The MCP endpoint is `http://localhost:3000/mcp`. See
@@ -37,6 +40,8 @@ npm start
 workflow and providers; `/health/ready` stays503 while required components are
 unavailable. The recorded Vercel Jev credit restriction currently pauses Jev work
 durably; successful live Jev inference and authenticated Telegram acceptance
-remain unverified. M4 independent review and final acceptance/video are pending.
+remain unverified. M0–M4 code/local acceptance and the fresh canonical deployment
+passed independent QA. The [narrated working-project demo](artifacts/demo/README.md)
+labels synthetic inputs and the remaining live boundaries.
 See [delivery evidence](docs/DELIVERY_STATUS.md),
 [architecture](docs/ARCHITECTURE.md) and [project brief](docs/PROJECT_BRIEF.md).

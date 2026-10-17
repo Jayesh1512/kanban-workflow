@@ -1,0 +1,160 @@
+1
+00:00:00,000 --> 00:00:04,400
+AntSeed brings company conversations, contacts, and follow ups into one board.
+
+2
+00:00:04,400 --> 00:00:08,000
+This recording uses synthetic messages and authored AI decisions.
+
+3
+00:00:08,000 --> 00:00:15,500
+The actual Vikunja board has six lanes, from To be started through Completed.
+
+4
+00:00:15,500 --> 00:00:17,808
+Cedar is a Buyer.
+
+5
+00:00:17,808 --> 00:00:23,000
+That workstream label is separate from its current progress.
+
+6
+00:00:23,000 --> 00:00:24,931
+Open the company ticket.
+
+7
+00:00:24,931 --> 00:00:30,724
+Mira is the C T O, and Jo is the engineering lead.
+
+8
+00:00:30,724 --> 00:00:33,138
+Both contacts belong to Cedar.
+
+9
+00:00:33,138 --> 00:00:37,483
+The backend keeps source evidence beside the next action.
+
+10
+00:00:37,483 --> 00:00:40,862
+AntSeed owes pricing and integration notes tomorrow.
+
+11
+00:00:40,862 --> 00:00:43,759
+Jo owns a separate external review.
+
+12
+00:00:43,759 --> 00:00:51,000
+Those commitments keep their original actor and calendar date, instead of
+inventing an exact time.
+
+13
+00:00:51,000 --> 00:00:57,500
+The setup page exposes actual connection state, chat inclusion, and bounded
+history import.
+
+14
+00:00:57,500 --> 00:01:00,500
+This demo contains one synthetic chat.
+
+15
+00:01:00,500 --> 00:01:06,500
+An operator can exclude a chat or configure the operational group here.
+
+16
+00:01:06,500 --> 00:01:11,000
+Live Telegram login is not shown in this recording.
+
+17
+00:01:11,000 --> 00:01:15,968
+The recommendation proposes Work in progress, with evidence and a reason.
+
+18
+00:01:15,968 --> 00:01:20,032
+Decision is pending, and apply state is not requested.
+
+19
+00:01:20,032 --> 00:01:22,290
+The board has not moved.
+
+20
+00:01:22,290 --> 00:01:25,000
+This recommendation is an authored fixture.
+
+21
+00:01:25,000 --> 00:01:32,500
+Now an explicit operator approval is submitted through the existing H T T P
+endpoint.
+
+22
+00:01:32,500 --> 00:01:34,500
+Approval queues the operation.
+
+23
+00:01:34,500 --> 00:01:39,500
+The normal backend worker handles the move and checks Vikunja.
+
+24
+00:01:39,500 --> 00:01:45,000
+After refreshing the real board, Cedar is in Work in progress.
+
+25
+00:01:45,000 --> 00:01:51,500
+Database readback confirms stage version one, one committed mutation, and an
+applied proposal.
+
+26
+00:01:51,500 --> 00:01:55,000
+The helper did not move the task.
+
+27
+00:01:55,000 --> 00:02:01,829
+The priorities endpoint returns the current ticket, next action, evidence, and
+an upcoming commitment.
+
+28
+00:02:01,829 --> 00:02:05,244
+The date is interpreted in Asia Kolkata.
+
+29
+00:02:05,244 --> 00:02:09,634
+AntSeed responsibilities remain distinct from the external contact review.
+
+30
+00:02:09,634 --> 00:02:15,000
+These same records are available to Hermes through M C P.
+
+31
+00:02:15,000 --> 00:02:19,471
+A separate recorded independent verification used the actual installed Nous
+Hermes agent.
+
+32
+00:02:19,471 --> 00:02:23,569
+It discovered all twenty seven tools and called propose lane change.
+
+33
+00:02:23,569 --> 00:02:30,647
+Real database readback found a pending Hermes proposal, while the board stayed
+unchanged, with stage zero and no mutations.
+
+34
+00:02:30,647 --> 00:02:34,000
+No new model run was used for this video.
+
+35
+00:02:34,000 --> 00:02:36,308
+Start everything with docker compose up.
+
+36
+00:02:36,308 --> 00:02:40,154
+Local deployment, persistence, approvals, and Hermes have passed independent
+checks.
+
+37
+00:02:40,154 --> 00:02:45,538
+Live Telegram onboarding remains outstanding, and successful Jev inference is
+blocked by Gateway credits.
+
+38
+00:02:45,538 --> 00:02:49,000
+Those limits are separate from the working local demonstration.
