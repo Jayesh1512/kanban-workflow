@@ -185,7 +185,7 @@ export interface AnalysisQueue {
   saveExtraction(checkpoint: ExtractionCheckpoint, claimToken: string): Promise<void>; // persist before Jev; validate versions/hash and live claim
   complete(jobId: UUID, decision: JevDecision, provenance: ProviderProvenance, claimToken: string): Promise<void>; // uses saved extraction; recheck versions and live claim
   fail(jobId: UUID, error: Extract<ProviderResult<never>, { ok: false }>, claimToken: string): Promise<void>;
-  replayUnavailable(input: { idempotencyKey: string; chatId?: TelegramChatId; includeCompletedUnmapped?: boolean }): Promise<{ queued: number }>;
+  replayUnavailable(input: { idempotencyKey: string; chatId?: TelegramChatId; includeCompletedUnmapped?: boolean; includeCompletedDecisions?: boolean }): Promise<{ queued: number }>;
 }
 export interface ProposalService {
   propose(input: ProposeLaneInput): Promise<Proposal>;

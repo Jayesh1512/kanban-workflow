@@ -149,7 +149,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       const job = await this.fenced(tx, jobId, claimToken); const input = await this.load(tx, jobId);
       assert(job.extraction && job.extraction_input_hash === inputHash(input), 'conflict', 'Current extraction checkpoint is required');
       const extraction = validateExtraction(job.extraction, input);
-      const supportedProvider = provenance.provider === 'vercel' || (provenance.provider === 'openai' && provenance.model === 'gpt-6-luna' && ['openai.decisions.antseed.v1', 'openai.decisions.antseed.v2'].includes(provenance.schemaVersion));
+      const supportedProvider = provenance.provider === 'vercel' || (provenance.provider === 'openai' && provenance.model === 'gpt-6-luna' && ['openai.decisions.antseed.v1', 'openai.decisions.antseed.v2', 'openai.decisions.antseed.v3'].includes(provenance.schemaVersion));
       assert(supportedProvider && decision.model === provenance.model, 'validation', 'Decision provenance does not match the configured decision model');
       const evidenceIds = [...new Set(extraction.evidenceIds)]; await assertEvidence(tx, [...evidenceIds, ...decision.lane.evidenceIds], input.chat.id);
       const match = decision.companyMatch;
@@ -239,18 +239,22 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       assert(updated.rows.length === 1, 'conflict', 'Analysis lease expired during failure handling');
     });
   }
-  async replayUnavailable(input: { idempotencyKey: string; chatId?: string; includeCompletedUnmapped?: boolean }): Promise<{ queued: number }> {
+  async replayUnavailable(input: { idempotencyKey: string; chatId?: string; includeCompletedUnmapped?: boolean; includeCompletedDecisions?: boolean }): Promise<{ queued: number }> {
     assert(!input.includeCompletedUnmapped || !!input.chatId, 'validation', 'Completed unmapped replay requires one explicit chat');
+    assert(!input.includeCompletedDecisions || !!input.chatId, 'validation', 'Completed decision replay requires one explicit chat');
     return command(this.db, 'analysis:replay', input.idempotencyKey, input, async (tx) => {
       await this.hooks.onReplay?.(tx);
       // Changed mappings/policies are never revived under obsolete job snapshots.
       const result = await tx.query(`UPDATE analysis_jobs j SET status='pending',retry_at=NULL,last_error=NULL,decision=NULL,jev_provenance=NULL,jev_diagnostics=NULL
         WHERE (j.status='provider_unavailable' OR ($2::boolean AND j.status='completed' AND NOT EXISTS(SELECT 1 FROM tickets t WHERE t.chat_id=j.chat_id)
-          AND EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND c.mapping_status IN ('unresolved','ambiguous') AND c.company_id IS NULL)))
+          AND EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND c.mapping_status IN ('unresolved','ambiguous') AND c.company_id IS NULL))
+          OR ($3::boolean AND j.status='completed' AND j.id=(SELECT newest.id FROM analysis_jobs newest
+            WHERE newest.chat_id=j.chat_id AND newest.status='completed' AND newest.policy_version=j.policy_version AND newest.mapping_version=j.mapping_version
+            ORDER BY newest.created_at DESC,newest.id DESC LIMIT 1)))
         AND ($1::bigint IS NULL OR j.chat_id=$1) AND EXISTS(SELECT 1 FROM chats c WHERE c.id=j.chat_id AND c.inclusion='included' AND NOT c.is_control
         AND c.policy_version=j.policy_version AND c.mapping_version=j.mapping_version)
         AND NOT EXISTS(SELECT 1 FROM analysis_job_messages s LEFT JOIN messages m ON m.chat_id=s.chat_id AND m.id=s.message_id
-          WHERE s.job_id=j.id AND (m.version IS NULL OR m.version<>s.message_version OR m.deleted_at IS NOT NULL)) RETURNING j.id`, [input.chatId ?? null, !!input.includeCompletedUnmapped]);
+          WHERE s.job_id=j.id AND (m.version IS NULL OR m.version<>s.message_version OR m.deleted_at IS NOT NULL)) RETURNING j.id`, [input.chatId ?? null, !!input.includeCompletedUnmapped, !!input.includeCompletedDecisions]);
       return { queued: result.rows.length };
     });
   }
