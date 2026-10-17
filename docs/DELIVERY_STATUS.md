@@ -391,3 +391,41 @@ phase, so readiness honestly returns503. No live enquiry, Telegram test send,
 approval or stage movement was performed for deployment verification. The source,
 SQL-engine and synthetic live-provider evidence above remains separate from
 an actual user outbound enquiry/reply acceptance test.
+
+## Extraction timeout recovery
+
+The follow-up investigation confirmed valid API access from inside the production
+container (models HTTP200 in1267ms) and an8-second validated synthetic extraction.
+A previously timing-out real chat request carried116 captured messages and about
+120KB serialized input; no private source text was printed or saved in diagnostic
+artifacts. A90-second diagnostic returned after about61seconds but was rejected.
+A second diagnostic captured only response metadata: incomplete/max_output_tokens,
+42,264 input tokens and all4,096 allowed output tokens consumed after62.9seconds.
+Thus the30-second request deadline and output budget were both insufficient.
+
+GPT-6.1 Sol extraction now explicitly uses low reasoning effort, consistent with
+the official deployment guidance for routine extraction. A tuned real-input probe
+completed in30.5seconds (30,564 input/2,304 output/41 reasoning tokens); its full
+JSON was then rejected because the connected AntSeed account was labeled internal
+without repeating an AntSeed introduction in the message body. Validation now
+recognizes only the exact explicitly bound account as internal in this case.
+Other identities, recipient/forwarded metadata, roles, dates and evidence retain
+their existing checks. The diagnostic outputs were not committed as domain facts.
+
+Compose now accepts optional extraction timeout/output overrides while preserving
+mounted values when the optional override is blank. Personal ignored `.env` selects
+90,000ms and8,192 tokens; the private shared ai.env was not edited. Only the personal
+backend was rebuilt/recreated; account, session, Approvals and volumes persist.
+Four parked eligible jobs were explicitly returned to pending through the canonical
+idempotent replay operation. Existing retry jobs remain durable. No test Telegram
+send or approval was issued. Targeted configuration/provider/source/independent-QA
+contracts and outbound SQL-engine tests108PASS; strict TS and production image
+build/native probe PASS. Changed-file private credential comparison:0matches.
+
+At2026-10-17T15:17:53Z, a naturally scheduled real queued analysis completed and
+extraction, native decisions and workflow all reported READY, together with
+database, Vikunja, Telegram, sync and control. Both liveness and readiness return200.
+The running personal image is
+`sha256:fde45f6579fe7891448820fca2c8de595600c7c7619a3179fdc5a16b8045648c`.
+The backlog remains queued rather than being declared fully processed. No manual
+approval, test Telegram message or forced lane movement was used for this recovery.

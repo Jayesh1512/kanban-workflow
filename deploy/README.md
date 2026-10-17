@@ -153,6 +153,15 @@ raw native diagnostics and OpenAI provenance are retained. New automatic proposa
 have origin `openai`; they remain pending until an explicit operator decision.
 Refusals, malformed distributions and unexpected models never become lane writes.
 
+Extraction requests can include a sizeable captured history. For the personal
+deployment, `.env` can override `OPENAI_TIMEOUT_MS=90000` and
+`OPENAI_MAX_OUTPUT_TOKENS=8192` without editing the shared private AI file. Blank
+Compose overrides preserve that file's settings. GPT-6.1 Sol extraction uses low
+reasoning effort; evidence, date and identity validation remains required. A
+timeout returns work to the durable queue. Incomplete output is rejected rather
+than used to create facts or decisions. These limits are finite and do not
+guarantee that every model response will pass validation.
+
 Existing deployments may continue selecting `MOVEMENT_PROVIDER=vercel` with its
 original endpoint/model. The recorded real Gateway 403 paid-credit restriction seeds a
 durable Jev pause across jobs/processes/restarts. Extraction already saved for a
