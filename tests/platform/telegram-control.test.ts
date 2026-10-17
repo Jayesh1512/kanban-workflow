@@ -42,6 +42,31 @@ describe('durable control journal with synthetic Telegram transport and real SQL
     expect((await f.store.getCursor(String(group.id))).status).toBe('paused');
     await expect(f.store.setInclusion({ chatId: String(group.id), expectedPolicyVersion: 1, inclusion: 'included', idempotencyKey: 'bad-control-inclusion' })).rejects.toThrow('operational only');
   });
+  it('automatically reconciles a group accepted before a create-response timeout, without a second create', async () => {
+    let creates = 0, marker = '';
+    const client = {
+      async createSupergroup(input: { description: string }) { creates++; marker = input.description; throw new Error('Synthetic accepted create, lost response'); },
+      async *iterDialogs() { yield { peer: group, isArchived: false }; },
+      async getFullChat() { return { bio: marker }; },
+    } as unknown as TelegramClient;
+    const manager = new ControlSetupManager(f.db, f.store, () => client);
+    const input = { operationKey: 'auto-recover', createPrivateSupergroup: true as const, title: group.title };
+    expect(await manager.configure(input)).toMatchObject({ state: 'configured', lastError: null, chat: { id: String(group.id) } });
+    expect((await manager.configure(input)).state).toBe('configured'); expect(creates).toBe(1);
+    expect((await f.db.query('SELECT inclusion,is_control FROM chats WHERE id=$1', [String(group.id)])).rows[0]).toMatchObject({ inclusion: 'excluded', is_control: true });
+  });
+  it('retains unknown setup when automatic readback fails and recovers on a later readback', async () => {
+    let creates = 0, marker = '', unavailable = true;
+    const client = {
+      async createSupergroup(input: { description: string }) { creates++; marker = input.description; throw new Error('Synthetic timeout'); },
+      async *iterDialogs() { if (unavailable) throw new Error('Synthetic read outage'); yield { peer: group, isArchived: false }; },
+      async getFullChat() { return { bio: marker }; },
+    } as unknown as TelegramClient;
+    const manager = new ControlSetupManager(f.db, f.store, () => client);
+    const input = { operationKey: 'delayed-recover', createPrivateSupergroup: true as const, title: group.title };
+    expect((await manager.configure(input)).state).toBe('remote_unknown');
+    unavailable = false; expect((await manager.reconcile(input.operationKey)).state).toBe('configured'); expect(creates).toBe(1);
+  });
   it('retains inbox without subscriber; awaits handler, durably finishes irrelevant replies, retries transient errors', async () => {
     await configure(); await f.store.ingest({ type: 'message', message: fixtureMessage(7, String(group.id), 'approve') });
     const bus = new DurableControlBus(f.db, fakePort(async () => ({ messageId: 10 })));
