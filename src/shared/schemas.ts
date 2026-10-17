@@ -17,7 +17,7 @@ export const proposeLaneSchema = z.strictObject({
   evidenceIds: z.array(uuidSchema).min(1),
   reason: z.string().min(1).max(8000),
   nextAction: z.string().max(4000).nullable(),
-  origin: z.enum(['jev', 'hermes', 'manual']),
+  origin: z.enum(['jev', 'openai', 'hermes', 'manual']),
 });
 export type ProposeLaneInput = z.infer<typeof proposeLaneSchema>;
 export const decideProposalSchema = z.discriminatedUnion('decision', [

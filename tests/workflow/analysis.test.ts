@@ -5,6 +5,10 @@ import { RecordsRepository } from '../../src/workflow/records.js';
 import { processAnalysisOnce } from '../../src/workflow/processor.js';
 import { decisionFixture, extractionFixture, provenance } from '../intelligence/fixtures.js';
 import { fixtureDatabase, seedJob } from './database.js';
+import { readFile } from 'node:fs/promises';
+import { OPENAI_DECISIONS_VERSION } from '../../src/intelligence/openai-decisions.js';
+import { ProposalRepository } from '../../src/workflow/proposals.js';
+import type { ControlBus } from '../../src/shared/ports.js';
 
 let db: Database; let now: Date; let queue: SqlAnalysisQueue; let job: AnalysisJob;
 beforeEach(async () => { db = await fixtureDatabase(); now = new Date('2026-10-17T00:00:00Z'); queue = new SqlAnalysisQueue(db, { now: () => now }); job = (await queue.claim({ workerId: 'worker', leaseMs: 60000 }))!; });
@@ -13,6 +17,20 @@ async function checkpoint() { const input = await queue.loadInput(job.id); const
 const entitlement = { ok: false as const, code: 'entitlement' as const, retryable: false, retryAt: null, detail: 'Never persist synthetic-key or raw body' };
 
 describe('durable analysis checkpoint and immutable lease fencing (isolated PGlite)', () => {
+  it('retains native OpenAI decision provenance and creates an OpenAI pending-only proposal after the additive migration', async () => {
+    const migration = await readFile(new URL('../../db/migrations/202610170002_decision_origins.sql', import.meta.url), 'utf8');
+    for (const statement of migration.split(';').filter(s => s.trim())) await db.query(statement);
+    const proposals = new ProposalRepository(db, {} as ControlBus, { now: () => now });
+    queue = new SqlAnalysisQueue(db, { now: () => now }, 'Asia/Kolkata', { onDecision: (tx, input) => proposals.recordAnalysisDecisionTx(tx, input) });
+    const value = await checkpoint(); await queue.saveExtraction(value, job.claimToken);
+    const decision = decisionFixture(value.extraction.evidenceIds[0]); decision.model = 'gpt-6-luna'; decision.diagnostics.rubricVersion = OPENAI_DECISIONS_VERSION;
+    decision.lane = { outcome: 'propose', targetLane: 'Work in progress', evidenceIds: value.extraction.evidenceIds, reason: 'Sourced engagement', nextAction: null };
+    await queue.complete(job.id, decision, { ...provenance(), model: 'gpt-6-luna', schemaVersion: OPENAI_DECISIONS_VERSION }, job.claimToken);
+    expect((await db.query('SELECT status,extraction_provenance,jev_provenance FROM analysis_jobs WHERE id=$1', [job.id])).rows[0]).toMatchObject({ status: 'completed', extraction_provenance: { provider: 'openai', model: 'gpt-6.1-sol' }, jev_provenance: { provider: 'openai', model: 'gpt-6-luna' } });
+    expect((await db.query('SELECT origin,decision,apply_state FROM proposals')).rows).toEqual([{ origin: 'openai', decision: 'pending', apply_state: 'not_requested' }]);
+    expect((await db.query('SELECT lane,stage_version FROM tickets')).rows).toEqual([{ lane: 'To be started', stage_version: 0 }]);
+    expect((await db.query('SELECT id FROM mutations')).rows).toHaveLength(0);
+  });
   it('saves extraction/facts before Jev 403 and reuses the checkpoint after explicit replay', async () => {
     const value = await checkpoint(); await queue.saveExtraction(value, job.claimToken); await queue.fail(job.id, entitlement, job.claimToken);
     expect((await db.query('SELECT status,last_error,decision,extraction FROM analysis_jobs')).rows[0]).toMatchObject({ status: 'provider_unavailable', last_error: 'provider_entitlement', decision: null, extraction: value.extraction });

@@ -74,7 +74,7 @@ export class ProposalRepository {
     if ((await tx.query('SELECT 1 FROM app_settings WHERE key=$1', [key])).rows.length) return;
     const lane = input.decision.lane;
     const proposal = await this.proposeTx(tx, { idempotencyKey: `analysis:${input.jobId}`, ticketId: input.ticketId, expectedStageVersion: input.expectedStageVersion,
-      targetLane: lane.targetLane, evidenceIds: lane.evidenceIds, reason: lane.reason, nextAction: lane.nextAction, origin: 'jev' });
+      targetLane: lane.targetLane, evidenceIds: lane.evidenceIds, reason: lane.reason, nextAction: lane.nextAction, origin: input.decision.diagnostics.rubricVersion === 'openai.decisions.antseed.v1' ? 'openai' : 'jev' });
     await tx.query('INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb)', [key, JSON.stringify({ proposalId: proposal.id })]);
   }
   async recoverDecisionIntents(limit = 10): Promise<void> {

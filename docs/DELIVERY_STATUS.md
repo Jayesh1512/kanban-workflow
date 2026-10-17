@@ -251,3 +251,50 @@ Final cleanup/verification: temporary synthetic browser-login file removed, one-
 User reported entering a phone produced no visible response. Personal request metadata showed two POST409 results; request bodies were not read/logged and their exact conflict cause is unknown. Existing UI put errors in a global notice above the tall status section, with no local loading indicator or automatic next-step selection. PM repaired only src/platform/page.ts: explicit phone/code/2FA labels and buttons; immediate local progress and duplicate-submit suppression; inline focused errors; code delivery instructions; server-state-driven code/password/ready transitions; sensitive input cleared on submission. Failed HTTP requests refresh the actual login step without discarding the visible error. No adapter/auth semantics or permission gates changed.
 
 Production inline browser code exercised against an isolated loopback stand-in (zero Telegram/provider calls): HTTP409 visible/focused and reset to phone, one POST despite duplicate submit, sending indicator/cleared field, app-code delivery and automatic code step, masked 2FA step, ready disabled state, and invalid-code error on a390px viewport. Desktop1280px and mobile rendering inspected; Impeccable detector returned[];26 focused existing platform/config/profile/adapter tests, strict typecheck/build and diffcheck PASS. Rebuilt ONLY antseed-personal backend with --no-deps, retaining its existing volumes; actual container healthy and updated page GET verified. After restart the unauthenticated session reports AUTH_KEY_UNREGISTERED; the form explains that a new phone/code login is needed (no automatic retry/code request). Personal account remains unbound until user privately retries at http://localhost:19280/#telegram-onboarding. No real phone/code/password submitted by PM, no authenticated Telegram success claimed, no other stack modified.
+
+## GPT-6 Luna replaces Jev in the personal deployment
+
+User first requested Jev through OpenRouter, then explicitly superseded it with
+native OpenAI Decisions / gpt-6-luna. Uncommitted OpenRouter-specific work was
+removed before completing this switch; no OpenRouter key or provider request was
+used. The existing private OPENAI_API_KEY supplies both the unchanged gpt-6.1-sol
+extraction model and the new, separate gpt-6-luna decision model.
+
+Native POST /v1/decisions maps named predicate/choice/score questions to the same
+sourced company/workstream/lane/urgency rubrics. Validation preserves native
+answer identity/order, typed values, distributions, score labels/means and native
+confidence. Original native answers and distinct provider/model/schema provenance
+are retained; refusal or malformed answers cannot produce a recommendation.
+Compatibility names (`jev` port/status key and JEV_* config) remain, while the UI
+shows Decision model and OpenAI Decisions · gpt-6-luna. The original Vercel-only
+requirement is superseded by the user's explicit model choice. No model fallback,
+new permission gate, automatic approval or direct MCP move was introduced.
+
+Additive migration202610170002_decision_origins.sql permits origin=openai without
+changing001 or previous ledger checksums. A regression exercises checkpoint ->
+OpenAI decision -> pending/not_requested proposal, with local lane unchanged,
+stage0 and zero mutations. Extracting the validated-distribution interpretation
+helper exposed/fixed a narrow old no-ticket ambiguity bug: two absent lane values
+must not be treated as an explicit no-change decision.
+
+Verification: strict TS and production build PASS; full bounded suite299PASS /
+142 explicitly opt-in SKIPPED. The new native HTTP adapter tests cover successful
+wire/provenance, malformed/refused/reordered/duplicate/incorrectly scored answers,
+low-confidence abstention, credit failure,503 and timeout. Local Postman simulation
+was started, actual production adapter probe PASS, and request log confirmed
+POST /v1/decisions HTTP200; no cloud mock publication. Simulation stopped afterward.
+A first tiny live synthetic probe returned503; one subsequent full six-question
+native adapter probe completed HTTP200 in841ms with1950input/0output tokens and
+valid native distributions. This is transport/contract evidence, not a model-quality
+benchmark. No private conversation was used in either manual probe.
+
+Only antseed-personal backend was rebuilt/recreated; private ai.env was untouched,
+nonsecret ignored .env selects openai + exact /v1/decisions endpoint + gpt-6-luna,
+and existing volumes/session persisted. Actual PostgreSQL shows all three migration
+names and the OpenAI origin constraint. Explicit idempotent recovery queued one
+previously unavailable job. At2026-10-17T04:27:22Z, three actual live ingested jobs
+had completed with persisted OpenAI/gpt-6-luna provenance; database, Vikunja,
+Telegram/login, sync, extraction, decision and workflow were READY. Account remained
+bound. Control group remains missing; no proposals or mutations existed at that
+snapshot. No live approval/group send was claimed or attempted. Historical Vercel
+credit pause is scoped to its old endpoint/model and does not carry over.

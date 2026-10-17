@@ -44,12 +44,20 @@ reports are linked in [delivery status](DELIVERY_STATUS.md). The
 [narrated demo](../artifacts/demo/README.md) uses explicitly labelled synthetic
 source/model inputs with actual backend/SQL/Vikunja/HTTP operation.
 
-Two live checks remain: authenticated Telegram import/control delivery, and a
-successful Jev response through Vercel after Gateway credits/access are restored.
-The historical entitlement failure keeps Jev work durably paused and extraction
-checkpoints replayable. No repeat entitlement probe or model fallback was made.
-Explicit analysis replay can clear the pause after recovery; it may permit paid
-provider calls. Read-only discovery/status does not clear it.
+Telegram login and synchronization are now connected in the personal dataset;
+full live control delivery awaits an operational group. OpenAI extraction has
+reported timeouts. The selected decision layer is now native **gpt-6-luna** via
+OpenAI's Decisions API using the existing private `OPENAI_API_KEY`. Set
+`MOVEMENT_PROVIDER=openai`, `JEV_ENDPOINT=https://api.openai.com/v1/decisions`, and
+`JEV_MODEL=gpt-6-luna` in the local Compose `.env`, then recreate only the backend.
+Extraction remains on its separately configured OpenAI model. No OpenRouter key
+is needed. The historical Vercel entitlement pause remains in history and does
+not carry over to the deliberately changed decision endpoint/model.
+
+Live native GPT-6 Luna synthetic request completed successfully in841ms; this is
+transport/contract evidence, not a classification-quality benchmark. Proposals
+still require explicit human approval and an operational control group remains
+to be configured. Failed provider work and saved extraction remain replayable.
 
 Personal services and data volumes are retained. The separate demonstration
 project is `antseed-pm-demo-20261017` (19180/19181/19432), and QA projects retain

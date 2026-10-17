@@ -1,0 +1,5 @@
+simulation: antseed-openai-decisions
+routing: path
+mocks:
+  - routeKey: openai
+    path: ./config.yaml

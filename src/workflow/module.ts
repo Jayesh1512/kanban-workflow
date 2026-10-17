@@ -6,6 +6,7 @@ import { DomainError } from '../shared/api.js';
 import type { ApplicationModule, PlatformServices } from '../shared/ports.js';
 import type { ServiceStatus } from '../shared/domain.js';
 import { createOpenAIExtractor } from '../intelligence/openai.js';
+import { createOpenAIDecisions } from '../intelligence/openai-decisions.js';
 import { createJevAdapter } from '../intelligence/jev.js';
 import { SqlAnalysisQueue } from './analysis.js';
 import { RecordsRepository } from './records.js';
@@ -26,7 +27,7 @@ export function createWorkflowServices(platform: PlatformServices) {
     onDecision: (tx, input) => proposalRecords.recordAnalysisDecisionTx(tx, input), onReplay: resetJevBreaker,
   });
   const extraction = createOpenAIExtractor(platform.config.extraction, { clock: platform.clock });
-  const jev = withDurableJevBreaker(platform.db, createJevAdapter(platform.config.jev, { clock: platform.clock }), platform.config, platform.clock);
+  const jev = withDurableJevBreaker(platform.db, (platform.config.jev.provider === 'openai' ? createOpenAIDecisions : createJevAdapter)(platform.config.jev, { clock: platform.clock }), platform.config, platform.clock);
   return { records, analysis, extraction, jev, proposals, proposalRecords, mutations, projector,
     processOnce: (options: { workerId: string; leaseMs: number; signal?: AbortSignal }) => processAnalysisOnce({ queue: analysis, extraction, jev }, options) };
 }

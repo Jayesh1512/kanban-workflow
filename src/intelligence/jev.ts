@@ -74,32 +74,38 @@ export function createJevAdapter(config: RuntimeConfig['jev'], options: HttpOpti
       const request = buildJevRequest(input, config.model);
       const result = await http.post(config.endpoint, request, signal); if (!result.ok) return result;
       try {
-        const response = validateAnswers(result.data, request); const answers = response.answers;
-        const choice = (id: string) => strongChoice(answers[id]) ? (answers[id] as Extract<JevAnswer, { type: 'choice' }>).choice : 'uncertain';
-        const evidenceIds = [...new Set(input.extraction.evidenceIds)];
-        const relevanceChoice = choice('relevance');
-        const relevance = relevanceChoice === 'company' || relevanceChoice === 'non_company' ? relevanceChoice : 'uncertain';
-        const match = choice('company_match');
-        const knownIndex = /^existing_(\d+)$/.exec(match);
-        const known = knownIndex ? input.companies[Number(knownIndex[1])] : undefined;
-        const candidates = input.extraction.companyCandidates;
-        const companyMatch: JevDecision['companyMatch'] = known && relevance === 'company' && evidenceIds.length > 0
-          ? { outcome: 'matched', companyId: known.id, confidence: (answers.company_match as Extract<JevAnswer, { type: 'choice' }>).confidence }
-          : { outcome: match === 'new_company' && input.extraction.companies.length === 1 && relevance === 'company' && evidenceIds.length > 0 ? 'new_company' : match === 'none' ? 'none' : 'ambiguous', candidates };
-        const laneChoice = choice('lane'); const index = /^lane_(\d+)$/.exec(laneChoice); const target = index ? LANES[Number(index[1])] : undefined;
-        const supported = answers.supported?.type === 'noul' && answers.supported.noul >= 0.9;
-        const quotes = input.evidence.filter((e) => evidenceIds.includes(e.id)).map((e) => e.excerpt).join(' | ').slice(0, 3000);
-        const reason = `Source evidence: ${quotes || 'insufficient current evidence'}`;
-        const lane: JevDecision['lane'] = target && target !== input.ticket?.lane && supported && relevance === 'company' && evidenceIds.length
-          ? { outcome: 'propose', targetLane: target, evidenceIds, reason, nextAction: input.extraction.facts.find((f) => f.actor.party === 'antseed' && f.state === 'open' && (f.kind === 'action' || f.kind === 'commitment'))?.text ?? null }
-          : { outcome: laneChoice === 'no_change' || target === input.ticket?.lane ? 'no_change' : 'uncertain', reason, evidenceIds };
-        const work = choice('workstream'); const workstream = WORKSTREAMS.find((w) => w === work) ?? null;
-        const urgencyAnswer = answers.urgency;
-        const urgency = urgencyAnswer?.type === 'score' && urgencyAnswer.confidence >= 0.6 ? (['low', 'normal', 'high', 'urgent'] as const)[Math.min(3, Math.round(urgencyAnswer.score))]! : null;
-        return { ok: true, value: { relevance, companyMatch, workstream, urgency, lane, model: response.model,
-          diagnostics: { rubricVersion: JEV_RUBRIC_VERSION, answers } }, provenance: { provider: 'vercel', model: config.model,
+        const response = validateAnswers(result.data, request);
+        return { ok: true, value: decisionFromAnswers(input, response), provenance: { provider: 'vercel', model: config.model,
           requestId: result.requestId, schemaVersion: JEV_RUBRIC_VERSION, completedAt: http.clock.now().toISOString(), usage: usageProjection(response.usage) } };
       } catch { return http.invalid(); }
     },
   };
+}
+
+/** Interpret already validated native distributions; transport/provenance stay provider-owned. */
+export function decisionFromAnswers(input: AnalysisInput & { extraction: Extraction }, response: ReturnType<typeof validateAnswers>, rubricVersion = JEV_RUBRIC_VERSION): JevDecision {
+  const answers = response.answers;
+  const choice = (id: string) => strongChoice(answers[id]) ? (answers[id] as Extract<JevAnswer, { type: 'choice' }>).choice : 'uncertain';
+  const evidenceIds = [...new Set(input.extraction.evidenceIds)];
+  const relevanceChoice = choice('relevance');
+  const relevance = relevanceChoice === 'company' || relevanceChoice === 'non_company' ? relevanceChoice : 'uncertain';
+  const match = choice('company_match');
+  const knownIndex = /^existing_(\d+)$/.exec(match);
+  const known = knownIndex ? input.companies[Number(knownIndex[1])] : undefined;
+  const candidates = input.extraction.companyCandidates;
+  const companyMatch: JevDecision['companyMatch'] = known && relevance === 'company' && evidenceIds.length > 0
+    ? { outcome: 'matched', companyId: known.id, confidence: (answers.company_match as Extract<JevAnswer, { type: 'choice' }>).confidence }
+    : { outcome: match === 'new_company' && input.extraction.companies.length === 1 && relevance === 'company' && evidenceIds.length > 0 ? 'new_company' : match === 'none' ? 'none' : 'ambiguous', candidates };
+  const laneChoice = choice('lane'); const index = /^lane_(\d+)$/.exec(laneChoice); const target = index ? LANES[Number(index[1])] : undefined;
+  const supported = answers.supported?.type === 'noul' && answers.supported.noul >= 0.9;
+  const quotes = input.evidence.filter((e) => evidenceIds.includes(e.id)).map((e) => e.excerpt).join(' | ').slice(0, 3000);
+  const reason = `Source evidence: ${quotes || 'insufficient current evidence'}`;
+  const lane: JevDecision['lane'] = target && target !== input.ticket?.lane && supported && relevance === 'company' && evidenceIds.length
+    ? { outcome: 'propose', targetLane: target, evidenceIds, reason, nextAction: input.extraction.facts.find((f) => f.actor.party === 'antseed' && f.state === 'open' && (f.kind === 'action' || f.kind === 'commitment'))?.text ?? null }
+    : { outcome: laneChoice === 'no_change' || (target !== undefined && target === input.ticket?.lane) ? 'no_change' : 'uncertain', reason, evidenceIds };
+  const work = choice('workstream'); const workstream = WORKSTREAMS.find((w) => w === work) ?? null;
+  const urgencyAnswer = answers.urgency;
+  const urgency = urgencyAnswer?.type === 'score' && urgencyAnswer.confidence >= 0.6 ? (['low', 'normal', 'high', 'urgent'] as const)[Math.min(3, Math.round(urgencyAnswer.score))]! : null;
+  return { relevance, companyMatch, workstream, urgency, lane, model: response.model,
+          diagnostics: { rubricVersion, answers } };
 }
