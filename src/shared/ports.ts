@@ -24,7 +24,7 @@ export interface RuntimeConfig {
   databaseUrl: string;
   timezone: string;
   aiEnvPath: string;
-  telegram: { apiId: number | null; apiHash: string | null; sessionPath: string; historyBatchSize: number; historyMaxBatches: number };
+  telegram: { apiId: number | null; apiHash: string | null; sessionPath: string; historyBatchSize: number; historyMaxBatches: number; discoveryBatchSize?: number };
   vikunja: { baseUrl: string; apiToken: string | null; username: string; password: string | null; projectTitle: string };
   extraction: { provider: 'openai'; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number; maxOutputTokens: number };
   jev: { provider: 'vercel' | 'openai'; endpoint: string; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number };

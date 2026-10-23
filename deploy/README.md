@@ -321,3 +321,13 @@ The durable `telegram:automatic-since` setting can select conversations whose ea
 Qualifying chats bypass intake approval and get a card plus bounded import. The first supported AI lane recommendation is approved with `automation` provenance and applied through the same mutation journal/readback path; no initial approval message is sent. Initial no-change or uncertain assessments do not invent movement. Leftover historical windows from that initial snapshot do not produce approval spam; later recommendations based on newer messages or edits require the normal Telegram/operator approval. Explicit exclusions and the control group remain outside automatic intake. `/api/status` exposes `automaticIntake` counts and progress; scans and native flood waits survive worker restarts.
 
 For new groups, optional `groupApprovalFrom` is the inclusive UTC conversation-start boundary requiring human approval of the first AI lane recommendation as well as every later lane change. It applies to groups/supergroups, not private conversations. The existing cutoff import for groups started before that boundary keeps automatic initial placement, even if discovered later. Future groups first receive an intake request in the control group; no business messages are imported and no card is created until approve. Intake approval adds a prospect card in To be started and starts bounded analysis. The first recommended lane change is then sent to the configured control group and remains pending until its correlated approve reply. Unknown conversation dates remain deferred. This field does not authorize automatic later movements.
+
+## Supabase instead of local PostgreSQL
+
+[Supabase migration and deployment](supabase/README.md) moves both existing databases
+into separate schemas in one Supabase project, with encrypted direct/session
+connections, private configuration, coherent backups, row/sequence verification,
+and retained local volumes. Telegram sessions, Vikunja files and generated login/JWT
+credentials stay in the existing volumes. Use the Supabase Compose override only
+after restoring and verifying existing data; the default Compose file still uses
+local PostgreSQL.

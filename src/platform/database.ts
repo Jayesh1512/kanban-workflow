@@ -24,7 +24,21 @@ export class PgDatabase implements Database {
   readonly pool: pg.Pool;
   private readonly sessions = new AsyncLocalStorage<SessionScope>();
   constructor(connectionString: string) {
-    this.pool = new pg.Pool({ connectionString, max: 8, connectionTimeoutMillis: 3_000, idleTimeoutMillis: 10_000, query_timeout: 15_000, application_name: 'antseed-kanban' });
+    const endpoint = new URL(connectionString);
+    if (/(^|\.)supabase\.(com|co)$/.test(endpoint.hostname) && endpoint.port === '6543') {
+      throw new Error('Use a Supabase direct or session-pooler connection on port 5432; transaction pooling cannot preserve application locks');
+    }
+    const schema = endpoint.searchParams.get('schema');
+    endpoint.searchParams.delete('schema');
+    this.pool = new pg.Pool({ connectionString: endpoint.toString(), max: 8, connectionTimeoutMillis: 3_000, idleTimeoutMillis: 10_000, query_timeout: 15_000, application_name: 'antseed-kanban',
+      ...(schema ? { onConnect: async (client: pg.ClientBase) => {
+        // Explicit SQL avoids relying on pooler support for startup options.
+        // Never fall back to public and migrate the wrong schema.
+        await client.query(`SET search_path TO "${schema.replaceAll('"','""')}", public`);
+        const selected = await client.query<{ schema: string }>('SELECT current_schema() AS schema');
+        if (selected.rows[0]?.schema !== schema) throw new Error('Configured database schema is unavailable');
+      } } : {}),
+    });
     // Idle pool errors are reflected by the next bounded health probe, not emitted unhandled.
     this.pool.on('error', () => {});
   }

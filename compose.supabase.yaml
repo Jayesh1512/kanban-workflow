@@ -1,0 +1,25 @@
+# Local services and volumes stay intact; PostgreSQL is external in this mode.
+# Requires Docker Compose >=2.24.4 for !override.
+services:
+  init:
+    environment:
+      EXTERNAL_DATABASE_CONFIG_DIR: /run/database-config
+    volumes:
+      - type: bind
+        source: ${SUPABASE_CONFIG_DIR:-./.local/supabase}
+        target: /run/database-config
+        read_only: true
+        bind:
+          create_host_path: false
+  postgres:
+    profiles: [local-postgres]
+  vikunja:
+    depends_on: !override
+      init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_ENV_PATH: /run/antseed/database.env
+  backend:
+    environment:
+      DATABASE_ENV_PATH: /run/antseed/database.env
+      TELEGRAM_DISCOVERY_BATCH_SIZE: ${TELEGRAM_DISCOVERY_BATCH_SIZE:-20}
