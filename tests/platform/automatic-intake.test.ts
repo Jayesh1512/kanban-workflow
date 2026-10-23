@@ -57,3 +57,27 @@ it('preserves an already placed card and treats its later recommendations as ord
  await discover();await f.db.query("UPDATE chats SET inclusion='included' WHERE id=7");await f.db.query("INSERT INTO tickets(chat_id,company_id,kind,lane,stage_version) VALUES(7,NULL,'contact_prospect','Integrations',2)");
  await worker.tick();expect((await f.db.query('SELECT lane,stage_version FROM tickets')).rows[0]).toEqual({lane:'Integrations',stage_version:2});expect((await f.db.query('SELECT initial_result FROM telegram_conversation_starts')).rows[0]).toEqual({initial_result:'no_change'});
 });
+
+it('sends a future group intake approval before creating a card/importing, then retains lane approval semantics',async()=>{
+ const boundary='2026-10-23T13:48:42.677Z';
+ await f.db.query("UPDATE app_settings SET value=value||$1::jsonb WHERE key='telegram:automatic-since'",[JSON.stringify({groupApprovalFrom:boundary})]);
+ await f.store.upsertDialog({id:'-42',kind:'supergroup',title:'AntSeed <> Synthetic future group',username:null,archived:false,latestMessageAt:boundary});
+ await f.store.upsertDialog({id:'-1001',kind:'supergroup',title:'Control',username:null,archived:false});await f.db.query("UPDATE chats SET inclusion='excluded',is_control=true WHERE id=-1001");
+ result={at:boundary,messageId:1,uncertain:false,reason:'creation_service_message'};await worker.tick();
+ expect((await f.db.query('SELECT inclusion FROM chats WHERE id=-42')).rows[0]).toEqual({inclusion:'undecided'});
+ expect((await f.db.query('SELECT * FROM tickets')).rowCount).toBe(0);expect((await f.db.query('SELECT * FROM messages')).rowCount).toBe(0);
+ expect((await f.db.query('SELECT decision FROM chat_intake_requests')).rows).toEqual([{decision:'pending'}]);
+ let sends=0;const telegram={status:async()=>({state:'ready'}),sendControlMessage:async()=>{sends++;return {messageId:50};}} as unknown as TelegramPort;
+ const bus=new DurableControlBus(f.db,telegram,f.store);await bus.tick();expect(sends).toBe(1);
+ expect((await f.db.query('SELECT delivery_state,message_id FROM chat_intake_requests')).rows[0]).toMatchObject({delivery_state:'sent',message_id:50});
+ const {ChatIntake}=await import('../../src/telegram/intake.js');const intake=new ChatIntake(f.db,f.store,telegram);
+ expect(await intake.handle({chatId:'-1001',messageId:51,senderId:'123',replyToMessageId:50,text:'approve',sentAt:new Date().toISOString()})).toBe(true);
+ expect((await f.db.query('SELECT inclusion FROM chats WHERE id=-42')).rows[0]).toEqual({inclusion:'included'});
+ expect((await f.db.query('SELECT lane,stage_version FROM tickets WHERE chat_id=-42')).rows[0]).toEqual({lane:'To be started',stage_version:0});
+ expect((await worker.status()).detail).toContain('1 groups require first-placement approval');
+});
+it('keeps an older group in the automatic import even when newly discovered after the boundary',async()=>{
+ await f.db.query("UPDATE app_settings SET value=value||$1::jsonb WHERE key='telegram:automatic-since'",[JSON.stringify({groupApprovalFrom:'2026-10-23T13:48:42.677Z'})]);
+ await f.store.upsertDialog({id:'-42',kind:'group',title:'AntSeed <> Existing import',username:null,archived:false,latestMessageAt:'2026-10-23T14:00:00Z'});
+ await worker.tick();expect((await f.db.query('SELECT inclusion FROM chats WHERE id=-42')).rows[0]).toEqual({inclusion:'included'});expect((await f.db.query('SELECT * FROM chat_intake_requests')).rowCount).toBe(0);
+});
