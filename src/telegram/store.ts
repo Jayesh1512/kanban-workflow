@@ -5,6 +5,7 @@ import type { Chat, CompanyCandidate, HistoryCursor, LiveCheckpoint, PageInput }
 import type { ChatService, HistoryBatch, IngestionStore, RuntimeConfig, SqlExecutor, TelegramDialog, TelegramEvent, TelegramMessageInput } from '../shared/ports.js';
 import type { PgDatabase } from '../platform/database.js';
 import { chatIdSchema, correctMappingSchema, setInclusionSchema } from '../shared/schemas.js';
+import { enqueueAnalysisWindows, type AnalysisSourceRow } from '../shared/analysis-windows.js';
 
 type Row = QueryResultRow;
 const iso = (v: unknown): string | null => v == null ? null : new Date(v as string | Date).toISOString();
@@ -173,12 +174,8 @@ export class TelegramStore implements IngestionStore, ChatService {
   }
   private async enqueue(tx: SqlExecutor, chat: Chat): Promise<void> {
     if (!allowed(chat)) return;
-    const rows = (await tx.query("SELECT id,version FROM messages WHERE chat_id=$1 AND deleted_at IS NULL AND length(text)>0 ORDER BY sent_at DESC,id DESC LIMIT 100", [chat.id])).rows;
-    if (!rows.length) return;
-    const key = digest({ chatId: chat.id, policy: chat.policyVersion, mapping: chat.mappingVersion, messages: rows });
-    const job = (await tx.query('INSERT INTO analysis_jobs(chat_id,policy_version,mapping_version,dedupe_key) VALUES($1,$2,$3,$4) ON CONFLICT(dedupe_key) DO NOTHING RETURNING id', [chat.id, chat.policyVersion, chat.mappingVersion, key])).rows[0];
-    if (!job) return;
-    for (const row of rows) await tx.query('INSERT INTO analysis_job_messages(job_id,chat_id,message_id,message_version) VALUES($1,$2,$3,$4)', [job['id'], chat.id, row['id'], row['version']]);
+    const rows = (await tx.query<AnalysisSourceRow>("SELECT id,version,text FROM messages WHERE chat_id=$1 AND deleted_at IS NULL AND length(text)>0 ORDER BY sent_at DESC,id DESC LIMIT 100", [chat.id])).rows;
+    await enqueueAnalysisWindows(tx, { chatId: chat.id, policyVersion: chat.policyVersion, mappingVersion: chat.mappingVersion, rows });
   }
   async ingest(event: TelegramEvent): Promise<void> {
     await this.db.transaction(async (tx) => {

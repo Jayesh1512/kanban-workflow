@@ -12,10 +12,23 @@ it('can preserve a source-bound ID with an unknown display name instead of inven
   const input=inputFixture(),raw=extractionFixture();raw.contacts[0]!.names=['Invented Unseen Alias'];raw.contacts[0]!.roles=[];raw.contacts[0]!.affiliation='unknown';
   expect(normalizeExtraction(raw,input)).toMatchObject({omittedContactNames:1,value:{contacts:[{telegramUserIds:['7'],names:[],usernames:['mira']}]}});
 });
-it.each(['phone','role','identity','affiliation','date','evidence'] as const)('never uses name normalization to accept an unsupported %s',kind=>{
+it.each(['phone','role','identity','date','evidence'] as const)('never uses name normalization to accept an unsupported %s',kind=>{
   const input=inputFixture(),raw=extractionFixture();raw.contacts[0]!.names.push('Invented Unseen Alias');
-  if(kind==='phone')raw.contacts[0]!.phones=['+99999999999'];if(kind==='role')raw.contacts[0]!.roles[0]!.role='UnseenRole';if(kind==='identity')raw.contacts[0]!.telegramUserIds=['123456'];if(kind==='affiliation')raw.contacts[0]!.affiliation='internal';if(kind==='date')raw.facts[0]!.dates[0]!.localDate='1999-01-01';if(kind==='evidence')raw.evidenceIds=['00000000-0000-4000-8000-999999999999'];
+  if(kind==='phone')raw.contacts[0]!.phones=['+99999999999'];if(kind==='role')raw.contacts[0]!.roles[0]!.role='UnseenRole';if(kind==='identity')raw.contacts[0]!.telegramUserIds=['123456'];if(kind==='date')raw.facts[0]!.dates[0]!.localDate='1999-01-01';if(kind==='evidence')raw.evidenceIds=['00000000-0000-4000-8000-999999999999'];
   expect(()=>normalizeExtraction(raw,input)).toThrow();
+});
+it.each(['internal','external'] as const)('abstains on unsupported %s affiliation while preserving sourced identity and facts',affiliation=>{
+  const input=inputFixture(),raw=extractionFixture();raw.contacts[0]!.affiliation=affiliation;
+  if(affiliation==='external'){input.messages[0]!.text='Hello, nice to meet you.';input.evidence[0]!.excerpt=input.messages[0]!.text;raw.companies=[];raw.companyCandidates=[];raw.facts=[];raw.dates=[];raw.contacts[0]!.roles=[];}
+  expect(()=>validateExtraction(raw,input)).toThrow('affiliation');
+  const result=normalizeExtraction(raw,input);expect(result.omittedContactAffiliations).toBe(1);expect(result.value.contacts[0]!).toEqual({...raw.contacts[0]!,affiliation:'unknown'});expect(result.value.facts).toEqual(raw.facts);expect(()=>validateExtraction(result.value,input)).not.toThrow();expect(raw.contacts[0]!.affiliation).toBe(affiliation);
+});
+it('removing an unsupported affiliation never admits an unrelated identity, role, phone or date',()=>{
+  for(const kind of ['identity','role','phone','date']){const input=inputFixture(),raw=extractionFixture();raw.contacts[0]!.affiliation='internal';
+    if(kind==='identity')raw.contacts[0]!.telegramUserIds=['123456'];if(kind==='role')raw.contacts[0]!.roles[0]!.role='UnseenRole';if(kind==='phone')raw.contacts[0]!.phones=['+99999999999'];if(kind==='date')raw.facts[0]!.dates[0]!.localDate='1999-01-01';expect(()=>normalizeExtraction(raw,input)).toThrow();}
+});
+it('retains valid external affiliation when an unrelated unsupported name alias is removed',()=>{
+  const input=inputFixture(),raw=extractionFixture();raw.contacts[0]!.names.push('Invented Alias');const result=normalizeExtraction(raw,input);expect(result.value.contacts[0]!.affiliation).toBe('external');expect(result.omittedContactAffiliations).toBe(0);
 });
 it('omits duplicate excerpts only when exact source text and version match, preserving all messages and original input',()=>{
   const input=inputFixture(),wire=extractionPromptInput(input);expect(wire.messages).toEqual(input.messages);expect(wire.evidence[0]).not.toHaveProperty('excerpt');expect(wire.evidence[0]).toMatchObject({id:input.evidence[0]!.id,messageId:1,messageVersion:1});expect(input.evidence[0]!.excerpt).toBe(input.messages[0]!.text);expect(JSON.stringify(wire).length).toBeLessThan(JSON.stringify(input).length);
