@@ -86,6 +86,12 @@ existing session resumes automatically. Actual self identity is bound before
 processing. A different account needs a separate database/session dataset.
 Transient saved-session restoration retries from five seconds up to five minutes;
 invalid sessions/account mismatch need correction. Native flood waits are respected.
+Once phone/code/2FA authentication succeeds, transient activation or discovery
+errors use that same saved-session recovery without requesting another code.
+Discovery processes at most 500 dialogs per pass; subsequent passes continue
+from the last stored dialog, including after a rate limit, so a large chat list
+does not block the connected session behind a full rescan. Pagination offsets
+are process-local; after a restart, discovery safely starts another bounded sweep.
 
 Login starts archived/cloud dialog discovery, bounded history import and eligible
 workflow analysis. New chats default to included; rediscovery preserves exclusions.

@@ -32,6 +32,7 @@ export class MtcuteAdapter implements TelegramPort {
   private rateLimitedUntil = 0;
   private resumeTimer: ReturnType<typeof setTimeout> | null = null;
   private resumeTask: Promise<void> | null = null;
+  private discoveryOffset: { offsetId: number; offsetDate: number; offsetPeer: tl.TypeInputPeer } | null = null;
   private readonly factory: ClientFactory;
   private setup: { configure(input: Parameters<TelegramPort['configureControlChat']>[0]): Promise<ControlSetup>; reconcile(key: string): Promise<ControlSetup> } | null = null;
   constructor(private readonly config: RuntimeConfig['telegram'], private readonly store: TelegramStore, factory?: ClientFactory) {
@@ -81,6 +82,9 @@ export class MtcuteAdapter implements TelegramPort {
     this.component = status('unavailable', code, detail);
   }
   private async activate(user: User): Promise<void> {
+    // A real auth method returned an authorized user. From this point transient
+    // activation/discovery failures must resume that session, not ask for codes.
+    this.resumeEnabled = true;
     // Authentication client has updates:false. No loop can advance before this bind.
     await this.store.bindAccount(decimalId(user.id));
     this.login = { state: 'connecting', detail: 'Account bound; discovering cloud dialogs before live catch-up' };
@@ -101,11 +105,13 @@ export class MtcuteAdapter implements TelegramPort {
     });
     live.onError.add(() => { this.component = status('degraded', 'telegram_connection_error', 'Telegram connection needs recovery'); this.queue.push({ type: 'replay_required', chatId: null, reason: 'reconnect' }); });
     // Discover only after account identity is durable, before automatic catch-up.
-    for await (const d of live.iterDialogs({ archived: 'keep', chunkSize: 100 })) await this.store.upsertDialog(normalizeDialog(d.peer, d.isArchived));
+    // A large account must not make authentication wait for an unbounded sweep.
+    for await (const dialog of this.discoverBatch(live)) await this.store.upsertDialog(dialog);
     this.login = { state: 'ready', detail: null };
     await live.notifyLoggedIn(verified.raw); // mtcute automatically starts catchUp here.
     this.component = status('ready', null, 'Telegram account connected; import/replay runs in bounded jobs');
     this.queue.push({ type: 'replay_required', chatId: null, reason: 'reconnect' });
+    this.resumeFailures = 0; this.cancelResume();
   }
   private onMessage(message: MtcuteMessage, type: 'message' | 'edit'): void {
     if (!this.selfId || this.stopped) return;
@@ -132,6 +138,22 @@ export class MtcuteAdapter implements TelegramPort {
     }, Math.max(1, Math.min(300_000, this.resumeRetryAt - Date.now())));
     this.resumeTimer.unref();
   }
+  private async recoverAuthorizedSession(error: unknown): Promise<void> {
+    this.failure(error);
+    try { await this.auth?.destroy(); this.auth = null; await this.closeLive(); }
+    catch {
+      this.cancelResume();
+      this.component = status('unavailable', 'session_close_failed', 'Saved session could not close safely; restart before opening another session owner');
+      return;
+    }
+    if (this.stopped || !this.resumeEnabled || !this.retryableResume(error)) { this.cancelResume(); return; }
+    const delay = Math.min(300_000, 5_000 * 2 ** Math.min(this.resumeFailures++, 6));
+    this.resumeRetryAt = Math.max(Date.now() + delay, this.rateLimitedUntil);
+    const retryAt = new Date(this.resumeRetryAt).toISOString();
+    if (this.login.state === 'error') this.login = { ...this.login, retryAt, detail: 'Authenticated session temporarily unavailable; automatic restore scheduled at retryAt' };
+    this.component = status('degraded', 'saved_session_retry', `Saved session restore will retry after ${retryAt}`);
+    this.armResumeRetry();
+  }
   private restoreSavedSession(): Promise<void> {
     if (this.resumeTask) return this.resumeTask;
     if (this.stopped || !this.resumeEnabled || this.busy || this.live) return Promise.resolve();
@@ -145,22 +167,8 @@ export class MtcuteAdapter implements TelegramPort {
         const user = await this.auth.getMe();
         if (this.stopped) return;
         await this.activate(user);
-        this.resumeFailures = 0; this.cancelResume();
       } catch (error) {
-        this.failure(error);
-        try { await this.auth?.destroy(); this.auth = null; await this.closeLive(); }
-        catch {
-          this.cancelResume();
-          this.component = status('unavailable', 'session_close_failed', 'Saved session could not close safely; restart before opening another session owner');
-          return;
-        }
-        if (this.stopped || !this.retryableResume(error)) { this.cancelResume(); return; }
-        const delay = Math.min(300_000, 5_000 * 2 ** Math.min(this.resumeFailures++, 6));
-        this.resumeRetryAt = Math.max(Date.now() + delay, this.rateLimitedUntil);
-        const retryAt = new Date(this.resumeRetryAt).toISOString();
-        if (this.login.state === 'error') this.login = { ...this.login, retryAt, detail: 'Saved session temporarily unavailable; automatic restore scheduled at retryAt' };
-        this.component = status('degraded', 'saved_session_retry', `Saved session restore will retry after ${retryAt}`);
-        this.armResumeRetry();
+        await this.recoverAuthorizedSession(error);
       } finally { this.busy = false; }
     })().finally(() => { this.resumeTask = null; });
     return this.resumeTask;
@@ -209,6 +217,7 @@ export class MtcuteAdapter implements TelegramPort {
       }
     } catch (error) {
       if (error instanceof DomainError && ['validation', 'conflict'].includes(error.code) && !error.message.includes('dataset')) throw error;
+      if (this.resumeEnabled) { await this.recoverAuthorizedSession(error); return this.login; }
       this.failure(error);
       await this.closeLive();
       if (this.login.state === 'error' && this.login.code === 'dataset_account_mismatch') { await this.auth?.destroy(); this.auth = null; this.pending = null; this.passwordNeeded = false; }
@@ -216,7 +225,24 @@ export class MtcuteAdapter implements TelegramPort {
     return this.login;
   }
   async *discoverDialogs(): AsyncIterable<TelegramDialog> {
-    for await (const dialog of this.requireLive().iterDialogs({ archived: 'keep', chunkSize: 100 })) yield normalizeDialog(dialog.peer, dialog.isArchived);
+    yield* this.discoverBatch(this.requireLive());
+  }
+  private async *discoverBatch(client: TelegramClient): AsyncIterable<TelegramDialog> {
+    const limit = 500;
+    let count = 0;
+    for await (const dialog of client.iterDialogs({ archived: 'keep', chunkSize: 100, limit,
+      ...(this.discoveryOffset ? { ...this.discoveryOffset, pinned: 'exclude' as const } : {}) })) {
+      yield normalizeDialog(dialog.peer, dialog.isArchived);
+      // Advance only after the consumer durably stores the yielded dialog.
+      // Match pinned mtcute pagination: pinned rows cannot anchor date ordering.
+      if (!dialog.isPinned) this.discoveryOffset = { offsetId: dialog.raw.topMessage,
+        offsetDate: dialog.lastMessage?.raw.date ?? this.discoveryOffset?.offsetDate ?? 0,
+        offsetPeer: dialog.peer.inputPeer };
+      count++;
+    }
+    // A full batch continues next turn, including after a native flood wait.
+    // Only a short/empty final page starts a new sweep from the current head.
+    if (count < limit) this.discoveryOffset = null;
   }
   async describe(chatId: string): Promise<TelegramDialog> {
     const dialog = (await this.requireLive().getPeerDialogs(peerNumber(chatId)))[0];
