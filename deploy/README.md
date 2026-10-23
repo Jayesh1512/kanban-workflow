@@ -97,6 +97,9 @@ Login starts archived/cloud dialog discovery, bounded history import and eligibl
 workflow analysis. New chats wait outside business ingestion. Only a fresh incoming message in a new chat triggers an intake request in the configured approvals group. Reply **approve to that message** to create its To be started card and begin bounded import/analysis; reply **reject**, or leave it unanswered, to keep it out. This is separate from approving a later lane change. Discovery sends no requests by itself and does not store waiting-chat message bodies. Requests are paced at one per 30 seconds with at most five awaiting replies.
 
 Historical chats are handled manually: find the chat on the setup page and choose **Request approval / prioritize**, then approve its request in the control group. Existing tracked cards retain their stage and settings. Previously auto-included historical entries without a card are paused for manual selection; stored data is retained. Rediscovery preserves exclusions. HTTP/MCP include commands also request approval instead of bypassing it.
+
+For approved group cards, explicit titles such as `AntSeed <> Phala` and `Fere AI <> Antseed` identify the external company from either side of the separator. This links or creates the company record and upgrades the same card; its lane, stage version and remote task ID are preserved. The exact title is recorded in mapping history as metadata, without fabricated message evidence. Ambiguous multi-company titles, duplicate directory matches and explicit operator mapping choices are retained for review. A company title never proves a contact's employment or a workflow stage.
+
 Use stable chat IDs on the page to include/exclude or request more bounded import.
 Exclusion fences in-flight results, cancels older analysis, stales unapplied
 proposals and suspends tracking. The operational control group is excluded from
