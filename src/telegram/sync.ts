@@ -1,3 +1,4 @@
+import { AutomaticIntake } from './automatic-intake.js';
 import { randomUUID } from 'node:crypto';
 import { tl } from '@mtcute/node';
 import { DomainError } from '../shared/api.js';
@@ -17,6 +18,7 @@ const chatAccessFault = (error: unknown) => tl.RpcError.is(error) && /^(CHANNEL_
 
 /** Bounded remote work. No SQL transaction spans Telegram I/O. */
 export class TelegramSync {
+  readonly automaticIntake: AutomaticIntake;
   private readonly workerId = `telegram:${randomUUID()}`;
   private stopped = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -26,7 +28,7 @@ export class TelegramSync {
   private retryAt = 0;
   private globalFailures = 0;
   private component: ServiceStatus = { state: 'unconfigured', code: 'login_required', detail: 'Connect Telegram to start import/replay', checkedAt: new Date().toISOString() };
-  constructor(private readonly db: PgDatabase, private readonly store: TelegramStore, private readonly telegram: MtcuteAdapter, private readonly control: DurableControlBus, private readonly batchSize = 100) {}
+  constructor(private readonly db: PgDatabase, private readonly store: TelegramStore, private readonly telegram: MtcuteAdapter, private readonly control: DurableControlBus, private readonly batchSize = 100, private readonly ready?:()=>Promise<void>) { this.automaticIntake=new AutomaticIntake(db,store,telegram); }
   register(): void { this.unsubscribe ??= this.telegram.subscribe((event) => this.accept(event)); }
   private async accept(event: TelegramEvent): Promise<void> {
     if (event.type === 'message' || event.type === 'edit') {
@@ -84,12 +86,14 @@ export class TelegramSync {
     }
   }
   private async work(): Promise<void> {
+    await this.ready?.();
     await this.control.tick(); if (this.stopped) return;
     if (Date.now() >= this.nextDiscovery) {
       this.nextDiscovery = Date.now() + 60_000;
       for await (const dialog of this.telegram.discoverDialogs()) { if (this.stopped) return; await this.store.upsertDialog(dialog); }
     }
     await this.controlReplay(); if (this.stopped) return;
+    await this.automaticIntake.tick(); if (this.stopped) return;
     const history = (await this.db.query(`SELECT c.id,c.policy_version,r.batch_size FROM chats c JOIN history_cursors h ON h.chat_id=c.id JOIN telegram_history_requests r ON r.chat_id=c.id
       WHERE c.inclusion='included' AND NOT c.is_control AND r.remaining_batches>0 AND h.status IN ('pending','running','error') AND (h.lease_until IS NULL OR h.lease_until<now())
       AND NOT EXISTS(SELECT 1 FROM app_settings a WHERE a.key='telegram:sync-retry:history:'||c.id::text AND (a.value->>'retryAt')::timestamptz>now()) ORDER BY h.updated_at,c.id LIMIT 1`)).rows[0];

@@ -313,3 +313,9 @@ For M2 implementation/evidence limits see [M2 handoff](M2_HANDOFF.md) and the
 [independent M2 QA report](../docs/QA_M2_REPORT.md). The user-designated existing
 Telegram integration contact is thread `66cc9b30-4836-4f8d-8c6c-b0831923b62c`.
 Documentation does not itself log in, send messages, create groups or pass live gates.
+
+### Automatic intake by conversation start
+
+The durable `telegram:automatic-since` setting can select conversations whose earliest accessible Telegram message is on or after a UTC cutoff. The current requested cutoff, **5 October 2026 at midnight IST**, is `2026-10-04T18:30:00.000Z`. The policy has `enabled`, a unique `revision`, `cutoff`, and `initialPlacement: true`. It is disabled when no setting exists. Discovery preserves last-message metadata only; a resumable, rate-limited scanner probes oldest history. Known pre-cutoff messages or last activity exclude older conversations without extra RPCs. Recent activity alone never qualifies an older chat. Hidden earlier history, uncertain migrations and inaccessible boundaries are retained as unknown/retry, not guessed new. Deleted private history cannot be reconstructed.
+
+Qualifying chats bypass intake approval and get a card plus bounded import. The first supported AI lane recommendation is approved with `automation` provenance and applied through the same mutation journal/readback path; no initial approval message is sent. Initial no-change or uncertain assessments do not invent movement. Leftover historical windows from that initial snapshot do not produce approval spam; later recommendations based on newer messages or edits require the normal Telegram/operator approval. Explicit exclusions and the control group remain outside automatic intake. `/api/status` exposes `automaticIntake` counts and progress; scans and native flood waits survive worker restarts.

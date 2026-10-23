@@ -34,7 +34,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
   const db = new PgDatabase(config.databaseUrl), store = new TelegramStore(db, config.telegram), telegram = new MtcuteAdapter(config.telegram, store), vikunja = new VikunjaAdapter(config.vikunja, db);
   const migrationsReady = await createMigrationGate(db);
   telegram.setControlSetup(new ControlSetupManager(db, store, () => telegram.requireLive()));
-  const control = new DurableControlBus(db, telegram, store, requireDatabaseReady), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize);
+  const control = new DurableControlBus(db, telegram, store, requireDatabaseReady), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize, requireDatabaseReady);
   let telegramStarted = false, telegramTask: Promise<void> | null = null;
   let dbState = state('connecting', 'database_pending', 'Waiting for database and migrations');
   let boardState: ServiceStatus | null = null;
@@ -102,7 +102,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       } catch { dbState = state('unavailable', 'database_unavailable', 'Database status query failed; retrying connection'); }
     }
     const configured = (present: boolean, name: string) => state(present ? 'degraded' : 'unconfigured', present ? 'not_checked' : 'missing_credentials', present ? `${name} configured; access has not been verified by the workflow module` : `Configure ${name} runtime credentials`);
-    return { components: { database: dbState, vikunja: boardState ?? await vikunja.status(), telegram: await telegram.status(), telegramSync: sync.status(), control: migrationsDone && dbState.state === 'ready' ? await control.status().catch(() => state('unavailable', 'control_status_unavailable', 'Control status query failed')) : state('connecting', 'database_pending', 'Control status awaits migrations'), extraction: configured(Boolean(config.extraction.apiKey), 'OpenAI'), jev: configured(Boolean(config.jev.apiKey), config.jev.provider === 'openai' ? 'OpenAI Decisions gpt-6-luna' : 'Vercel AI Gateway Jev') }, telegramLogin: await telegram.loginState(), accountBound, imports, replayPending, analysisPending, proposalsPending,
+    return { components: { database: dbState, vikunja: boardState ?? await vikunja.status(), telegram: await telegram.status(), telegramSync: sync.status(), automaticIntake: migrationsDone && dbState.state === 'ready' ? await sync.automaticIntake.status().catch(() => state('unavailable','automatic_intake_status_unavailable','Automatic intake status unavailable')) : state('connecting','database_pending','Automatic intake awaits migrations'), control: migrationsDone && dbState.state === 'ready' ? await control.status().catch(() => state('unavailable', 'control_status_unavailable', 'Control status query failed')) : state('connecting', 'database_pending', 'Control status awaits migrations'), extraction: configured(Boolean(config.extraction.apiKey), 'OpenAI'), jev: configured(Boolean(config.jev.apiKey), config.jev.provider === 'openai' ? 'OpenAI Decisions gpt-6-luna' : 'Vercel AI Gateway Jev') }, telegramLogin: await telegram.loginState(), accountBound, imports, replayPending, analysisPending, proposalsPending,
       configuration: { ...configMetadata(config), telegramConfigured: Boolean(config.telegram.apiId && config.telegram.apiHash), extractionConfigured: Boolean(config.extraction.apiKey), jevConfigured: Boolean(config.jev.apiKey) } };
   }
   return {

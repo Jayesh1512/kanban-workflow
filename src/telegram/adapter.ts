@@ -232,7 +232,7 @@ export class MtcuteAdapter implements TelegramPort {
     let count = 0;
     for await (const dialog of client.iterDialogs({ archived: 'keep', chunkSize: 100, limit,
       ...(this.discoveryOffset ? { ...this.discoveryOffset, pinned: 'exclude' as const } : {}) })) {
-      yield normalizeDialog(dialog.peer, dialog.isArchived);
+      yield { ...normalizeDialog(dialog.peer, dialog.isArchived), latestMessageAt: dialog.lastMessage ? new Date(dialog.lastMessage.raw.date * 1000).toISOString() : null };
       // Advance only after the consumer durably stores the yielded dialog.
       // Match pinned mtcute pagination: pinned rows cannot anchor date ordering.
       if (!dialog.isPinned) this.discoveryOffset = { offsetId: dialog.raw.topMessage,
@@ -248,6 +248,22 @@ export class MtcuteAdapter implements TelegramPort {
     const dialog = (await this.requireLive().getPeerDialogs(peerNumber(chatId)))[0];
     if (!dialog) throw new DomainError('not_found', 'Telegram dialog is not accessible');
     return normalizeDialog(dialog.peer, dialog.isArchived);
+  }
+  async conversationStart(chatId: string, cutoff: string): Promise<import('./automatic-intake.js').ConversationStart> {
+    const client=this.requireLive();
+    // MTProto reverse offset starts at the oldest accessible message, including
+    // service/creation messages. Never substitute last activity or discovery time.
+    const page=await client.getHistory(peerNumber(chatId),{reverse:true,offset:{id:1,date:0},limit:1});
+    const first=page[0];if(!first)return {at:null,messageId:null,uncertain:true,reason:'empty_history'};
+    const at=first.date.toISOString();
+    if(Date.parse(at)<Date.parse(cutoff))return {at,messageId:first.id,uncertain:false,reason:'first_available_message'};
+    if(first.chat.type==='chat'){
+      const full=await client.getFullChat(first.chat.id);
+      const creation=first.raw._==='messageService'&&['messageActionChatCreate','messageActionChannelCreate'].includes(first.raw.action._);
+      if((full.hasHiddenHistory||full.historyMinId>1)&&!creation)return {at,messageId:first.id,uncertain:true,reason:'hidden_earlier_history'};
+      if(full.migratedFrom)return {at,messageId:first.id,uncertain:true,reason:'migrated_conversation_requires_original_history'};
+    }
+    return {at,messageId:first.id,uncertain:false,reason:'first_available_message'};
   }
   async getHistory(chatId: string, cursor: Parameters<TelegramPort['getHistory']>[1], limit: number): Promise<HistoryBatch> {
     const page = await this.requireLive().getHistory(peerNumber(chatId), { limit, ...(cursor.nextMessageId !== null && cursor.nextDate !== null ? { offset: { id: cursor.nextMessageId, date: Math.floor(Date.parse(cursor.nextDate) / 1000) } } : {}) });

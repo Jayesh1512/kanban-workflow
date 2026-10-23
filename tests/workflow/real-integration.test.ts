@@ -1,3 +1,5 @@
+import { AutomaticIntake } from '../../src/telegram/automatic-intake.js';
+import { decisionFixture } from '../intelligence/fixtures.js';
 import { AsyncResource } from 'node:async_hooks';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -53,6 +55,36 @@ describe.skipIf(!project)('M3.2 actual PostgreSQL + pinned Vikunja', () => {
     await h.service.decide({ idempotencyKey: 'approve', proposalId: p.id, decision: 'approve' });
     return { ...h, db, schema, board, adapter, proposal: p };
   }
+  it('automatically places the initial AI recommendation on real Vikunja without a control approval; later changes stay pending', async()=>{
+    const h=await fixture();await h.configureControl();await h.db.query("UPDATE proposals SET apply_state='stale' WHERE id=$1",[h.proposal.id]);
+    const cutoff='2026-10-04T18:30:00Z';await h.db.query("INSERT INTO app_settings(key,value) VALUES('telegram:automatic-since',$1)",[JSON.stringify({enabled:true,revision:'native-initial',cutoff,initialPlacement:true})]);
+    await h.db.query("INSERT INTO telegram_conversation_starts(chat_id,state,first_message_at,checked_cutoff) VALUES(-1001,'qualifies','2026-10-05',$1)",[cutoff]);
+    const decision=decisionFixture(h.evidenceId);decision.diagnostics.rubricVersion='openai.decisions.antseed.v3';decision.lane={outcome:'propose',targetLane:'Integrations',reason:'Authored initial pilot evidence',nextAction:null,evidenceIds:[h.evidenceId]};
+    const job=randomUUID();await h.db.query("INSERT INTO analysis_jobs(id,chat_id,policy_version,mapping_version,dedupe_key,status,decision) SELECT $1::uuid,id,policy_version,mapping_version,($1::uuid)::text,'completed',$2 FROM chats WHERE id=-1001",[job,JSON.stringify(decision)]);
+    await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId:job,ticketId:h.ticket.id,expectedStageVersion:0,decision}));
+    const initial=(await h.db.query("SELECT id FROM proposals WHERE id<>$1",[h.proposal.id])).rows[0]!.id;
+    expect((await h.db.query('SELECT 1 FROM control_outbox WHERE proposal_id=$1',[initial])).rowCount).toBe(0);
+    expect(await h.proposals.placeInitialAutomatically()).toBe(1);expect(await h.proposals.placeInitialAutomatically()).toBe(0);
+    await h.service.applyNext();const ticket=await h.records.getTicket(h.ticket.id);expect(ticket).toMatchObject({lane:'Integrations',stageVersion:1});expect((await h.adapter.getTask(ticket.vikunjaTaskId!))!.bucketId).toBe(h.board.buckets.Integrations);
+    expect((await h.db.query('SELECT source FROM proposal_decisions WHERE proposal_id=$1',[initial])).rows[0]).toEqual({source:'automation'});
+    const evidence=randomUUID();await h.db.query("INSERT INTO messages(chat_id,id,sent_at,text) VALUES(-1001,999,now()+interval '1 minute','Fresh later deployment update')");
+    await h.db.query("INSERT INTO evidence(id,chat_id,message_id,message_version,excerpt,observed_at) VALUES($1,-1001,999,1,'Fresh later deployment update',now())",[evidence]);
+    decision.lane={outcome:'propose',targetLane:'Completed',reason:'Authored later update',nextAction:null,evidenceIds:[evidence]};
+    await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId:randomUUID(),ticketId:ticket.id,expectedStageVersion:1,decision}));
+    expect(await h.proposals.placeInitialAutomatically()).toBe(0);expect((await h.db.query("SELECT 1 FROM proposals p JOIN control_outbox o ON o.proposal_id=p.id WHERE p.decision='pending' AND p.target_lane='Completed'")).rowCount).toBe(1);
+    expect((await h.adapter.getTask(ticket.vikunjaTaskId!))!.bucketId).toBe(h.board.buckets.Integrations);
+  },30000);
+  it('serializes two real PostgreSQL scan workers, admitting a qualifying conversation once',async()=>{
+    const h=await fixture(),store=new TelegramStore(h.db,{apiId:null,apiHash:null,sessionPath:':memory:',historyBatchSize:20,historyMaxBatches:1});
+    const cutoff='2026-10-04T18:30:00Z';await h.db.query("INSERT INTO app_settings(key,value) VALUES('telegram:automatic-since',$1)",[JSON.stringify({enabled:true,revision:'native-scan',cutoff,initialPlacement:true})]);
+    await store.upsertDialog({id:'7',kind:'user',title:'Synthetic new conversation',username:null,archived:false,latestMessageAt:'2026-10-22T00:00:00Z'});
+    // Keep the pre-existing fixture conversation out of this probe's candidate set.
+    await h.db.query("INSERT INTO telegram_conversation_starts(chat_id,state,first_message_at,checked_cutoff) VALUES(-1001,'older','2020-01-01',$1)",[cutoff]);
+    let calls=0;const reader={async conversationStart(){calls++;await delay(50);return {at:'2026-10-05T01:00:00Z',messageId:1,uncertain:false,reason:'first_available_message'};}};
+    const a=new AutomaticIntake(h.db,store,reader),b=new AutomaticIntake(h.db,store,reader);await Promise.all([a.tick(),b.tick()]);expect(calls).toBe(1);
+    expect((await h.db.query('SELECT state FROM telegram_conversation_starts WHERE chat_id=7')).rows[0]).toEqual({state:'qualifies'});expect((await h.db.query('SELECT count(*)::int n FROM tickets WHERE chat_id=7')).rows[0]!.n).toBe(1);
+    expect((await h.db.query('SELECT 1 FROM messages WHERE chat_id=7')).rowCount).toBe(0);
+  },30000);
   it('projects full context initially To be started and serializes eight concurrent applies', async () => {
     const h = await fixture(); const ticket = await h.projector.project(h.ticket.id); const remote = await h.adapter.getTask(ticket!.vikunjaTaskId!);
     expect(remote!.bucketId).toBe(h.board.buckets['To be started']); expect(remote!.description).toContain('Mira'); expect(remote!.description).toContain('2026-10-18'); expect(remote!.description).toContain(h.evidenceId);
