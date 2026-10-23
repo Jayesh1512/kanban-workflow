@@ -1,3 +1,5 @@
+import { companyCardTitle } from '../shared/company-title.js';
+import { resolveTitleCompany } from './title-company.js';
 import type { Ticket } from '../shared/domain.js';
 import type { Clock, Database, VikunjaPort } from '../shared/ports.js';
 import { DomainError } from '../shared/api.js';
@@ -13,10 +15,12 @@ export class TicketProjector {
       const scoped = signal ? AbortSignal.any([signal, lockSignal]) : lockSignal; scoped.throwIfAborted();
       const active = (await this.db.query("SELECT 1 FROM mutations WHERE ticket_id=$1 AND state IN ('prepared','remote_unknown','remote_confirmed')", [ticketId])).rows.length > 0;
       if (active) return null;
+      const source = (await this.db.query('SELECT chat_id FROM tickets WHERE id=$1', [ticketId])).rows[0];
+      if (source) await this.db.transaction(tx => resolveTitleCompany(tx, String(source['chat_id'])));
       const context = await this.records.getContext({ ticketId, limit: 100 });
       const { ticket, chat, company, contacts, facts } = context;
       assert(currentTicketMapping(chat, ticket), 'ambiguous_mapping', 'Projection requires the current company or contact-prospect mapping');
-      const title = (company ? `${company.canonicalName} — ${chat.title}` : `${chat.title} — company unknown`).slice(0, 500);
+      const title = companyCardTitle(company, chat).slice(0, 500);
       const description = [
         `Company: ${company?.canonicalName ?? 'Unknown (contact prospect)'}`, `Chat: ${chat.title} (${chat.id})`, `Workstream: ${ticket.workstream}`,
         `Contacts: ${contacts.map((c) => `${c.names.join('/')} ${c.roles.map((r) => r.role).join('/')}`).join('; ')}`,

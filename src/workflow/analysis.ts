@@ -182,7 +182,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
       const evidenceIds = [...new Set(extraction.evidenceIds)]; await assertEvidence(tx, [...evidenceIds, ...decision.lane.evidenceIds], input.chat.id);
       const match = decision.companyMatch;
       let companyId = input.chat.companyId;
-      const manual = (await tx.query("SELECT 1 FROM mapping_history WHERE chat_id=$1 AND source<>'analysis' LIMIT 1", [input.chat.id])).rows.length > 0;
+      const manual = (await tx.query("SELECT 1 FROM mapping_history WHERE chat_id=$1 AND (source<>'analysis' OR (version=$2 AND reason LIKE 'structured_group_title:v1 %')) LIMIT 1", [input.chat.id,input.chat.mappingVersion])).rows.length > 0;
       if (!manual && decision.relevance === 'company' && strongChoice(decision.diagnostics.answers.company_match) && evidenceIds.length) {
         await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', ['directory:analysis']);
         if (match.outcome === 'matched') {
