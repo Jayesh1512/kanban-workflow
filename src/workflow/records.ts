@@ -80,12 +80,24 @@ export async function writeContactTx(tx: SqlExecutor, input: ContactWrite, id?: 
 }
 
 export async function factRow(tx: SqlExecutor, r: Row): Promise<BusinessFact> {
-  const children = (await tx.query('SELECT facts.*,local_date::text AS local_date FROM facts WHERE parent_fact_id=$1 ORDER BY id', [r.id])).rows;
-  const dates: DateFact[] = await Promise.all(children.map(async (d) => ({ kind: d.kind as DateFact['kind'], originalText: String(d.text), relativeTo: iso(d.relative_to), timezone: String(d.timezone),
-    resolvedAt: nullableIso(d.resolved_at), localDate: d.local_date == null ? null : String(d.local_date),
-    precision: d.date_precision as DateFact['precision'], ambiguous: Boolean(d.ambiguous), evidenceIds: await evidenceFor(tx, 'fact_evidence', 'fact_id', String(d.id)) })));
-  return { id: String(r.id), kind: r.kind as BusinessFact['kind'], text: String(r.text), actor: { party: r.actor_party as BusinessFact['actor']['party'], contactId: r.actor_contact_id as string | null, displayName: r.actor_display_name as string | null },
-    state: r.state as BusinessFact['state'], answersFactId: r.answers_fact_id as string | null, dates, evidenceIds: await evidenceFor(tx, 'fact_evidence', 'fact_id', String(r.id)), version: Number(r.version), source: r.source as BusinessFact['source'] };
+  return (await factRows(tx, [r]))[0]!;
+}
+/** A full card can contain hundreds of tasks. Hydrate each page in two queries
+ * rather than issuing separate cloud round trips for every fact and date. */
+async function factRows(tx: SqlExecutor, rows: Row[]): Promise<BusinessFact[]> {
+  if (!rows.length) return [];
+  const children = (await tx.query('SELECT facts.*,local_date::text AS local_date FROM facts WHERE parent_fact_id=ANY($1::uuid[]) ORDER BY id', [rows.map(r => r.id)])).rows;
+  const evidence = (await tx.query<{ fact_id: string; evidence_id: string }>(`SELECT fe.fact_id,e.id AS evidence_id FROM fact_evidence fe JOIN evidence e ON e.id=fe.evidence_id
+    JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id JOIN chats c ON c.id=e.chat_id
+    WHERE fe.fact_id=ANY($1::uuid[]) AND e.invalidated_at IS NULL AND e.message_version=m.version AND m.deleted_at IS NULL
+    AND c.inclusion='included' AND NOT c.is_control ORDER BY fe.fact_id,e.id`, [[...rows, ...children].map(r => r.id)])).rows;
+  const evidenceByFact = new Map<string, string[]>();
+  for (const row of evidence) { const values = evidenceByFact.get(row.fact_id) ?? []; values.push(row.evidence_id); evidenceByFact.set(row.fact_id, values); }
+  return rows.map(r => ({ id: String(r.id), kind: r.kind as BusinessFact['kind'], text: String(r.text), actor: { party: r.actor_party as BusinessFact['actor']['party'], contactId: r.actor_contact_id as string | null, displayName: r.actor_display_name as string | null },
+    state: r.state as BusinessFact['state'], answersFactId: r.answers_fact_id as string | null,
+    dates: children.filter(d => d.parent_fact_id === r.id).map(d => ({ kind: d.kind as DateFact['kind'], originalText: String(d.text), relativeTo: iso(d.relative_to), timezone: String(d.timezone),
+      resolvedAt: nullableIso(d.resolved_at), localDate: d.local_date == null ? null : String(d.local_date), precision: d.date_precision as DateFact['precision'], ambiguous: Boolean(d.ambiguous), evidenceIds: evidenceByFact.get(String(d.id)) ?? [] })),
+    evidenceIds: evidenceByFact.get(String(r.id)) ?? [], version: Number(r.version), source: r.source as BusinessFact['source'] }));
 }
 export async function replaceDates(tx: SqlExecutor, parentId: string, jobId: string, ticketId: string | null, dates: DateFact[], source: 'manual' | 'inferred') {
   await tx.query('DELETE FROM fact_evidence WHERE fact_id IN (SELECT id FROM facts WHERE parent_fact_id=$1)', [parentId]);
@@ -138,7 +150,7 @@ export class RecordsRepository implements RecordsService {
     const p = page(input); const rows = (await this.db.query(`SELECT f.* FROM facts f JOIN tickets t ON t.id=f.ticket_id JOIN chats c ON c.id=t.chat_id
       WHERE f.ticket_id=$1 AND f.parent_fact_id IS NULL AND c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active'
       AND ($2::uuid IS NULL OR f.id>$2) ORDER BY f.id LIMIT $3`, [input.ticketId, p.after, p.limit + 1])).rows;
-    const facts = await Promise.all(rows.slice(0, p.limit).map((r) => factRow(this.db, r)));
+    const facts = await factRows(this.db, rows.slice(0, p.limit));
     return { items: facts.filter((f) => f.source === 'manual' || f.evidenceIds.length > 0), nextCursor: rows.length > p.limit ? String(rows[p.limit - 1]!.id) : null };
   }
   async getContext(input: { ticketId: string; limit: number }) {
