@@ -10,9 +10,10 @@ import type { TelegramStore } from '../../src/telegram/store.js';
 
 const self = new User({ _: 'user', id: 123, firstName: 'Synthetic saved account', self: true });
 class Emitter { add(_handler: unknown) {} }
-type Stage = 'prepare' | 'getMe' | 'discovery' | 'bind';
-async function fixture(stage: Stage = 'getMe', remaining = 1, error: Error = new Error('synthetic transient outage')) {
-  const directory = await mkdtemp(join(tmpdir(), 'antseed-resume-')), path = join(directory, 'client.session'); await writeFile(path, 'synthetic existing session marker');
+type Stage = 'prepare' | 'getMe' | 'discovery' | 'bind' | 'signIn';
+async function fixture(stage: Stage = 'getMe', remaining = 1, error: Error = new Error('synthetic transient outage'), options: { fresh?: boolean; passwordRequired?: boolean; authorizedPhone?: boolean } = {}) {
+  const directory = await mkdtemp(join(tmpdir(), 'antseed-resume-')), path = join(directory, 'client.session');
+  if (!options.fresh) await writeFile(path, 'synthetic existing session marker');
   let owners = 0, maxOwners = 0, sentCodes = 0, bound = false, startedUpdates = 0;
   const modes: string[] = [];
   let prepareGate: Promise<void> | null = null;
@@ -25,8 +26,8 @@ async function fixture(stage: Stage = 'getMe', remaining = 1, error: Error = new
       async destroy() { if (open) { open = false; owners--; } }, async stopUpdatesLoop() {},
       async getMe() { fail('getMe'); return self; }, async *iterDialogs() { fail('discovery'); },
       async notifyLoggedIn() { expect(bound).toBe(true); expect(mode).toBe('live'); startedUpdates++; },
-      async sendCode() { sentCodes++; return new SentCode({ _: 'auth.sentCode', type: { _: 'auth.sentCodeTypeApp', length: 5 }, phoneCodeHash: 'synthetic-hash', timeout: 60 }); },
-      async signIn() { return self; }, onNewMessage: new Emitter(), onEditMessage: new Emitter(), onDeleteMessage: new Emitter(), onConnectionState: new Emitter(), onError: new Emitter(),
+      async sendCode() { sentCodes++; if (options.authorizedPhone) return self; return new SentCode({ _: 'auth.sentCode', type: { _: 'auth.sentCodeTypeApp', length: 5 }, phoneCodeHash: 'synthetic-hash', timeout: 60 }); },
+      async signIn() { fail('signIn'); if (options.passwordRequired) throw new tl.RpcError(401, 'SESSION_PASSWORD_NEEDED'); return self; }, async checkPassword() { return self; }, onNewMessage: new Emitter(), onEditMessage: new Emitter(), onDeleteMessage: new Emitter(), onConnectionState: new Emitter(), onError: new Emitter(),
     } as unknown as TelegramClient;
   });
   return { adapter, modes, owners: () => owners, maxOwners: () => maxOwners, sentCodes: () => sentCodes, startedUpdates: () => startedUpdates,
@@ -89,5 +90,37 @@ describe('saved-session automatic recovery (controlled clients; no authenticated
       await f.adapter.start(); f.blockPrepare(new Promise<void>((resolve) => { release = resolve; })); await vi.advanceTimersByTimeAsync(5_000);
       const stop = f.adapter.stop(); release(); await stop; await vi.advanceTimersByTimeAsync(60_000); expect(f.modes).toEqual(['auth', 'auth']); expect(f.startedUpdates()).toBe(0); expect(f.owners()).toBe(0);
     } finally { release?.(); await f.close(); }
+  });
+  it.each(['code', 'password', 'authorized-phone'] as const)('resumes a newly authenticated %s session after discovery FLOOD_WAIT without another code', async (path) => {
+    const f = await fixture('discovery', 1, tl.RpcError.fromTl({ errorCode: 420, errorMessage: 'FLOOD_WAIT_45' }), { fresh: true, passwordRequired: path === 'password', authorizedPhone: path === 'authorized-phone' });
+    try {
+      await f.adapter.start(); expect(f.modes).toEqual([]);
+      await f.adapter.submitLogin({ step: 'phone', phone: '+1000000000' });
+      if (path !== 'authorized-phone') await f.adapter.submitLogin({ step: 'code', code: 'synthetic-code' });
+      if (path === 'password') await f.adapter.submitLogin({ step: 'password', password: 'synthetic-password' });
+      expect(await f.adapter.loginState()).toMatchObject({ state: 'error', code: 'FLOOD_WAIT', retryAt: new Date(Date.now() + 45_000).toISOString() });
+      expect(await f.adapter.status()).toMatchObject({ state: 'degraded', code: 'saved_session_retry' }); expect(f.owners()).toBe(0);
+      await f.adapter.submitLogin({ step: 'phone', phone: '+1000000000' }); expect(f.sentCodes()).toBe(1);
+      const makes = f.modes.length; await vi.advanceTimersByTimeAsync(44_999); expect(f.modes).toHaveLength(makes);
+      await vi.advanceTimersByTimeAsync(1); expect((await f.adapter.loginState()).state).toBe('ready');
+      expect(f.startedUpdates()).toBe(1); expect(f.sentCodes()).toBe(1); expect(f.maxOwners()).toBe(1); expect(f.owners()).toBe(1);
+    } finally { await f.close(); }
+  });
+  it('does not automatically retry a flood wait before authentication has succeeded', async () => {
+    const f = await fixture('signIn', 1, tl.RpcError.fromTl({ errorCode: 420, errorMessage: 'FLOOD_WAIT_45' }), { fresh: true });
+    try {
+      await f.adapter.start(); await f.adapter.submitLogin({ step: 'phone', phone: '+1000000000' });
+      expect(await f.adapter.submitLogin({ step: 'code', code: 'synthetic-code' })).toMatchObject({ state: 'error', code: 'FLOOD_WAIT' });
+      await vi.advanceTimersByTimeAsync(300_000); expect(f.modes).toEqual(['auth']); expect(f.sentCodes()).toBe(1); expect(f.startedUpdates()).toBe(0);
+      expect((await f.adapter.submitLogin({ step: 'code', code: 'synthetic-code' })).state).toBe('ready');
+    } finally { await f.close(); }
+  });
+  it('stop cancels recovery of a newly authenticated session waiting after discovery', async () => {
+    const f = await fixture('discovery', 1, new Error('Synthetic discovery interruption'), { fresh: true });
+    try {
+      await f.adapter.start(); await f.adapter.submitLogin({ step: 'phone', phone: '+1000000000' }); await f.adapter.submitLogin({ step: 'code', code: 'synthetic-code' });
+      expect((await f.adapter.status()).code).toBe('saved_session_retry'); await f.adapter.stop(); const makes = f.modes.length;
+      await vi.advanceTimersByTimeAsync(300_000); expect(f.modes).toHaveLength(makes); expect(f.owners()).toBe(0); expect(f.startedUpdates()).toBe(0);
+    } finally { await f.close(); }
   });
 });

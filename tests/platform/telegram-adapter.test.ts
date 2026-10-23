@@ -33,7 +33,7 @@ describe('deterministic mtcute transport seam (not authenticated Telegram)', () 
         async sendCode() { return new SentCode({ _: 'auth.sentCode', type: { _: 'auth.sentCodeTypeApp', length: 5 }, phoneCodeHash: 'private-code-hash', timeout: 60 }); },
         async signIn(input: { phoneCode: string }) { if (input.phoneCode === '22222') throw new tl.RpcError(401, 'SESSION_PASSWORD_NEEDED'); if (input.phoneCode !== '11111') throw new tl.RpcError(400, 'PHONE_CODE_INVALID'); return user; },
         async checkPassword(input: { password: string }) { if (input.password !== 'synthetic-right') throw new tl.RpcError(400, 'PASSWORD_HASH_INVALID'); return user; },
-        async *iterDialogs() { expect(bound).toBe(true); yield { peer: group, isArchived: true }; },
+        async *iterDialogs() { expect(bound).toBe(true); yield { peer: group, isArchived: true, isPinned: false, raw: { topMessage: 1 }, lastMessage: { raw: { date: 1 } } }; },
         async notifyLoggedIn() { expect(bound).toBe(true); expect(mode).toBe('live'); log.push('updates-started'); client.onNewMessage.emit(nativeMessage()); return user.raw; },
       };
       return client as unknown as TelegramClient;
