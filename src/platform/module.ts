@@ -34,7 +34,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
   const db = new PgDatabase(config.databaseUrl), store = new TelegramStore(db, config.telegram), telegram = new MtcuteAdapter(config.telegram, store), vikunja = new VikunjaAdapter(config.vikunja, db);
   const migrationsReady = await createMigrationGate(db);
   telegram.setControlSetup(new ControlSetupManager(db, store, () => telegram.requireLive()));
-  const control = new DurableControlBus(db, telegram), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize);
+  const control = new DurableControlBus(db, telegram, store, requireDatabaseReady), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize);
   let telegramStarted = false, telegramTask: Promise<void> | null = null;
   let dbState = state('connecting', 'database_pending', 'Waiting for database and migrations');
   let boardState: ServiceStatus | null = null;

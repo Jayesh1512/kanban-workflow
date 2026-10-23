@@ -1,3 +1,5 @@
+import { ChatIntake } from '../../src/telegram/intake.js';
+import type { TelegramPort } from '../../src/shared/ports.js';
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import type { Extraction } from '../../src/shared/domain.js';
@@ -67,7 +69,12 @@ it('preserves exclusion/reinclusion and operator mapping corrections for a prosp
   // SQL-only store methods here; this fixture does not establish session-loss behavior.
   const h=await createProspect(),store=new TelegramStore(db as PgDatabase,{apiId:null,apiHash:null,sessionPath:':memory:',historyBatchSize:10,historyMaxBatches:1});
   await store.setInclusion({chatId:'7',inclusion:'excluded',expectedPolicyVersion:0,idempotencyKey:'exclude'});expect((await records.getTicket(h.ticket.id)).trackingState).toBe('suspended');
-  await store.setInclusion({chatId:'7',inclusion:'included',expectedPolicyVersion:1,idempotencyKey:'include'});expect((await records.getTicket(h.ticket.id)).trackingState).toBe('active');
+  await store.setInclusion({chatId:'7',inclusion:'included',expectedPolicyVersion:1,idempotencyKey:'include'});
+  expect((await records.getTicket(h.ticket.id)).trackingState).toBe('suspended');
+  await db.query("INSERT INTO chats(id,kind,title,inclusion,is_control) VALUES(-1009,'supergroup','Synthetic approvals','excluded',true)");
+  await db.query("UPDATE chat_intake_requests SET control_chat_id=-1009,message_id=50,delivery_state='sent' WHERE chat_id=7");
+  await new ChatIntake(db as PgDatabase,store,{} as TelegramPort).handle({chatId:'-1009',messageId:51,senderId:'99',replyToMessageId:50,text:'approve',sentAt:new Date().toISOString()});
+  expect((await records.getTicket(h.ticket.id)).trackingState).toBe('active');
   const company=await records.createCompany({idempotencyKey:'manual-company',canonicalName:'Manually confirmed company',aliases:[],domains:[],buyerIds:[],providerIds:[],workstream:null,summary:'',evidenceIds:[]});
   await store.correctMapping({chatId:'7',companyId:company.id,status:'confirmed',expectedMappingVersion:0,reason:'Operator supplies known company',source:'http',evidenceIds:h.input.evidence.map(e=>e.id),idempotencyKey:'map'});
   expect(await records.getTicket(h.ticket.id)).toMatchObject({kind:'company',companyId:company.id,trackingState:'active'});expect((await records.listTickets({})).items).toHaveLength(1);
