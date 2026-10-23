@@ -1,4 +1,4 @@
-import { automaticPolicy } from '../shared/automatic-policy.js';
+import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
 import type { JevDecision, Lane, Proposal } from '../shared/domain.js';
 import { LANES } from '../shared/domain.js';
 import type { Clock, ControlBus, ControlMessage, Database, SqlExecutor } from '../shared/ports.js';
@@ -54,7 +54,8 @@ export class ProposalRepository {
     return Boolean((await tx.query(`SELECT 1 FROM telegram_conversation_starts s JOIN tickets t ON t.chat_id=s.chat_id
       JOIN chats c ON c.id=t.chat_id WHERE t.id=$1 AND t.stage_version=0 AND s.state='qualifies'
       AND s.checked_cutoff=$2 AND s.first_message_at >= $2 AND s.initial_placement_at IS NULL
-      AND c.inclusion='included' AND NOT c.is_control`,[ticketId,policy.cutoff])).rowCount);
+      AND c.inclusion='included' AND NOT c.is_control
+      AND NOT ${groupInitialApprovalSql('c','s','$3')}`,[ticketId,policy.cutoff,policy.groupApprovalFrom])).rowCount);
   }
   private async deferInitialReview(tx:SqlExecutor,ticketId:string):Promise<boolean>{
     const policy=await automaticPolicy(tx);if(!policy?.initialPlacement)return false;
@@ -68,7 +69,7 @@ export class ProposalRepository {
     const control = (await tx.query('SELECT id FROM chats WHERE is_control AND inclusion=\'excluded\'')).rows[0];
     if (!control) { await tx.query("UPDATE proposals SET last_error='control_chat_missing' WHERE id=$1 AND decision='pending'", [proposal.id]); return; }
     await this.control.enqueueProposal(tx, { proposalId: proposal.id, chatId: String(control.id), text: controlProposalText(proposal) });
-    await tx.query("UPDATE proposals SET last_error=NULL WHERE id=$1 AND last_error='control_chat_missing'", [proposal.id]);
+    await tx.query("UPDATE proposals SET last_error=NULL WHERE id=$1 AND last_error IN ('control_chat_missing','initial_placement_pending')", [proposal.id]);
   }
   async proposeTx(tx: SqlExecutor, input: ProposeLaneInput, correctionOf: string | null = null): Promise<Proposal> {
     const chat = (await tx.query('SELECT c.* FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [input.ticketId])).rows[0]; assert(chat, 'not_found', 'Ticket not found');
@@ -94,8 +95,9 @@ export class ProposalRepository {
     const key = `workflow:decision-proposal:${input.jobId}`;
     const policy=await automaticPolicy(tx);
     if(policy?.initialPlacement){
-      const initial=(await tx.query(`SELECT s.initial_placement_at FROM telegram_conversation_starts s JOIN tickets t ON t.chat_id=s.chat_id
-        WHERE t.id=$1 AND s.state='qualifies' AND s.checked_cutoff=$2 AND s.initial_placement_at IS NOT NULL`,[input.ticketId,policy.cutoff])).rows[0];
+      const initial=(await tx.query(`SELECT s.initial_placement_at FROM telegram_conversation_starts s JOIN tickets t ON t.chat_id=s.chat_id JOIN chats c ON c.id=t.chat_id
+        WHERE t.id=$1 AND s.state='qualifies' AND s.checked_cutoff=$2 AND s.initial_placement_at IS NOT NULL
+        AND NOT ${groupInitialApprovalSql('c','s','$3')}`,[input.ticketId,policy.cutoff,policy.groupApprovalFrom])).rows[0];
       if(initial && !(await tx.query(`SELECT 1 FROM evidence e JOIN messages m ON (m.chat_id,m.id)=(e.chat_id,e.message_id)
         WHERE e.id=ANY($1::uuid[]) AND GREATEST(m.sent_at,m.edited_at)>$2::timestamptz LIMIT 1`,[input.decision.lane.evidenceIds,initial['initial_placement_at']])).rowCount){
         await tx.query("INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb) ON CONFLICT DO NOTHING",[key,JSON.stringify({state:'initial_snapshot_reviewed',reason:'Historical initial-snapshot recommendations do not request approval again'})]);return;
@@ -153,12 +155,13 @@ export class ProposalRepository {
   async placeInitialAutomatically(limit=5): Promise<number> {
     const policy=await automaticPolicy(this.db);if(!policy?.initialPlacement)return 0;
     const rows=(await this.db.query<{id:string;ticket_id:string}>(`SELECT p.id,p.ticket_id FROM proposals p JOIN tickets t ON t.id=p.ticket_id
-      JOIN telegram_conversation_starts s ON s.chat_id=t.chat_id
+      JOIN telegram_conversation_starts s ON s.chat_id=t.chat_id JOIN chats c ON c.id=t.chat_id
       WHERE p.decision='pending' AND p.apply_state='not_requested' AND p.origin IN ('openai','jev')
       AND t.stage_version=0 AND s.state='qualifies' AND s.checked_cutoff=$1 AND s.first_message_at >= $1 AND s.initial_placement_at IS NULL
+      AND NOT ${groupInitialApprovalSql('c','s','$3')}
       AND EXISTS(SELECT 1 FROM app_settings a JOIN analysis_jobs j ON a.key='workflow:decision-proposal:'||j.id::text
         WHERE a.value->>'proposalId'=p.id::text AND j.status='completed' AND j.chat_id=t.chat_id)
-      ORDER BY p.created_at,p.id LIMIT $2`,[policy.cutoff,limit])).rows;
+      ORDER BY p.created_at,p.id LIMIT $2`,[policy.cutoff,limit,policy.groupApprovalFrom])).rows;
     let count=0;
     for(const row of rows) await this.db.transaction(async tx=>{
       // Resolve in the established chat -> ticket -> proposal order.

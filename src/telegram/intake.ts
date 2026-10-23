@@ -1,4 +1,4 @@
-import { automaticPolicy } from '../shared/automatic-policy.js';
+import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
 import type { SqlExecutor, ControlMessage, TelegramPort } from '../shared/ports.js';
@@ -59,13 +59,13 @@ export class ChatIntake {
       // Five unresolved delivered requests maximum; new live activity/manual
       // requests are prioritized. At most one new request each thirty seconds.
       const item = (await tx.query(`SELECT r.*,c.title,c.kind,c.username FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id
-        WHERE ($2::timestamptz IS NULL OR EXISTS(SELECT 1 FROM telegram_conversation_starts s WHERE s.chat_id=r.chat_id AND s.checked_cutoff=$2 AND s.state IN ('older','unknown'))) AND r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
+        WHERE ($2::timestamptz IS NULL OR EXISTS(SELECT 1 FROM telegram_conversation_starts s WHERE s.chat_id=r.chat_id AND s.checked_cutoff=$2 AND (s.state IN ('older','unknown') OR (s.state='qualifies' AND ${groupInitialApprovalSql('c','s','$3')})))) AND r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
         AND (r.attempts<10 OR r.control_chat_id IS DISTINCT FROM $1) AND (r.lease_until IS NULL OR r.lease_until<now())
         AND (r.delivery_state<>'sent' OR r.control_chat_id IS DISTINCT FROM $1)
         AND (r.control_chat_id=$1 AND r.attempts>0 OR (
           (SELECT count(*) FROM chat_intake_requests WHERE decision='pending' AND control_chat_id=$1 AND attempts>0)<5
           AND NOT EXISTS(SELECT 1 FROM app_settings WHERE key='telegram:intake:last-send' AND (value->>'at')::timestamptz>now()-interval '30 seconds')))
-        ORDER BY (r.attempts>0) DESC,r.priority_at DESC,r.created_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1`, [control['id'],automatic?automatic.cutoff:null])).rows[0];
+        ORDER BY (r.attempts>0) DESC,r.priority_at DESC,r.created_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1`, [control['id'],automatic?automatic.cutoff:null,automatic?.groupApprovalFrom??null])).rows[0];
       if (!item) return null;
       const changed = String(item['control_chat_id']) !== String(control['id']);
       let randomId = String(item['random_id']);

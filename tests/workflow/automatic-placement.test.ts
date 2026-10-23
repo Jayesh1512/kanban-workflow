@@ -52,3 +52,54 @@ it('holds an already queued initial AI notification until its scope is known, wi
  const bus=new DurableControlBus(h.db as PgDatabase,{status:async()=>({state:'ready'}),sendControlMessage:async()=>{sends++;return {messageId:50};}} as unknown as TelegramPort);await bus.tick();expect(sends).toBe(0);
  await h.db.query("UPDATE telegram_conversation_starts SET state='older',checked_cutoff=$1,first_message_at='2020-01-01'",[cutoff]);await bus.tick();expect(sends).toBe(1);
 });
+
+const groupApprovalFrom='2026-10-23T13:48:42.677Z';
+async function futureGroup(h:Awaited<ReturnType<typeof setup>>,at=groupApprovalFrom,kind='supergroup'){
+ await h.db.query("UPDATE app_settings SET value=value||$1::jsonb WHERE key='telegram:automatic-since'",[JSON.stringify({groupApprovalFrom})]);
+ await h.db.query('UPDATE chats SET kind=$1 WHERE id=-1001',[kind]);
+ await h.db.query('UPDATE telegram_conversation_starts SET first_message_at=$1 WHERE chat_id=-1001',[at]);
+}
+it('requires a real correlated control approval for the first recommendation in a future group and every later change',async()=>{
+ const h=await setup();await futureGroup(h);const {decision,jobId}=await recommend(h);
+ await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId,ticketId:h.ticket.id,expectedStageVersion:0,decision}));
+ const p=(await h.proposals.list({})).items[0]!;expect(await h.proposals.placeInitialAutomatically()).toBe(0);
+ expect(p).toMatchObject({decision:'pending',applyState:'not_requested',lastError:null});
+ expect((await h.db.query('SELECT source FROM proposal_decisions')).rows).toHaveLength(0);
+ expect(await h.service.applyNext()).toBeNull();expect(h.moves()).toBe(0);
+ let sends=0;const bus=new DurableControlBus(h.db as PgDatabase,{status:async()=>({state:'ready'}),sendControlMessage:async()=>{sends++;return {messageId:50};}} as unknown as TelegramPort);
+ await bus.tick();await bus.tick();expect(sends).toBe(1);
+ expect((await h.db.query('SELECT state,message_id FROM control_outbox')).rows[0]).toEqual({state:'sent',message_id:50});
+ await h.proposals.handleControlReply({chatId:'-2001',messageId:51,senderId:'99',replyToMessageId:50,text:'approve',sentAt:h.clock.now().toISOString()});
+ await h.service.applyNext();expect(await h.records.getTicket(h.ticket.id)).toMatchObject({lane:'Integrations',stageVersion:1});expect(h.moves()).toBe(1);
+ expect((await h.db.query('SELECT source FROM proposal_decisions')).rows).toEqual([{source:'telegram'}]);
+ const laterEvidence=await freshEvidence(h);decision.lane={outcome:'propose',targetLane:'Completed',reason:'Later update',nextAction:null,evidenceIds:[laterEvidence]};
+ await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId:randomUUID(),ticketId:h.ticket.id,expectedStageVersion:1,decision}));
+ expect(await h.proposals.placeInitialAutomatically()).toBe(0);expect(await h.service.applyNext()).toBeNull();expect(h.moves()).toBe(1);
+ expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(2);
+});
+it.each(['group','supergroup'])('preserves automatic initial import for an older %s even when discovered after the new policy',async kind=>{
+ const h=await setup();await futureGroup(h,'2026-10-23T13:48:42.676Z',kind);await h.db.query('UPDATE chats SET discovered_at=now()');
+ const {decision,jobId}=await recommend(h);await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId,ticketId:h.ticket.id,expectedStageVersion:0,decision}));
+ expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(0);expect(await h.proposals.placeInitialAutomatically()).toBe(1);
+});
+it('leaves private-chat automatic initial placement unchanged',async()=>{
+ const h=await setup();await futureGroup(h,groupApprovalFrom,'user');const {decision,jobId}=await recommend(h);
+ await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId,ticketId:h.ticket.id,expectedStageVersion:0,decision}));expect(await h.proposals.placeInitialAutomatically()).toBe(1);
+});
+it('holds pre-classification delivery then releases the future group recommendation for approval without marking it automatically placed',async()=>{
+ const h=await setup();await futureGroup(h);await h.db.query("UPDATE telegram_conversation_starts SET state='pending',checked_cutoff=NULL");
+ const {decision,jobId}=await recommend(h);await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId,ticketId:h.ticket.id,expectedStageVersion:0,decision}));
+ expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(0);
+ await h.db.query("UPDATE telegram_conversation_starts SET state='qualifies',checked_cutoff=$1",[cutoff]);await h.proposals.flushPendingControl();
+ expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(1);expect(await h.proposals.placeInitialAutomatically()).toBe(0);
+ expect((await h.db.query('SELECT initial_placement_at FROM telegram_conversation_starts')).rows[0]).toEqual({initial_placement_at:null});
+});
+it('does not suppress a future group first proposal after an initial no-change assessment',async()=>{
+ const h=await setup();await futureGroup(h);const {decision,jobId}=await recommend(h);const first=decisionFixture(h.evidenceId);first.lane={outcome:'no_change',reason:'No change',evidenceIds:[h.evidenceId]};
+ await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId:randomUUID(),ticketId:h.ticket.id,expectedStageVersion:0,decision:first}));
+ await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId,ticketId:h.ticket.id,expectedStageVersion:0,decision}));expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(1);expect(await h.proposals.placeInitialAutomatically()).toBe(0);
+});
+it('fails closed on a malformed new-group approval boundary rather than auto-approving',async()=>{
+ const h=await setup();await futureGroup(h);await h.db.query("UPDATE app_settings SET value=jsonb_set(value,'{groupApprovalFrom}','\"invalid\"') WHERE key='telegram:automatic-since'");
+ const {decision,jobId}=await recommend(h);await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,{jobId,ticketId:h.ticket.id,expectedStageVersion:0,decision}));expect(await h.proposals.placeInitialAutomatically()).toBe(0);expect((await h.db.query('SELECT * FROM control_outbox')).rows).toHaveLength(1);
+});
