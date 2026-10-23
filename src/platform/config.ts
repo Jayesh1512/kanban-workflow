@@ -20,7 +20,10 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   const runtime = env['RUNTIME_ENV_PATH'] ? await readEnv(env['RUNTIME_ENV_PATH']) : null;
   const aiEnvPath = env['AI_ENV_PATH'] ?? '/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env';
   const ai = await readEnv(aiEnvPath);
-  const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...env };
+  const database = env['DATABASE_ENV_PATH'] ? await readEnv(env['DATABASE_ENV_PATH']) : null;
+  if (env['DATABASE_ENV_PATH'] && database === null) throw new Error('Could not read database configuration file');
+  if (env['DATABASE_ENV_PATH'] && !nonblank(database?.['DATABASE_URL'])) throw new Error('Database configuration file must contain DATABASE_URL');
+  const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...database, ...env };
   // Optional blank Compose fields must preserve mounted configuration.
   for (const key of ['TELEGRAM_APPLICATION_PROFILE', 'TELEGRAM_API_ID', 'TELEGRAM_API_HASH', 'MOVEMENT_PROVIDER', 'JEV_ENDPOINT', 'JEV_MODEL', 'OPENAI_TIMEOUT_MS', 'OPENAI_MAX_OUTPUT_TOKENS']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
   const str = (key: string, fallback: string) => nonblank(values[key]) ?? fallback;
@@ -55,6 +58,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     telegram: {
       ...telegramApplication(values), sessionPath: str('TELEGRAM_SESSION_PATH', '/data/telegram/client.session'),
       historyBatchSize: int('TELEGRAM_HISTORY_BATCH_SIZE', 100, 100), historyMaxBatches: int('TELEGRAM_HISTORY_MAX_BATCHES', 10, 10_000),
+      discoveryBatchSize: int('TELEGRAM_DISCOVERY_BATCH_SIZE', 500, 500),
     },
     vikunja: {
       baseUrl: url('VIKUNJA_URL', 'http://127.0.0.1:3456', ['http:', 'https:']).replace(/\/$/, ''),

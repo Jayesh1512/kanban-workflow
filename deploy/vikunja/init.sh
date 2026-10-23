@@ -24,4 +24,17 @@ mv /run/antseed/pg-password.tmp /run/antseed/pg-password
 chown 1000:1000 /run/antseed /run/antseed/runtime.env /run/antseed/pg-password /vikunja-files /telegram
 chmod 700 /run/antseed /vikunja-files /telegram
 chmod 400 /run/antseed/runtime.env /run/antseed/pg-password
+if [ -n "${EXTERNAL_DATABASE_CONFIG_DIR:-}" ]; then
+  # Root copies the private host file into the existing volume for UID1000;
+  # neither app container needs access to the owner's 0700 host directory.
+  cp "$EXTERNAL_DATABASE_CONFIG_DIR/database.env" /run/antseed/database.env.tmp
+  chown 1000:1000 /run/antseed/database.env.tmp
+  chmod 400 /run/antseed/database.env.tmp
+  mv /run/antseed/database.env.tmp /run/antseed/database.env
+  if [ -f "$EXTERNAL_DATABASE_CONFIG_DIR/database-ca.crt" ]; then
+    cp "$EXTERNAL_DATABASE_CONFIG_DIR/database-ca.crt" /run/antseed/database-ca.crt
+    chown 1000:1000 /run/antseed/database-ca.crt
+    chmod 400 /run/antseed/database-ca.crt
+  fi
+fi
 printf 'Persistent service credentials and writable data directories ready.\n'

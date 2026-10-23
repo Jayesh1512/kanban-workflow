@@ -6,6 +6,8 @@ coverage/
 !.env.example
 *.sqlite*
 .local/
+**/credentials.env
+**/database.env
 *.log
 /artifacts/demo/.render/
 /artifacts/demo/__pycache__/

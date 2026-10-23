@@ -12,3 +12,9 @@
 !db/migrations/*.sql
 !deploy/
 !deploy/**
+# Deployment directories can contain owner-created private credentials too.
+**/*.env
+**/*.env.*
+**/*.pem
+**/*.key
+**/*.crt

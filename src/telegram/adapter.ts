@@ -33,6 +33,7 @@ export class MtcuteAdapter implements TelegramPort {
   private resumeTimer: ReturnType<typeof setTimeout> | null = null;
   private resumeTask: Promise<void> | null = null;
   private discoveryOffset: { offsetId: number; offsetDate: number; offsetPeer: tl.TypeInputPeer } | null = null;
+  private readonly discoveredPinned = new Set<string>();
   private readonly factory: ClientFactory;
   private setup: { configure(input: Parameters<TelegramPort['configureControlChat']>[0]): Promise<ControlSetup>; reconcile(key: string): Promise<ControlSetup> } | null = null;
   constructor(private readonly config: RuntimeConfig['telegram'], private readonly store: TelegramStore, factory?: ClientFactory) {
@@ -228,21 +229,24 @@ export class MtcuteAdapter implements TelegramPort {
     yield* this.discoverBatch(this.requireLive());
   }
   private async *discoverBatch(client: TelegramClient): AsyncIterable<TelegramDialog> {
-    const limit = 500;
+    const limit = this.config.discoveryBatchSize ?? 500;
     let count = 0;
-    for await (const dialog of client.iterDialogs({ archived: 'keep', chunkSize: 100, limit,
+    for await (const dialog of client.iterDialogs({ archived: 'keep', chunkSize: 100, limit: limit + (this.discoveryOffset ? 0 : this.discoveredPinned.size),
       ...(this.discoveryOffset ? { ...this.discoveryOffset, pinned: 'exclude' as const } : {}) })) {
+      if (dialog.isPinned && this.discoveredPinned.has(String(dialog.peer.id))) continue;
       yield { ...normalizeDialog(dialog.peer, dialog.isArchived), latestMessageAt: dialog.lastMessage ? new Date(dialog.lastMessage.raw.date * 1000).toISOString() : null };
       // Advance only after the consumer durably stores the yielded dialog.
       // Match pinned mtcute pagination: pinned rows cannot anchor date ordering.
       if (!dialog.isPinned) this.discoveryOffset = { offsetId: dialog.raw.topMessage,
         offsetDate: dialog.lastMessage?.raw.date ?? this.discoveryOffset?.offsetDate ?? 0,
         offsetPeer: dialog.peer.inputPeer };
+      else this.discoveredPinned.add(String(dialog.peer.id));
       count++;
+      if (count >= limit) break;
     }
     // A full batch continues next turn, including after a native flood wait.
     // Only a short/empty final page starts a new sweep from the current head.
-    if (count < limit) this.discoveryOffset = null;
+    if (count < limit) { this.discoveryOffset = null; this.discoveredPinned.clear(); }
   }
   async describe(chatId: string): Promise<TelegramDialog> {
     const dialog = (await this.requireLive().getPeerDialogs(peerNumber(chatId)))[0];
