@@ -1,3 +1,4 @@
+import { ChatIntake } from './intake.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TelegramClient } from '@mtcute/node';
 import { DomainError } from '../shared/api.js';
@@ -23,6 +24,7 @@ export class ControlSetupManager {
       await tx.query('UPDATE chats SET is_control=false,policy_version=policy_version+1,updated_at=now() WHERE is_control AND id<>$1', [chatId]);
       await tx.query("UPDATE chats SET is_control=true,inclusion='excluded',policy_version=policy_version+1,updated_at=now() WHERE id=$1", [chatId]);
       await this.store.invalidateChat(tx, chatId, 'control_chat_configured');
+      await tx.query("UPDATE chat_intake_requests SET decision='cancelled',decided_at=now() WHERE chat_id=$1 AND decision='pending'", [chatId]);
       await tx.query("UPDATE history_cursors SET status='paused',generation=generation+1,lease_until=NULL,worker_id=NULL WHERE chat_id=$1", [chatId]);
       await tx.query('UPDATE telegram_history_requests SET remaining_batches=0 WHERE chat_id=$1', [chatId]);
       await tx.query('UPDATE live_checkpoints SET replay_required=false,generation=generation+1 WHERE chat_id=$1', [chatId]);
@@ -90,11 +92,13 @@ export class ControlSetupManager {
 
 export class DurableControlBus implements ControlBus {
   private readonly subscribers = new Set<(message: ControlMessage) => Promise<void>>();
-  constructor(private readonly db: PgDatabase, private readonly telegram: TelegramPort) {}
+  private readonly intake: ChatIntake | null;
+  constructor(private readonly db: PgDatabase, private readonly telegram: TelegramPort, store?: TelegramStore, private readonly ready?: () => Promise<void>) { this.intake = store ? new ChatIntake(db, store, telegram) : null; }
   async status(): Promise<ServiceStatus> {
     const row = (await this.db.query("SELECT EXISTS(SELECT 1 FROM chats WHERE is_control) AS configured,(SELECT count(*) FROM control_setup_operations WHERE state='remote_unknown') AS unknown,(SELECT count(*) FROM control_inbox WHERE state<>'done') AS inbox,(SELECT count(*) FROM control_outbox WHERE state='failed' AND attempts>=10) AS failed")).rows[0]!;
-    const code = Number(row['unknown']) ? 'control_setup_unknown' : !row['configured'] ? 'control_chat_missing' : Number(row['failed']) ? 'control_delivery_failed' : Number(row['inbox']) ? 'control_replies_pending' : null;
-    return { state: code ? 'degraded' : 'ready', code, detail: code === 'control_setup_unknown' ? 'Group creation outcome unknown; reconcile its operation key before creating another group' : code === 'control_chat_missing' ? 'Configure an operational control group to deliver pending proposals' : code === 'control_delivery_failed' ? 'Control delivery exhausted bounded retries; inspect persisted outbox and reconcile message receipts' : code === 'control_replies_pending' ? `${row['inbox']} durable control replies await workflow processing` : 'Operational control group configured', checkedAt: new Date().toISOString() };
+    const intake = this.intake ? (await this.db.query("SELECT count(*) FILTER(WHERE decision='pending') AS pending,count(*) FILTER(WHERE decision='pending' AND delivery_state<>'sent') AS queued,count(*) FILTER(WHERE decision='pending' AND delivery_state='failed' AND attempts>=10) AS failed FROM chat_intake_requests")).rows[0] : null;
+    const code = Number(row['unknown']) ? 'control_setup_unknown' : !row['configured'] ? 'control_chat_missing' : Number(row['failed']) || Number(intake?.['failed'] ?? 0) ? 'control_delivery_failed' : Number(row['inbox']) ? 'control_replies_pending' : null;
+    return { state: code ? 'degraded' : 'ready', code, detail: code === 'control_setup_unknown' ? 'Group creation outcome unknown; reconcile its operation key before creating another group' : code === 'control_chat_missing' ? 'Configure an operational control group to deliver pending proposals' : code === 'control_delivery_failed' ? 'Control delivery exhausted bounded retries; inspect persisted outbox and reconcile message receipts' : code === 'control_replies_pending' ? `${row['inbox']} durable control replies await workflow processing` : `Operational control group configured${intake ? `; ${intake['pending']} chats await intake approval (${intake['queued']} requests queued)` : ''}`, checkedAt: new Date().toISOString() };
   }
   subscribe(handler: (message: ControlMessage) => Promise<void>): () => void { this.subscribers.add(handler); return () => { this.subscribers.delete(handler); }; }
   async enqueueProposal(tx: SqlExecutor, input: Parameters<ControlBus['enqueueProposal']>[1]): Promise<void> {
@@ -105,9 +109,11 @@ export class DurableControlBus implements ControlBus {
   }
   async tick(): Promise<void> {
     if ((await this.telegram.status()).state !== 'ready') return;
+    await this.ready?.();
     await this.db.withSessionLock('antseed:control-worker', async () => {
-      if (this.subscribers.size) await this.deliverOne();
+      if (this.subscribers.size || this.intake) await this.deliverOne();
       await this.sendOne();
+      await this.intake?.sendOne();
     });
   }
   private async deliverOne(): Promise<void> {
@@ -120,7 +126,7 @@ export class DurableControlBus implements ControlBus {
     if (!row) return;
     try {
       const message: ControlMessage = { chatId: String(row['chat_id']), messageId: Number(row['message_id']), senderId: row['sender_id'] == null ? null : String(row['sender_id']), replyToMessageId: row['reply_to_id'] as number | null, text: String(row['text']), sentAt: new Date(row['sent_at'] as Date).toISOString() };
-      for (const handler of this.subscribers) await handler(message);
+      if (!await this.intake?.handle(message)) for (const handler of this.subscribers) await handler(message);
       await this.db.query("UPDATE control_inbox SET state='done',claim_token=NULL,lease_until=NULL,last_error=NULL WHERE chat_id=$1 AND message_id=$2 AND claim_token=$3 AND lease_until>now()", [message.chatId, message.messageId, token]);
     } catch {
       await this.db.query("UPDATE control_inbox SET state='pending',claim_token=NULL,lease_until=now()+LEAST(attempts*2,60)*interval '1 second',last_error='Control handler unavailable; decision retained for retry' WHERE chat_id=$1 AND message_id=$2 AND claim_token=$3 AND lease_until>now()", [row['chat_id'], row['message_id'], token]);

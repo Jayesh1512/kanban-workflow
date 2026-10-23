@@ -1,24 +1,17 @@
 import { PGlite } from '@electric-sql/pglite';
-import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { PgDatabase } from '../../src/platform/database.js';
-import type { SqlExecutor, TelegramMessageInput } from '../../src/shared/ports.js';
+import type { TelegramMessageInput } from '../../src/shared/ports.js';
+import { telegramFixture } from './telegram-fixture.js';
 import { TelegramStore } from '../../src/telegram/store.js';
 
 describe('synthetic Telegram events against actual SQL storage (PGlite)', () => {
   let engine: PGlite, db: PgDatabase, store: TelegramStore;
   beforeEach(async () => {
-    engine = new PGlite();
-    await engine.exec(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
-    await engine.exec(await readFile(new URL('../../db/migrations/202610170001_telegram_operations.sql', import.meta.url), 'utf8'));
-    await engine.exec(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
-    const wrap = (client: Pick<PGlite, 'query'>): SqlExecutor => ({ async query(text, values) {
-      const r = await client.query(text, values); return { rows: r.rows, rowCount: r.rows.length || r.affectedRows || 0, command: '', fields: [], oid: 0 } as never;
-    } });
-    db = { ...wrap(engine), transaction: async <T>(fn: (tx: SqlExecutor) => Promise<T>) => engine.transaction((tx) => fn(wrap(tx))) } as PgDatabase;
-    store = new TelegramStore(db, { apiId: null, apiHash: null, sessionPath: ':memory:', historyBatchSize: 100, historyMaxBatches: 2 });
-    await store.bindAccount('123');
+    // These storage/source-fencing cases start with admitted synthetic chats.
+    const fixture = await telegramFixture();
+    engine = fixture.engine; db = fixture.db; store = fixture.store;
   });
   afterEach(async () => { await engine.close(); });
   const dialog = (id = '-10042', kind: 'supergroup' | 'user' = 'supergroup') => ({ id, kind, title: 'Synthetic fixture chat', username: null, archived: true });
@@ -33,7 +26,7 @@ describe('synthetic Telegram events against actual SQL storage (PGlite)', () => 
     await store.bindAccount('123'); await expect(store.bindAccount('999')).rejects.toThrow('different dataset account');
     expect((await db.query('SELECT self_user_id FROM telegram_account')).rows.map((r) => String(r['self_user_id']))).toEqual(['123']);
   });
-  it('discovers archived chats included; preserves exclusions and creates no job/content after exclusion', async () => {
+  it('preserves admitted archived chats; preserves exclusions and creates no job/content after exclusion', async () => {
     const chat = await store.upsertDialog(dialog()); expect(chat.archived).toBe(true); expect(chat.inclusion).toBe('included');
     const excluded = await store.setInclusion({ chatId: chat.id, expectedPolicyVersion: 0, inclusion: 'excluded', idempotencyKey: 'exclude-one' });
     expect(excluded.policyVersion).toBe(1);

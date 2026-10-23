@@ -16,11 +16,17 @@ describe.skipIf(!url)('M2 actual isolated PostgreSQL (synthetic Telegram events,
     db = new PgDatabase(scopedUrl); await migrate(db); store = new TelegramStore(db, { apiId: null, apiHash: null, sessionPath: ':memory:', historyBatchSize: 100, historyMaxBatches: 2 }); await store.bindAccount('123');
   });
   afterEach(async () => { await db.close(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.close(); });
-  const discover = () => store.upsertDialog({ id: '-10042', title: 'Synthetic PG fixture', kind: 'supergroup', username: null, archived: true });
+  const discover = async () => {
+    await store.upsertDialog({ id: '-10042', title: 'Synthetic PG fixture', kind: 'supergroup', username: null, archived: true });
+    // Replay/storage coverage here uses an explicitly admitted fixture chat.
+    await db.query("UPDATE chats SET inclusion='included' WHERE id=-10042");
+    await db.query("UPDATE history_cursors SET status='pending' WHERE chat_id=-10042");
+    await db.query('UPDATE telegram_history_requests SET remaining_batches=2 WHERE chat_id=-10042');
+  };
   it('repeats checksum migration and resumes persisted cursor/account after pool restart', async () => {
     await discover(); const cursor = await store.claimHistory('-10042', 'worker', 30_000);
     await store.commitHistoryBatch('-10042', 0, cursor!.generation, { messages: [fixtureMessage(9)], next: { messageId: 9, date: fixtureMessage(9).sentAt }, complete: false });
-    await migrate(db); expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map(r=>r.version)).toEqual(['001_initial.sql','202610170001_telegram_operations.sql','202610170002_decision_origins.sql','202610170003_contact_prospects.sql']); await db.close(); db = new PgDatabase(scopedUrl); await migrate(db);
+    await migrate(db); expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map(r=>r.version)).toEqual(['001_initial.sql','202610170001_telegram_operations.sql','202610170002_decision_origins.sql','202610170003_contact_prospects.sql', '202610230001_chat_intake_approvals.sql']); await db.close(); db = new PgDatabase(scopedUrl); await migrate(db);
     store = new TelegramStore(db, { apiId: null, apiHash: null, sessionPath: ':memory:', historyBatchSize: 100, historyMaxBatches: 2 });
     expect(await store.getCursor('-10042')).toMatchObject({ nextMessageId: 9, importedCount: 1 }); await expect(store.bindAccount('999')).rejects.toMatchObject({ code: 'conflict' });
   });

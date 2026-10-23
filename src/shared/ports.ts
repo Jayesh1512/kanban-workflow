@@ -122,7 +122,7 @@ export interface ChatService {
 }
 export interface IngestionStore {
   bindAccount(selfId: TelegramUserId): Promise<void>; // first binding or same self only; mismatch requires new dataset/session volume
-  upsertDialog(dialog: TelegramDialog): Promise<Chat>; // new discovery explicitly included (control excluded); preserve existing selection
+  upsertDialog(dialog: TelegramDialog): Promise<Chat>; // new discovery waits undecided for control-group intake approval; preserve existing selection
   ingest(event: TelegramEvent): Promise<void>; // persists message/version + analysis job atomically; control chat routed separately
   claimHistory(chatId: TelegramChatId, workerId: string, leaseMs: number): Promise<HistoryCursor | null>;
   commitHistoryBatch(chatId: TelegramChatId, expectedPolicyVersion: number, expectedGeneration: number, batch: HistoryBatch): Promise<HistoryCursor>;

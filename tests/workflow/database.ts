@@ -11,6 +11,7 @@ export async function fixtureDatabase() {
   await engine.exec(await readFile(new URL('../../db/migrations/202610170001_telegram_operations.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610170002_decision_origins.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
+  await engine.exec(await readFile(new URL('../../db/migrations/202610230001_chat_intake_approvals.sql', import.meta.url), 'utf8'));
   let tail: Promise<unknown> = Promise.resolve();
   const executor: SqlExecutor = { async query<R extends QueryResultRow = QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<R>> {
     const result = await engine.query<R>(text, values); return { rows: result.rows, rowCount: result.rows.length || result.affectedRows || 0, fields: [], command: '', oid: 0 };
