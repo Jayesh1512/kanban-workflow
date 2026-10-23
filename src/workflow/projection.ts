@@ -1,4 +1,5 @@
-import { companyCardTitle } from '../shared/company-title.js';
+import { formatCard } from './card-format.js';
+import { loadCardContext } from './card-context.js';
 import { resolveTitleCompany } from './title-company.js';
 import type { Ticket } from '../shared/domain.js';
 import type { Clock, Database, VikunjaPort } from '../shared/ports.js';
@@ -17,21 +18,10 @@ export class TicketProjector {
       if (active) return null;
       const source = (await this.db.query('SELECT chat_id FROM tickets WHERE id=$1', [ticketId])).rows[0];
       if (source) await this.db.transaction(tx => resolveTitleCompany(tx, String(source['chat_id'])));
-      const context = await this.records.getContext({ ticketId, limit: 100 });
-      const { ticket, chat, company, contacts, facts } = context;
+      const context = await loadCardContext(this.records, ticketId);
+      const { ticket, chat } = context;
       assert(currentTicketMapping(chat, ticket), 'ambiguous_mapping', 'Projection requires the current company or contact-prospect mapping');
-      const title = companyCardTitle(company, chat).slice(0, 500);
-      const description = [
-        `Company: ${company?.canonicalName ?? 'Unknown (contact prospect)'}`, `Chat: ${chat.title} (${chat.id})`, `Workstream: ${ticket.workstream}`,
-        `Contacts: ${contacts.map((c) => `${c.names.join('/')} ${c.roles.map((r) => r.role).join('/')}`).join('; ')}`,
-        ...(context.outreach?.lastOutgoingAt ? [`Outreach (captured messages): ${context.outreach.waitingForReply ? 'Awaiting reply' : 'Reply received'}`, `Last outreach: ${context.outreach.lastOutgoingAt}`, `Last incoming message: ${context.outreach.lastIncomingAt ?? 'None captured'}`] : []),
-        `Summary: ${ticket.summary}`, `Latest substantive interaction: ${ticket.latestSubstantiveAt ?? 'Unknown'}`,
-        `Next action: ${ticket.nextAction ?? 'Unspecified'}`, `Follow-up: ${ticket.followUpAt ?? 'See sourced date facts'}`, `ETA: ${ticket.etaAt ?? 'Unspecified'}`,
-        `Blockers: ${ticket.blockers.join('; ') || 'None recorded'}`,
-        ...facts.map((f) => `${f.kind} (${f.actor.party}, ${f.state}): ${f.text}${f.dates.length ? ` — ${f.dates.map((d) => `${d.originalText}: ${d.ambiguous ? 'ambiguous' : d.localDate ?? d.resolvedAt ?? 'unresolved'} (${d.timezone})`).join('; ')}` : ''}`),
-        ...context.evidence.map((e) => `Evidence ${e.id}: ${e.sourceUrl ?? `${e.chatId}/${e.messageId}`} — ${e.excerpt.slice(0, 500)}`),
-      ].join('\n').slice(0, 24000);
-      const signature = hash({ title, description, workstream: ticket.workstream, policy: chat.policyVersion, mapping: chat.mappingVersion });
+      let { title, description } = formatCard(context);
       const stateKey = `workflow:projection:${ticketId}`;
       const saved = (await this.db.query<{ value: { hash?: string; state?: string } }>('SELECT value FROM app_settings WHERE key=$1', [stateKey])).rows[0]?.value;
       // All upstream calls occur under a session lock, with no transaction open.
@@ -39,7 +29,11 @@ export class TicketProjector {
       scoped.throwIfAborted(); assert(remote, 'conflict', 'Previously projected task is missing');
       const binding = (await this.db.query('SELECT project_id FROM board_bindings WHERE singleton')).rows[0]; assert(binding && String(binding.project_id) === remote.projectId, 'conflict', 'Remote task left the managed project');
       const bucket = (await this.db.query<{ lane: string }>('SELECT lane FROM board_buckets WHERE bucket_id=$1', [remote.bucketId])).rows[0]; assert(bucket, 'conflict', 'Remote task left the managed buckets');
-      if (bucket.lane !== ticket.lane) await this.db.transaction((tx) => observeRemoteTx(tx, ticketId, remote!.bucketId));
+      if (bucket.lane !== ticket.lane) {
+        await this.db.transaction((tx) => observeRemoteTx(tx, ticketId, remote!.bucketId));
+        ({ title, description } = formatCard({ ...context, ticket: await this.records.getTicket(ticketId) }));
+      }
+      const signature = hash({ title, description, workstream: ticket.workstream, policy: chat.policyVersion, mapping: chat.mappingVersion });
       const justEnsuredCurrentDetails = !ticket.vikunjaTaskId && remote.title === title && (remote.description === description || remote.description === `${description}\n\n[antseed-ticket:${ticketId}]`);
       if (!justEnsuredCurrentDetails && (saved?.hash !== signature || saved.state !== 'ready')) {
         remote = await this.vikunja.updateTaskDetails({ taskId: remote.id, title, description, workstream: ticket.workstream }); scoped.throwIfAborted();
@@ -55,7 +49,7 @@ export class TicketProjector {
     });
   }
   async projectBatch(limit = 10, signal?: AbortSignal): Promise<number> {
-    const rows = (await this.db.query<{ id: string }>(`SELECT t.id FROM tickets t JOIN chats c ON c.id=t.chat_id LEFT JOIN app_settings s ON s.key='workflow:projection:'||t.id::text
+    const rows = (await this.db.query<{ id: string; projection_updated_at: string | null }>(`SELECT t.id,s.updated_at::text AS projection_updated_at FROM tickets t JOIN chats c ON c.id=t.chat_id LEFT JOIN app_settings s ON s.key='workflow:projection:'||t.id::text
       WHERE c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active' AND (
         (t.kind='company' AND c.mapping_status='confirmed' AND c.company_id=t.company_id) OR
         (t.kind='contact_prospect' AND t.company_id IS NULL AND c.company_id IS NULL AND c.mapping_status IN ('unresolved','ambiguous')))
@@ -70,10 +64,13 @@ export class TicketProjector {
         // Reacquire the common lock; never let a late failed callback overwrite a
         // projection successfully committed by a newer owner after session loss.
         await this.db.withSessionLock(ticketLockKey(row.id), async () => {
-          const ready = (await this.db.query<{ value: { state?: string } }>('SELECT value FROM app_settings WHERE key=$1', [`workflow:projection:${row.id}`])).rows[0]?.value;
-          if (ready?.state === 'ready') return;
-          await this.db.query(`INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=now()`,
-          [`workflow:projection:${row.id}`, JSON.stringify({ state: 'remote_unknown', code, checkedAt: this.clock.now().toISOString() })]);
+          // Advance failed entries too: otherwise deleted cards whose last
+          // projection was ready can occupy every slot forever. Exact timestamp
+          // CAS still protects a newer owner's success after session loss.
+          await this.db.query(`INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb)
+            ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=now()
+            WHERE app_settings.updated_at IS NOT DISTINCT FROM $3::timestamptz`,
+          [`workflow:projection:${row.id}`, JSON.stringify({ state: 'remote_unknown', code, checkedAt: this.clock.now().toISOString() }), row.projection_updated_at]);
         });
       }
     }
