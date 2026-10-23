@@ -4,33 +4,40 @@ import {extractionSchema,validateExtraction} from './validation.js';
 const recoverableContactError=(error:unknown)=>error instanceof Error&&['Contact name absent from target identity evidence','Internal affiliation lacks identity-attributed AntSeed evidence','External affiliation lacks identity-attributed company evidence'].includes(error.message);
 
 /** Omit unsupported optional names and abstain on unsourced affiliation. Identity, phones,
- * roles, affiliations, facts, dates and all other source checks remain strict.
+ * roles, facts, dates and all retained fields remain strict.
  * Every retained field is run through the unchanged validator again. */
-export function normalizeExtraction(raw:unknown,input:AnalysisInput):{value:Extraction;omittedContactNames:number;omittedContactAffiliations:number}{
-  try{return{value:validateExtraction(raw,input),omittedContactNames:0,omittedContactAffiliations:0};}
+export function normalizeExtraction(raw:unknown,input:AnalysisInput):{value:Extraction;omittedContactNames:number;omittedContactAffiliations:number;omittedCompanyAttributes:number}{
+  // Optional aliases/domains/IDs may be omitted when unsupported. Primary
+  // company identity and every retained attribute still pass the strict validator.
+  const parsed=extractionSchema.parse(raw);let omittedCompanyAttributes=0;
+  const source={...parsed,companies:parsed.companies.map(company=>{
+    const quotes=company.evidenceIds.map(id=>input.evidence.find(e=>e.id===id)?.excerpt??'').join('\n');
+    const keep=(values:string[],fold:boolean)=>values.filter(value=>{const supported=fold?quotes.toLowerCase().includes(value.toLowerCase()):quotes.includes(value);if(!supported)omittedCompanyAttributes++;return supported;});
+    return {...company,aliases:keep(company.aliases,true),domains:keep(company.domains,true),buyerIds:keep(company.buyerIds,false),providerIds:keep(company.providerIds,false)};
+  })};
+  try{return{value:validateExtraction(source,input),omittedContactNames:0,omittedContactAffiliations:0,omittedCompanyAttributes};}
   catch(error){if(!recoverableContactError(error))throw error;}
-  const parsed=extractionSchema.parse(raw);
-  if(parsed.contacts.reduce((n,c)=>n+c.names.length,0)>256)throw new Error('Contact-name normalization exceeds bounded limit');
-  validateExtraction({...parsed,contacts:[]},input);
+  if(source.contacts.reduce((n,c)=>n+c.names.length,0)>256)throw new Error('Contact-name normalization exceeds bounded limit');
+  validateExtraction({...source,contacts:[]},input);
   let omittedContactNames=0,omittedContactAffiliations=0;
-  const contacts=parsed.contacts.map(contact=>{
-    try{validateExtraction({...parsed,contacts:[contact]},input);return contact;}
+  const contacts=source.contacts.map(contact=>{
+    try{validateExtraction({...source,contacts:[contact]},input);return contact;}
     catch(error){if(!recoverableContactError(error))throw error;}
     const candidate={...contact,names:[] as string[],affiliation:'unknown' as const};
-    validateExtraction({...parsed,contacts:[candidate]},input);
+    validateExtraction({...source,contacts:[candidate]},input);
     for(const name of contact.names){
-      try{validateExtraction({...parsed,contacts:[{...candidate,names:[...candidate.names,name]}]},input);candidate.names.push(name);}
+      try{validateExtraction({...source,contacts:[{...candidate,names:[...candidate.names,name]}]},input);candidate.names.push(name);}
       catch(error){if(!(error instanceof Error)||error.message!=='Contact name absent from target identity evidence')throw error;omittedContactNames++;}
     }
     // Restore the original affiliation only if it independently passes the
     // strict validator with the retained names. Unknown never asserts a company.
     const restored={...candidate,affiliation:contact.affiliation};
-    try{validateExtraction({...parsed,contacts:[restored]},input);return restored;}
+    try{validateExtraction({...source,contacts:[restored]},input);return restored;}
     catch(error){if(!(error instanceof Error)||!['Internal affiliation lacks identity-attributed AntSeed evidence','External affiliation lacks identity-attributed company evidence'].includes(error.message))throw error;}
     omittedContactAffiliations++;
     return candidate;
   });
-  return{value:validateExtraction({...parsed,contacts},input),omittedContactNames,omittedContactAffiliations};
+  return{value:validateExtraction({...source,contacts},input),omittedContactNames,omittedContactAffiliations,omittedCompanyAttributes};
 }
 
 /** Keep all source text/metadata and versioned evidence IDs, without sending a

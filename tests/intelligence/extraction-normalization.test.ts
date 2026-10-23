@@ -39,3 +39,12 @@ it('bounds recovery work for a malformed response with hundreds of optional name
   const input=inputFixture(),raw=extractionFixture();raw.contacts=Array.from({length:3},()=>({...raw.contacts[0]!,names:Array.from({length:100},(_,i)=>'Invented alias '+i)}));
   expect(()=>normalizeExtraction(raw,input)).toThrow('bounded limit');
 });
+it('omits unsupported optional company attributes while retaining sourced primary company identity and facts',()=>{
+ const input=inputFixture(),raw=extractionFixture();const company=raw.companies[0]!;
+ company.aliases.push('Unsupported invented brand expansion');company.domains.push('invented.example');company.buyerIds.push('invented-buyer');company.providerIds.push('invented-provider');
+ expect(()=>validateExtraction(raw,input)).toThrow('Company attribute absent');const result=normalizeExtraction(raw,input);expect(result.omittedCompanyAttributes).toBe(4);expect(result.value).toEqual(extractionFixture());expect(raw.companies[0]!.aliases).toContain('Unsupported invented brand expansion');expect(()=>validateExtraction(result.value,input)).not.toThrow();
+});
+it('optional company cleanup never admits unsupported primary names, evidence, contacts, dates or roles',()=>{
+ for(const kind of ['name','evidence','identity','phone','role','date']){const input=inputFixture(),raw=extractionFixture();raw.companies[0]!.aliases.push('Invented Alias');
+  if(kind==='name')raw.companies[0]!.canonicalName='Invented Company';if(kind==='evidence')raw.companies[0]!.evidenceIds=['00000000-0000-4000-8000-999999999999'];if(kind==='identity')raw.contacts[0]!.telegramUserIds=['9999'];if(kind==='phone')raw.contacts[0]!.phones=['+99999999999'];if(kind==='role')raw.contacts[0]!.roles[0]!.role='Invented Role';if(kind==='date')raw.facts[0]!.dates[0]!.localDate='1999-01-01';expect(()=>normalizeExtraction(raw,input)).toThrow();}
+});

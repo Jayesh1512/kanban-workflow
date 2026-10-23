@@ -43,6 +43,11 @@ describe('real HTTP adapter paths against local documented-contract stand-ins (n
     handler=(_,res)=>reply(res,{model:config.model,status:'completed',error:null,incomplete_details:null,output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(extraction)}]}]});
     const result=await createOpenAIExtractor(config,{fetch:localFetch}).extract(inputFixture());expect(result).toMatchObject({ok:true,provenance:{validation:{omittedContactNames:1}}});if(result.ok)expect(result.value).toEqual(extractionFixture());expect(requests).toHaveLength(1);
   });
+  it('records omitted optional company attributes while returning only source-validated values',async()=>{
+    requests.length=0;const extraction=extractionFixture();extraction.companies[0]!.aliases.push('Invented brand expansion');extraction.companies[0]!.domains.push('invented.example');
+    handler=(_,res)=>reply(res,{model:config.model,status:'completed',error:null,incomplete_details:null,output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(extraction)}]}]});
+    const result=await createOpenAIExtractor(config,{fetch:localFetch}).extract(inputFixture());expect(result).toMatchObject({ok:true,provenance:{validation:{omittedCompanyAttributes:2}}});if(result.ok)expect(result.value).toEqual(extractionFixture());expect(requests).toHaveLength(1);
+  });
   it('sends Vercel systemone typed questions and keeps native diagnostics', async () => {
     requests.length = 0; handler = (_, res) => reply(res, responseFixture());
     const result = await createJevAdapter(jevConfig, { fetch: localFetch }).decide({ ...inputFixture(), extraction: extractionFixture() });
