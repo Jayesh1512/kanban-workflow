@@ -75,6 +75,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       let phaseFailed = false;
       async function phase(work: () => Promise<unknown>) { try { abort.signal.throwIfAborted(); await work(); } catch { phaseFailed = true; abort.signal.throwIfAborted(); } }
       await phase(() => services.proposalRecords.recoverDecisionIntents());
+      await phase(() => services.proposalRecords.placeInitialAutomatically(5));
       await phase(() => services.proposalRecords.flushPendingControl(20));
       await phase(() => services.projector.projectBatch(5, abort.signal));
       await phase(() => services.proposals.applyNext(abort.signal));

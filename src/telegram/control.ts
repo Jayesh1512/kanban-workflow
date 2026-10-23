@@ -1,3 +1,4 @@
+import { automaticPolicy } from '../shared/automatic-policy.js';
 import { ChatIntake } from './intake.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { TelegramClient } from '@mtcute/node';
@@ -133,9 +134,10 @@ export class DurableControlBus implements ControlBus {
     }
   }
   private async sendOne(): Promise<void> {
+    const automatic=await automaticPolicy(this.db);
     const token = randomUUID();
     const row = await this.db.transaction(async (tx) => {
-      const item = (await tx.query("SELECT o.* FROM control_outbox o JOIN chats c ON c.id=o.chat_id JOIN proposals p ON p.id=o.proposal_id JOIN tickets t ON t.id=p.ticket_id JOIN chats source ON source.id=t.chat_id WHERE c.is_control AND p.decision='pending' AND p.apply_state='not_requested' AND source.inclusion='included' AND NOT source.is_control AND source.policy_version=p.source_policy_version AND source.mapping_version=p.source_mapping_version AND t.stage_version=p.source_stage_version AND NOT EXISTS(SELECT 1 FROM proposal_evidence pe JOIN evidence e ON e.id=pe.evidence_id JOIN messages m ON (m.chat_id,m.id)=(e.chat_id,e.message_id) WHERE pe.proposal_id=p.id AND (e.invalidated_at IS NOT NULL OR m.deleted_at IS NOT NULL OR m.version<>e.message_version)) AND o.state<>'sent' AND o.attempts<10 AND (o.lease_until IS NULL OR o.lease_until<now()) ORDER BY o.created_at FOR UPDATE OF o SKIP LOCKED LIMIT 1")).rows[0];
+      const item = (await tx.query("SELECT o.* FROM control_outbox o JOIN chats c ON c.id=o.chat_id JOIN proposals p ON p.id=o.proposal_id JOIN tickets t ON t.id=p.ticket_id JOIN chats source ON source.id=t.chat_id WHERE ($1::timestamptz IS NULL OR p.source_stage_version<>0 OR p.origin NOT IN ('openai','jev') OR EXISTS(SELECT 1 FROM telegram_conversation_starts scope WHERE scope.chat_id=source.id AND scope.checked_cutoff=$1 AND (scope.state IN ('older','unknown') OR (scope.state='qualifies' AND scope.initial_placement_at IS NOT NULL)))) AND c.is_control AND p.decision='pending' AND p.apply_state='not_requested' AND source.inclusion='included' AND NOT source.is_control AND source.policy_version=p.source_policy_version AND source.mapping_version=p.source_mapping_version AND t.stage_version=p.source_stage_version AND NOT EXISTS(SELECT 1 FROM proposal_evidence pe JOIN evidence e ON e.id=pe.evidence_id JOIN messages m ON (m.chat_id,m.id)=(e.chat_id,e.message_id) WHERE pe.proposal_id=p.id AND (e.invalidated_at IS NOT NULL OR m.deleted_at IS NOT NULL OR m.version<>e.message_version)) AND o.state<>'sent' AND o.attempts<10 AND (o.lease_until IS NULL OR o.lease_until<now()) ORDER BY o.created_at FOR UPDATE OF o SKIP LOCKED LIMIT 1",[automatic?.initialPlacement?automatic.cutoff:null])).rows[0];
       if (!item) return null;
       await tx.query("UPDATE control_outbox SET state='sending',claim_token=$2,lease_until=now()+interval '30 seconds',attempts=attempts+1 WHERE id=$1", [item['id'], token]); return item;
     });

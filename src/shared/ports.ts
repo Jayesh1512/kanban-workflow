@@ -58,7 +58,7 @@ export type TelegramLoginState =
   | { state: 'password_required'; hint: string | null }
   | { state: 'error'; code: string; detail: string; retryAt: ISODateTime | null };
 export type TelegramLoginInput = { step: 'phone'; phone: string } | { step: 'code'; code: string } | { step: 'password'; password: string };
-export interface TelegramDialog { id: TelegramChatId; kind: Chat['kind']; title: string; username: string | null; archived: boolean }
+export interface TelegramDialog { id: TelegramChatId; kind: Chat['kind']; title: string; username: string | null; archived: boolean; latestMessageAt?: ISODateTime | null }
 export type TelegramMessageInput = Omit<Message, 'version' | 'deletedAt'>;
 export type TelegramEvent =
   | { type: 'message' | 'edit'; message: TelegramMessageInput }

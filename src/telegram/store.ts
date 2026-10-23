@@ -1,3 +1,4 @@
+import { automaticPolicy } from '../shared/automatic-policy.js';
 import { queueIntake } from './intake.js';
 import { createHash } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
@@ -43,6 +44,8 @@ export class TelegramStore implements IngestionStore, ChatService {
       await this.account(tx);
       const row = (await tx.query(`INSERT INTO chats(id,kind,title,username,archived,inclusion) VALUES($1,$2,$3,$4,$5,'undecided')
         ON CONFLICT(id) DO UPDATE SET kind=$2,title=$3,username=$4,archived=$5,updated_at=now() RETURNING *`, [dialog.id, dialog.kind, dialog.title, dialog.username, dialog.archived])).rows[0]!;
+      await tx.query(`INSERT INTO telegram_conversation_starts(chat_id,latest_message_at) VALUES($1,$2)
+        ON CONFLICT(chat_id) DO UPDATE SET latest_message_at=GREATEST(telegram_conversation_starts.latest_message_at,EXCLUDED.latest_message_at)`, [dialog.id,dialog.latestMessageAt??null]);
       await this.initCursor(tx, dialog.id);
       return toChat(row);
     });
@@ -221,9 +224,12 @@ export class TelegramStore implements IngestionStore, ChatService {
         await tx.query('INSERT INTO control_inbox(chat_id,message_id,sender_id,reply_to_id,text,sent_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [chat.id, m.id, m.senderId, m.replyToId, m.text, m.sentAt]); return;
       }
       if (!allowed(chat)) {
+        if(chat.inclusion==='undecided'&&event.type==='message')await tx.query(`UPDATE telegram_conversation_starts
+          SET latest_message_at=GREATEST(latest_message_at,$2::timestamptz),next_check_at=CASE WHEN reason='empty_history' THEN now() ELSE next_check_at END,
+          state=CASE WHEN reason='empty_history' THEN 'pending' ELSE state END WHERE chat_id=$1`,[chat.id,event.message.sentAt]);
         // Only a fresh incoming live message triggers automatic intake. Metadata
         // discovery, catch-up edits, old updates and historical chats never do.
-        if (chat.inclusion === 'undecided' && event.type === 'message' && (await tx.query(`SELECT 1 FROM telegram_account a,app_settings s
+        if (chat.inclusion === 'undecided' && event.type === 'message' && !await automaticPolicy(tx) && (await tx.query(`SELECT 1 FROM telegram_account a,app_settings s
           WHERE s.key='telegram:intake:activated' AND $1::timestamptz >= (s.value->>'at')::timestamptz
           AND ($2::bigint IS NULL OR $2::bigint<>a.self_user_id)`, [event.message.sentAt, event.message.senderId])).rowCount) await queueIntake(tx, chat.id);
         return;

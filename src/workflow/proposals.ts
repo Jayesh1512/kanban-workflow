@@ -1,3 +1,4 @@
+import { automaticPolicy } from '../shared/automatic-policy.js';
 import type { JevDecision, Lane, Proposal } from '../shared/domain.js';
 import { LANES } from '../shared/domain.js';
 import type { Clock, ControlBus, ControlMessage, Database, SqlExecutor } from '../shared/ports.js';
@@ -48,7 +49,22 @@ export class ProposalRepository {
     const p = page(input); const rows = (await this.db.query(`SELECT * FROM proposals WHERE ($1::uuid IS NULL OR id>$1) AND ($2::uuid IS NULL OR ticket_id=$2) AND ($3::text IS NULL OR decision=$3) ORDER BY id LIMIT $4`, [p.after, input.ticketId ?? null, input.decision ?? null, p.limit + 1])).rows;
     return { items: await Promise.all(rows.slice(0, p.limit).map((r) => proposalRow(this.db, r))), nextCursor: rows.length > p.limit ? String(rows[p.limit - 1]!.id) : null };
   }
+  async initialPlacementPending(tx: SqlExecutor, ticketId: string): Promise<boolean> {
+    const policy=await automaticPolicy(tx);if(!policy?.initialPlacement)return false;
+    return Boolean((await tx.query(`SELECT 1 FROM telegram_conversation_starts s JOIN tickets t ON t.chat_id=s.chat_id
+      JOIN chats c ON c.id=t.chat_id WHERE t.id=$1 AND t.stage_version=0 AND s.state='qualifies'
+      AND s.checked_cutoff=$2 AND s.first_message_at >= $2 AND s.initial_placement_at IS NULL
+      AND c.inclusion='included' AND NOT c.is_control`,[ticketId,policy.cutoff])).rowCount);
+  }
+  private async deferInitialReview(tx:SqlExecutor,ticketId:string):Promise<boolean>{
+    const policy=await automaticPolicy(tx);if(!policy?.initialPlacement)return false;
+    return Boolean((await tx.query(`SELECT 1 FROM telegram_conversation_starts s JOIN tickets t ON t.chat_id=s.chat_id
+      WHERE t.id=$1 AND t.stage_version=0 AND (s.checked_cutoff IS DISTINCT FROM $2::timestamptz OR s.state IN ('pending','checking','error'))`,[ticketId,policy.cutoff])).rowCount);
+  }
   async enqueueTx(tx: SqlExecutor, proposal: Proposal): Promise<void> {
+    if((proposal.origin==='openai'||proposal.origin==='jev')&&(await this.initialPlacementPending(tx,proposal.ticketId)||await this.deferInitialReview(tx,proposal.ticketId))) {
+      await tx.query("UPDATE proposals SET last_error='initial_placement_pending' WHERE id=$1 AND decision='pending'",[proposal.id]);return;
+    }
     const control = (await tx.query('SELECT id FROM chats WHERE is_control AND inclusion=\'excluded\'')).rows[0];
     if (!control) { await tx.query("UPDATE proposals SET last_error='control_chat_missing' WHERE id=$1 AND decision='pending'", [proposal.id]); return; }
     await this.control.enqueueProposal(tx, { proposalId: proposal.id, chatId: String(control.id), text: controlProposalText(proposal) });
@@ -70,8 +86,21 @@ export class ProposalRepository {
     const input = proposeLaneSchema.parse(raw); return command(this.db, 'proposal:create', input.idempotencyKey, input, (tx) => this.proposeTx(tx, input));
   }
   async recordAnalysisDecisionTx(tx: SqlExecutor, input: { jobId: string; ticketId: string; expectedStageVersion: number; decision: JevDecision }): Promise<void> {
-    if (input.decision.lane.outcome !== 'propose') return;
+    if (input.decision.lane.outcome !== 'propose') {
+      if(await this.initialPlacementPending(tx,input.ticketId)) await tx.query(`UPDATE telegram_conversation_starts
+        SET initial_placement_at=now(),initial_result=$2 WHERE chat_id=(SELECT chat_id FROM tickets WHERE id=$1) AND initial_placement_at IS NULL`,[input.ticketId,input.decision.lane.outcome]);
+      return;
+    }
     const key = `workflow:decision-proposal:${input.jobId}`;
+    const policy=await automaticPolicy(tx);
+    if(policy?.initialPlacement){
+      const initial=(await tx.query(`SELECT s.initial_placement_at FROM telegram_conversation_starts s JOIN tickets t ON t.chat_id=s.chat_id
+        WHERE t.id=$1 AND s.state='qualifies' AND s.checked_cutoff=$2 AND s.initial_placement_at IS NOT NULL`,[input.ticketId,policy.cutoff])).rows[0];
+      if(initial && !(await tx.query(`SELECT 1 FROM evidence e JOIN messages m ON (m.chat_id,m.id)=(e.chat_id,e.message_id)
+        WHERE e.id=ANY($1::uuid[]) AND GREATEST(m.sent_at,m.edited_at)>$2::timestamptz LIMIT 1`,[input.decision.lane.evidenceIds,initial['initial_placement_at']])).rowCount){
+        await tx.query("INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb) ON CONFLICT DO NOTHING",[key,JSON.stringify({state:'initial_snapshot_reviewed',reason:'Historical initial-snapshot recommendations do not request approval again'})]);return;
+      }
+    }
     if ((await tx.query('SELECT 1 FROM app_settings WHERE key=$1', [key])).rows.length) return;
     const lane = input.decision.lane;
     const proposal = await this.proposeTx(tx, { idempotencyKey: `analysis:${input.jobId}`, ticketId: input.ticketId, expectedStageVersion: input.expectedStageVersion,
@@ -98,7 +127,7 @@ export class ProposalRepository {
       }
     });
   }
-  async decideTx(tx: SqlExecutor, input: DecideProposalInput, audit: { source: 'http' | 'telegram'; message?: ControlMessage }) {
+  async decideTx(tx: SqlExecutor, input: DecideProposalInput, audit: { source: 'http' | 'telegram' | 'automation'; message?: ControlMessage }) {
     const { proposal, ticket, chat } = await lockProposal(tx, input.proposalId);
     assert(proposal.decision === 'pending', 'conflict', 'Proposal already has a decision');
     const stale = await staleReason(tx, proposal, ticket, chat);
@@ -118,6 +147,30 @@ export class ProposalRepository {
     const input = decideProposalSchema.parse(raw);
     const result = await command(this.db, `proposal:decision:${input.proposalId}`, input.idempotencyKey, input, (tx) => this.decideTx(tx, input, { source: 'http' }));
     assert(!result.stale, 'stale_proposal', 'Proposal sources changed; create a new proposal'); return { proposal: result.proposal, replacement: result.replacement };
+  }
+  /** User-authorized initial placement only, through the ordinary approval/apply
+   * journal. Later movement remains a Telegram/operator decision. */
+  async placeInitialAutomatically(limit=5): Promise<number> {
+    const policy=await automaticPolicy(this.db);if(!policy?.initialPlacement)return 0;
+    const rows=(await this.db.query<{id:string;ticket_id:string}>(`SELECT p.id,p.ticket_id FROM proposals p JOIN tickets t ON t.id=p.ticket_id
+      JOIN telegram_conversation_starts s ON s.chat_id=t.chat_id
+      WHERE p.decision='pending' AND p.apply_state='not_requested' AND p.origin IN ('openai','jev')
+      AND t.stage_version=0 AND s.state='qualifies' AND s.checked_cutoff=$1 AND s.first_message_at >= $1 AND s.initial_placement_at IS NULL
+      AND EXISTS(SELECT 1 FROM app_settings a JOIN analysis_jobs j ON a.key='workflow:decision-proposal:'||j.id::text
+        WHERE a.value->>'proposalId'=p.id::text AND j.status='completed' AND j.chat_id=t.chat_id)
+      ORDER BY p.created_at,p.id LIMIT $2`,[policy.cutoff,limit])).rows;
+    let count=0;
+    for(const row of rows) await this.db.transaction(async tx=>{
+      // Resolve in the established chat -> ticket -> proposal order.
+      const {proposal}=await lockProposal(tx,row.id);
+      const current=await automaticPolicy(tx);
+      if(!current||current.revision!==policy.revision||!await this.initialPlacementPending(tx,row.ticket_id)||proposal.decision!=='pending')return;
+      const result=await this.decideTx(tx,{idempotencyKey:`initial:${policy.revision}:${row.id}`,proposalId:row.id,decision:'approve',note:`Explicit user policy: initial placement for conversations first started since ${policy.cutoff}; revision ${policy.revision}. Later movements still require approval.`},{source:'automation'});
+      if(result.stale)return;
+      await tx.query(`UPDATE telegram_conversation_starts SET initial_placement_at=now(),initial_result='propose',initial_proposal_id=$2
+        WHERE chat_id=(SELECT chat_id FROM tickets WHERE id=$1) AND initial_placement_at IS NULL`,[row.ticket_id,row.id]);count++;
+    });
+    return count;
   }
   async flushPendingControl(limit = 50): Promise<number> {
     const rows = (await this.db.query<{ id: string }>(`SELECT p.id FROM proposals p WHERE p.decision='pending' AND p.apply_state='not_requested'
