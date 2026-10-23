@@ -5,6 +5,7 @@ import { validateExtraction, EXTRACTION_VERSION } from '../intelligence/validati
 import { strongChoice } from '../intelligence/jev.js';
 import { assert, assertEvidence, chatRow, command, companyRow, evidenceRow, hash, links, messageRow, ticketRow, type Row } from './sql.js';
 import { ensureContactProspectTx, ensureTicketTx, getCompanyTx, getContactTx, refreshInferredActions, replaceDates, writeCompanyTx, writeContactTx } from './records.js';
+import { ANALYSIS_WINDOW_MESSAGES, ANALYSIS_WINDOW_CHARACTERS, enqueueAnalysisWindows, type AnalysisSourceRow } from '../shared/analysis-windows.js';
 
 export function inputHash(input: AnalysisInput): string { return hash({ ...input, jobId: null, schemaVersion: EXTRACTION_VERSION }); }
 const idFrom = (value: unknown) => { const h = hash(value); return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`; };
@@ -20,9 +21,28 @@ export interface AnalysisClaimOptions {
 
 export class SqlAnalysisQueue implements AnalysisQueue {
   constructor(readonly db: Database, readonly clock: Clock = { now: () => new Date() }, readonly timezone = 'Asia/Kolkata', readonly hooks: AnalysisHooks = {}) {}
+  private async partitionLegacyJob(now: Date): Promise<void> {
+    const candidate = (await this.db.query<{ id: string; chat_id: string }>(`SELECT j.id,j.chat_id FROM analysis_jobs j
+      WHERE (j.status IN ('pending','retry','provider_unavailable') OR (j.status='running' AND j.lease_until<=$1))
+      AND EXISTS(SELECT 1 FROM analysis_job_messages s JOIN messages m ON (m.chat_id,m.id)=(s.chat_id,s.message_id) WHERE s.job_id=j.id
+        GROUP BY s.job_id HAVING count(*)>$2 OR sum(LEAST(length(m.text),8000))>$3)
+      ORDER BY j.created_at,j.id LIMIT 1`, [now, ANALYSIS_WINDOW_MESSAGES, ANALYSIS_WINDOW_CHARACTERS])).rows[0];
+    if (!candidate) return;
+    await this.db.transaction(async tx => {
+      // Match ingestion/exclusion: chat before job, including FK inserts.
+      const chat = (await tx.query('SELECT * FROM chats WHERE id=$1 FOR UPDATE SKIP LOCKED', [candidate.chat_id])).rows[0]; if (!chat) return;
+      const job = (await tx.query(`SELECT * FROM analysis_jobs WHERE id=$1 AND (status IN ('pending','retry','provider_unavailable') OR (status='running' AND lease_until<=$2)) FOR UPDATE SKIP LOCKED`, [candidate.id, now])).rows[0]; if (!job) return;
+      const rows = (await tx.query<AnalysisSourceRow & { message_version: number; deleted_at: unknown }>(`SELECT m.id,m.version,m.text,m.deleted_at,s.message_version FROM analysis_job_messages s LEFT JOIN messages m ON (m.chat_id,m.id)=(s.chat_id,s.message_id) WHERE s.job_id=$1 ORDER BY m.sent_at DESC,m.id DESC`, [job.id])).rows;
+      const current = chat.inclusion === 'included' && !chat.is_control && chat.policy_version === job.policy_version && chat.mapping_version === job.mapping_version
+        && rows.length > 0 && rows.every(r => r.version != null && r.version === r.message_version && !r.deleted_at);
+      if (current) await enqueueAnalysisWindows(tx, { chatId: String(chat.id), policyVersion: Number(chat.policy_version), mappingVersion: Number(chat.mapping_version), rows, createdAt: new Date(job.created_at as string).toISOString(), ...(job.retry_at ? { retryAt: new Date(job.retry_at as string).toISOString() } : {}) });
+      await tx.query("UPDATE analysis_jobs SET status='cancelled',worker_id=NULL,lease_until=NULL,last_error=$2,updated_at=$3 WHERE id=$1", [job.id, current ? 'analysis_window_partitioned' : 'source_changed', now]);
+    });
+  }
   async claim(input: AnalysisClaimOptions): Promise<AnalysisJob | null> {
     assert(input.workerId.length > 0 && Number.isFinite(input.leaseMs) && input.leaseMs > 0 && input.leaseMs <= 3_600_000, 'validation', 'Invalid analysis lease');
     const now = this.clock.now(); const token = randomUUID();
+    await this.partitionLegacyJob(now);
     return this.db.transaction(async (tx) => {
       // Four fresh conversation slots, then one oldest eligible job. Replies on
       // active tracked cards remain live even when initial outreach is old.
@@ -48,6 +68,8 @@ export class SqlAnalysisQueue implements AnalysisQueue {
         ) fresh ON true
         WHERE c.inclusion='included' AND NOT c.is_control AND j.policy_version=c.policy_version AND j.mapping_version=c.mapping_version
         AND ((j.status IN ('pending','retry') AND (j.retry_at IS NULL OR j.retry_at<=$1)) OR (j.status='running' AND j.lease_until<=$1))
+        AND NOT EXISTS(SELECT 1 FROM analysis_job_messages w JOIN messages wm ON (wm.chat_id,wm.id)=(w.chat_id,w.message_id) WHERE w.job_id=j.id
+          GROUP BY w.job_id HAVING count(*)>20 OR sum(LEAST(length(wm.text),8000))>16000)
         AND (NOT $4::boolean OR (j.attempts<3 AND fresh.latest IS NOT NULL))
         ORDER BY CASE WHEN $2::boolean AND j.attempts<3 AND fresh.latest IS NOT NULL THEN 0 ELSE 1 END,
           CASE WHEN $2::boolean AND j.attempts<3 THEN fresh.latest END DESC NULLS LAST,
@@ -78,11 +100,11 @@ export class SqlAnalysisQueue implements AnalysisQueue {
     assert(snapshots.length > 0 && snapshots.every((m) => m.version === m.message_version && !m.deleted_at), 'conflict', 'Analysis message snapshot is stale or empty');
     // Immutable source snapshot bounds are checked in addition to a bounded current chat window.
     const rows = (await tx.query(`SELECT m.* FROM messages m WHERE m.chat_id=$1 AND m.deleted_at IS NULL AND (m.id IN (SELECT message_id FROM analysis_job_messages WHERE job_id=$2)
-      OR m.id IN (SELECT id FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY sent_at DESC,id DESC LIMIT 100)) ORDER BY m.sent_at DESC,m.id DESC LIMIT 200`, [c.id, id])).rows;
+      OR m.id IN (SELECT id FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY sent_at DESC,id DESC LIMIT 20)) ORDER BY m.sent_at DESC,m.id DESC LIMIT 200`, [c.id, id])).rows;
     const required = new Set(snapshots.map((r) => Number(r.message_id)));
     const ordered = [...rows.filter((r) => required.has(Number(r.id))), ...rows.filter((r) => !required.has(Number(r.id)))];
     const selected: Row[] = []; let length = 0;
-    for (const row of ordered) { const text = String(row.text).slice(0, 8000); if (length + text.length > 64000) continue; selected.push({ ...row, text }); length += text.length; }
+    for (const row of ordered) { const text = String(row.text).slice(0, 8000); if (length + text.length > ANALYSIS_WINDOW_CHARACTERS * 2) continue; selected.push({ ...row, text }); length += text.length; }
     assert([...required].every((id) => selected.some((r) => Number(r.id) === id)), 'conflict', 'Source snapshot exceeds bounded analysis window; partition ingestion jobs');
     const messages = selected.map(messageRow).sort((a, b) => a.sentAt.localeCompare(b.sentAt) || a.id - b.id);
     assert(messages.length > 0, 'conflict', 'No current source messages');

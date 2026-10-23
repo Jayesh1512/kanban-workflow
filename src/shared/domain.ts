@@ -210,7 +210,7 @@ export type JevAnswer =
   | { type: 'choice'; choice: string; probabilities: Record<string, number>; confidence: number }
   | { type: 'score'; score: number; legend: Record<string, string>; probabilities: Record<string, number>; confidence: number };
 export interface JevDiagnostics { rubricVersion: string; answers: Record<string, JevAnswer>; native?: Json }
-export interface ProviderProvenance { provider: 'openai' | 'vercel'; model: string; requestId: string | null; schemaVersion: string; completedAt: ISODateTime; usage: Json; validation?:{omittedContactNames:number} }
+export interface ProviderProvenance { provider: 'openai' | 'vercel'; model: string; requestId: string | null; schemaVersion: string; completedAt: ISODateTime; usage: Json; validation?:{omittedContactNames:number;omittedContactAffiliations?:number} }
 export interface ExtractionCheckpoint { jobId: UUID; extraction: Extraction; provenance: ProviderProvenance; inputHash: string }
 export type ProposalDecision = 'pending' | 'approved' | 'rejected' | 'corrected';
 export type ApplyState = 'not_requested' | 'queued' | 'applying' | 'reconciling' | 'applied' | 'stale' | 'failed';
