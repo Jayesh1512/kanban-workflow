@@ -1,0 +1,71 @@
+{
+  "composition": "AntSeedTeaser",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationInFrames": 900,
+  "durationSeconds": 30,
+  "sceneTimesSeconds": [
+    [
+      0,
+      5
+    ],
+    [
+      5,
+      11
+    ],
+    [
+      11,
+      18
+    ],
+    [
+      18,
+      25
+    ],
+    [
+      25,
+      30
+    ]
+  ],
+  "reviewFrames": [
+    90,
+    270,
+    465,
+    610,
+    710,
+    855
+  ],
+  "visualReview": "Passed: five scenes plus before/after approval, no clipping observed",
+  "typecheck": "passed",
+  "assets": "local fonts and original synthesized 30-second mono 48kHz score",
+  "privacy": "Synthetic authored interface only; no private UI, live account access, model calls or app mutations",
+  "mp4Export": {
+    "path": "/Users/jys/.t3/projects/kanban/artifacts/teaser-30s/out/antseed-teaser-30s.mp4",
+    "durationSeconds": 30.016,
+    "width": 1920,
+    "height": 1080,
+    "fps": "30/1",
+    "frames": 900,
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "audioCodec": "aac",
+    "audioSampleRate": "48000",
+    "sizeBytes": 2660458,
+    "sha256": "e49d19a64a708d897f58ce8ba9ed679bce39fdb15d24d34e32f28a460d8f5309",
+    "fullVideoAudioDecode": "passed",
+    "decodeErrors": 0,
+    "volume": [
+      "[Parsed_volumedetect_0 @ 0xc6cc04f00] mean_volume: -25.0 dB",
+      "[Parsed_volumedetect_0 @ 0xc6cc04f00] max_volume: -9.4 dB"
+    ],
+    "reviewFrames": [
+      90,
+      270,
+      465,
+      610,
+      710,
+      855
+    ]
+  },
+  "preview": "http://localhost:19390/AntSeedTeaser"
+}
