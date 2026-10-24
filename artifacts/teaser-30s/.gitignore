@@ -1,0 +1,6 @@
+/node_modules
+/out/*
+!/out/antseed-teaser-30s.mp4
+!/out/export-validation.json
+.remotion/
+*.log
