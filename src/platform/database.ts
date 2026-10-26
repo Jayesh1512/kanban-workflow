@@ -30,7 +30,14 @@ export class PgDatabase implements Database {
     }
     const schema = endpoint.searchParams.get('schema');
     endpoint.searchParams.delete('schema');
-    this.pool = new pg.Pool({ connectionString: endpoint.toString(), max: 8, connectionTimeoutMillis: 3_000, idleTimeoutMillis: 10_000, query_timeout: 15_000, application_name: 'antseed-kanban',
+    const option = (name: string, fallback: number, max: number) => {
+      const raw = endpoint.searchParams.get(name); endpoint.searchParams.delete(name);
+      const value = raw === null ? fallback : Number(raw);
+      if (!Number.isSafeInteger(value) || value < 1 || value > max) throw new Error(`Invalid database ${name}`);
+      return value;
+    };
+    const max = option('pool_max', 8, 32), connectionTimeoutMillis = option('connect_timeout_ms', 3_000, 60_000);
+    this.pool = new pg.Pool({ connectionString: endpoint.toString(), max, connectionTimeoutMillis, idleTimeoutMillis: 10_000, query_timeout: 15_000, application_name: 'antseed-kanban',
       ...(schema ? { onConnect: async (client: pg.ClientBase) => {
         // Explicit SQL avoids relying on pooler support for startup options.
         // Never fall back to public and migrate the wrong schema.

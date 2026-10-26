@@ -1,0 +1,30 @@
+{
+  "createdAt": "2026-10-25T19:34:38.963773+00:00",
+  "durationSeconds": 120,
+  "resolution": "1920x1080",
+  "fps": 30,
+  "sourceBoundaries": {
+    "workBoard": "Existing reviewed native Vikunja recordings, synthetic Cedar company data, actual recorded backend application and readback.",
+    "crm": "Current src/outreach/page.ts rendered locally against explicitly synthetic API responses. No actual SQL stage decisions or production CRM deployment established.",
+    "approval": "Recorded operator HTTP decision, canonical worker and actual remote readback; accelerated same-task source cuts. Telegram control delivery not freshly captured.",
+    "intelligence": "Explainer only; no fresh inference/model calls. Current extraction degraded, decision provider not_checked.",
+    "hermes": "Existing independent installed Hermes verification. No new Hermes/model call."
+  },
+  "currentStatus": "status.json",
+  "originalFootageUnchanged": true,
+  "nativeClips": {
+    "board": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-fbd3158f-c6d6-4b5f-ace7-4b93bee7d23f-mp4.mp4",
+    "task": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-554a4c1b-0c32-4dd3-ade9-f7b31f440894-mp4.mp4",
+    "proposal": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-2ce44f09-4f47-43ca-bb21-59d7338b71b1-mp4.mp4",
+    "priorities": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-e53898f9-fa87-4644-83c5-c4d0211fd3f9-mp4.mp4"
+  },
+  "crmRecording": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-82c0599a-b414-4005-ba4e-b2bf805b6bc6-mp4.mp4",
+  "claimsNotMade": [
+    "All production components healthy",
+    "Fresh successful AI extraction or stage inference",
+    "Live Telegram approval captured",
+    "Email connector or email import completed",
+    "CRM sales approvals/native board publication deployed"
+  ],
+  "noProductionWritesDuringVideoTask": true
+}

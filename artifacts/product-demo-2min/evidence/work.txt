@@ -1,0 +1,1 @@
+The work Kanban tracks delivery across six lanes. Start with a prospect, move into work in progress and integrations, and keep blockers, completed work, and archived conversations visible. Workstream labels describe the relationship separately.

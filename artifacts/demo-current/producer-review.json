@@ -1,0 +1,34 @@
+{
+  "result": "PASS",
+  "reviewKind": "Producer artifact review; inherited source independently reviewed previously. No new independent reviewer/model run.",
+  "visualFramesReviewedSeconds": [
+    3,
+    30,
+    53,
+    67,
+    90,
+    109,
+    122,
+    140,
+    156,
+    178,
+    201,
+    211
+  ],
+  "fullResolutionAdditionalReviewSeconds": [
+    90,
+    109,
+    140
+  ],
+  "visualFindings": "New status and closing cards readable, no overflow. Board pending and approved lanes visible. Dense original UI text softer than added captions; key callouts readable at 1080p.",
+  "privacyReview": "No private account UI was captured. New cards contain allowlisted aggregate status only. Reused footage shows labelled synthetic records; no private names, phones, messages, codes or keys visible in sampled frames. Pattern scan found no credential/phone/private status fields in new text inputs. No secret files were read for this update.",
+  "claimChecks": {
+    "currentConnection": "Telegram/login ready, accountBound true; sync ready at rendered timestamp.",
+    "recordedContacts": "2 contacts corroborated in pending/applied sanitized source readbacks.",
+    "recordedApproval": "To be started / stage0 / pending / zero committed mutations -> operator HTTP approval -> Work in progress / stage1 / applied / one committed mutation.",
+    "recordedHermes": "27 tools; pending proposal; unchanged board; zero mutations; CLI exit0. Recorded independent installed-agent evidence, no new model call.",
+    "liveLimits": "Extraction timeout; control group missing; Jev provider entitlement. No successful live extraction/Jev/Telegram group approval asserted."
+  },
+  "outOfScopeActionsPerformed": [],
+  "artifacts": "All output confined to artifacts/demo-current/; mp4 and render intermediates ignored; no commit."
+}

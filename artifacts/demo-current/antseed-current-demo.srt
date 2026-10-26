@@ -1,0 +1,209 @@
+1
+00:00:00,000 --> 00:00:03,512
+AntSeed turns conversations into contacts and clear next actions.
+
+2
+00:00:03,512 --> 00:00:07,024
+Telegram is now connected, and history import is underway.
+
+3
+00:00:07,024 --> 00:00:12,488
+Extraction is timing out, the control group still needs setup, and Jev needs
+credits.
+
+4
+00:00:12,488 --> 00:00:16,390
+The workflow you will see is a recorded synthetic demonstration.
+
+5
+00:00:18,000 --> 00:00:20,863
+Here is the current, sanitized status snapshot.
+
+6
+00:00:20,863 --> 00:00:23,316
+The database and Vikunja are ready.
+
+7
+00:00:23,316 --> 00:00:26,997
+Telegram login is ready and the account is bound.
+
+8
+00:00:26,997 --> 00:00:28,224
+Sync is ready.
+
+9
+00:00:28,224 --> 00:00:33,131
+There are 408 replay items, 96 analysis items, and 0 proposals pending.
+
+10
+00:00:33,131 --> 00:00:35,176
+Extraction still reports a timeout.
+
+11
+00:00:35,176 --> 00:00:37,629
+The operational control group is missing.
+
+12
+00:00:37,629 --> 00:00:40,083
+Jev remains paused for provider entitlement.
+
+13
+00:00:40,083 --> 00:00:42,946
+A connection is not full live acceptance.
+
+14
+00:00:47,000 --> 00:00:50,200
+The next section is recorded synthetic workflow evidence.
+
+15
+00:00:50,200 --> 00:00:53,000
+The backend, database, and board are real.
+
+16
+00:00:53,000 --> 00:00:56,200
+Source conversations and model decisions are authored fixtures.
+
+17
+00:00:56,200 --> 00:01:00,200
+Approval uses an explicit operator H T T P request.
+
+18
+00:01:01,000 --> 00:01:08,500
+The actual Vikunja board has six lanes, from To be started through Completed.
+
+19
+00:01:08,500 --> 00:01:10,808
+Cedar is a Buyer.
+
+20
+00:01:10,808 --> 00:01:16,000
+That workstream label is separate from its current progress.
+
+21
+00:01:16,000 --> 00:01:17,931
+Open the company ticket.
+
+22
+00:01:17,931 --> 00:01:23,724
+Mira is the C T O, and Jo is the engineering lead.
+
+23
+00:01:23,724 --> 00:01:26,138
+Both contacts belong to Cedar.
+
+24
+00:01:26,138 --> 00:01:30,483
+The backend keeps source evidence beside the next action.
+
+25
+00:01:30,483 --> 00:01:33,862
+AntSeed owes pricing and integration notes tomorrow.
+
+26
+00:01:33,862 --> 00:01:36,759
+Jo owns a separate external review.
+
+27
+00:01:36,759 --> 00:01:44,000
+Those commitments keep their original actor and calendar date, instead of
+inventing an exact time.
+
+28
+00:01:44,000 --> 00:01:48,968
+The recommendation proposes Work in progress, with evidence and a reason.
+
+29
+00:01:48,968 --> 00:01:53,032
+Decision is pending, and apply state is not requested.
+
+30
+00:01:53,032 --> 00:01:55,290
+The board has not moved.
+
+31
+00:01:55,290 --> 00:01:58,000
+This recommendation is an authored fixture.
+
+32
+00:01:58,000 --> 00:02:05,500
+Now an explicit operator approval is submitted through the existing H T T P
+endpoint.
+
+33
+00:02:05,500 --> 00:02:07,500
+Approval queues the operation.
+
+34
+00:02:07,500 --> 00:02:12,500
+The normal backend worker handles the move and checks Vikunja.
+
+35
+00:02:12,500 --> 00:02:18,000
+After refreshing the real board, Cedar is in Work in progress.
+
+36
+00:02:18,000 --> 00:02:24,500
+Database readback confirms stage version one, one committed mutation, and an
+applied proposal.
+
+37
+00:02:24,500 --> 00:02:28,000
+The helper did not move the task.
+
+38
+00:02:28,000 --> 00:02:34,829
+The priorities endpoint returns the current ticket, next action, evidence, and
+an upcoming commitment.
+
+39
+00:02:34,829 --> 00:02:38,244
+The date is interpreted in Asia Kolkata.
+
+40
+00:02:38,244 --> 00:02:42,634
+AntSeed responsibilities remain distinct from the external contact review.
+
+41
+00:02:42,634 --> 00:02:48,000
+These same records are available to Hermes through M C P.
+
+42
+00:02:48,000 --> 00:02:52,471
+A separate recorded independent verification used the actual installed Nous
+Hermes agent.
+
+43
+00:02:52,471 --> 00:02:56,569
+It discovered all twenty seven tools and called propose lane change.
+
+44
+00:02:56,569 --> 00:03:03,647
+Real database readback found a pending Hermes proposal, while the board stayed
+unchanged, with stage zero and no mutations.
+
+45
+00:03:03,647 --> 00:03:07,000
+No new model run was used for this video.
+
+46
+00:03:07,000 --> 00:03:12,253
+Telegram is connected, the account is bound, and history import is underway.
+
+47
+00:03:12,253 --> 00:03:14,880
+Sync is ready at this timestamp.
+
+48
+00:03:14,880 --> 00:03:21,447
+Extraction still times out, the operational control group needs setup, and Jev
+needs provider credits.
+
+49
+00:03:21,447 --> 00:03:28,013
+The recorded workflow demonstrates contacts, sourced actions, and an approved
+board move with synthetic inputs.
+
+50
+00:03:28,013 --> 00:03:32,391
+Successful live extraction, inference, and Telegram group approval remain
+unvalidated.

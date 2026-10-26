@@ -1,0 +1,2 @@
+import {Video} from '@remotion/media';import {staticFile,useVideoConfig} from 'remotion';import {Frame,C} from './Frame';
+export const Work=()=>{const{fps}=useVideoConfig();return <Frame id="work" boundary="RECORDED APP · SYNTHETIC COMPANY DATA"><div style={{height:'100%',borderRadius:16,overflow:'hidden',border:'1px solid '+C.line}}><Video src={staticFile('board.mp4')} muted objectFit="contain" premountFor={fps} style={{width:'100%',height:'100%'}}/></div></Frame>};

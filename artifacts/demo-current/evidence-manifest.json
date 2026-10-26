@@ -1,0 +1,121 @@
+{
+  "video": "antseed-current-demo.mp4",
+  "sha256": "823b8ac7dbbc086131c165afffeea3d16fd63c7e322eaec9179d8fec3bf99947",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "30/1"
+      },
+      {
+        "codec_name": "aac",
+        "sample_rate": "48000",
+        "r_frame_rate": "0/0"
+      }
+    ],
+    "format": {
+      "duration": "214.021333",
+      "size": "7436662"
+    }
+  },
+  "timelineSeconds": 214,
+  "renderedStatus": {
+    "checkedAtUTC": "2026-10-17 04:11:37 UTC",
+    "components": {
+      "database": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "vikunja": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "telegram": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "telegramSync": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "extraction": {
+        "state": "unavailable",
+        "code": "timeout"
+      },
+      "control": {
+        "state": "degraded",
+        "code": "control_chat_missing"
+      },
+      "jev": {
+        "state": "unavailable",
+        "code": "provider_entitlement"
+      }
+    },
+    "loginState": "ready",
+    "accountBound": true,
+    "replayPending": 408,
+    "analysisPending": 96,
+    "proposalsPending": 0
+  },
+  "preExportStatus": {
+    "checkedAtUTC": "2026-10-17 04:11:37 UTC",
+    "components": {
+      "database": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "vikunja": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "telegram": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "telegramSync": {
+        "state": "ready",
+        "code": "unknown"
+      },
+      "extraction": {
+        "state": "unavailable",
+        "code": "timeout"
+      },
+      "control": {
+        "state": "degraded",
+        "code": "control_chat_missing"
+      },
+      "jev": {
+        "state": "unavailable",
+        "code": "provider_entitlement"
+      }
+    },
+    "loginState": "ready",
+    "accountBound": true,
+    "replayPending": 408,
+    "analysisPending": 96,
+    "proposalsPending": 0
+  },
+  "originalVideoSha256": "df613a2e15f179f0a12a00d885a52004601320da3c5b9496f24c8fb23fa4516f",
+  "originalDirectoryUnchanged": true,
+  "originalFilesCompared": 74,
+  "reusedSourceHashes": {
+    "board": "37a9444a90ca524585fe340ee6df6892035418c322d9e9c84b34e4b8499c53dd",
+    "contacts": "7fe3070dc23e6b32deb1a5ac60f18617b7edce7c2403657199e7e99cecc14c0c",
+    "proposal": "1070b8a2b9aef750b931c6b565f3236bee8794f2c4669a1ef6eb275f186db846",
+    "approval": "d38a869ce6d9250d06f58a90a06f116aae81742d0fc4e91b7908d59b8d4ef771",
+    "priorities": "b0f817b9ca2e32282c9ce411843a74f110c2f1faaea1f63d03fa17bc411066c9",
+    "hermes": "9c906360c2acba77f85af45ae7edc6bd0f095bbcf088490f4320250b2fa25c21"
+  },
+  "privacy": "Only allowlisted status states/codes, accountBound boolean and aggregate counts retained. No personal UI captured.",
+  "boundary": "Recorded synthetic workflow, actual backend/database/board and operator HTTP approval; recorded independent Hermes evidence. No new model call.",
+  "notEstablished": [
+    "successful live extraction",
+    "successful live Jev inference",
+    "Telegram control-group approval"
+  ],
+  "historicalSourceManifest": "../demo/evidence-manifest.json"
+}

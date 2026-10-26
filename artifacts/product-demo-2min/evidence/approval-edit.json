@@ -1,0 +1,13 @@
+{
+  "first": {
+    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-a016a44d-55de-46d1-937e-9de1775a071a-mp4.mp4",
+    "start": 0,
+    "duration": 9
+  },
+  "second": {
+    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-0005e899-0924-42d7-83b4-83ad535243c7-mp4.mp4",
+    "start": 9,
+    "duration": 9
+  },
+  "note": "Idle wait cut to later genuine capture of same approved task; no reset/replay. Operator approval is HTTP, not Telegram."
+}

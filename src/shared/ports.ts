@@ -7,6 +7,7 @@ import type {
   BusinessFact, ContactDetail, ExtractionCheckpoint, LiveCheckpoint, ProviderProvenance,
 } from './domain.js';
 import type { CorrectMappingInput, DecideProposalInput, ProposeLaneInput, SetInclusionInput, UpdateActionsInput, UpdateFactInput } from './schemas.js';
+import type { OutreachService } from './outreach-domain.js';
 
 export interface Clock { now(): Date }
 export interface SqlExecutor {
@@ -25,7 +26,7 @@ export interface RuntimeConfig {
   timezone: string;
   aiEnvPath: string;
   telegram: { apiId: number | null; apiHash: string | null; sessionPath: string; historyBatchSize: number; historyMaxBatches: number; discoveryBatchSize?: number };
-  vikunja: { baseUrl: string; apiToken: string | null; username: string; password: string | null; projectTitle: string };
+  vikunja: { baseUrl: string; apiToken: string | null; username: string; password: string | null; projectTitle: string; publicUrl?:string; timeoutMs?: number };
   extraction: { provider: 'openai'; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number; maxOutputTokens: number };
   jev: { provider: 'vercel' | 'openai'; endpoint: string; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number };
 }
@@ -94,6 +95,7 @@ export interface TelegramPort {
 }
 export interface ControlSetup { operationKey: string; marker: string; state: 'prepared' | 'remote_unknown' | 'configured' | 'conflict' | 'failed'; chat: TelegramDialog | null; lastError: string | null }
 export interface ControlBus {
+  subscribeOwner?(owner: 'operational'|'outreach', handler:(message:ControlMessage)=>Promise<void>, validateDelivery?:(proposalId:string)=>Promise<boolean>):()=>void;
   subscribe(handler: (message: ControlMessage) => Promise<void>): () => void;
   enqueueProposal(tx: SqlExecutor, input: { proposalId: UUID; chatId: TelegramChatId; text: string }): Promise<void>; // same proposal transaction
 }
@@ -204,7 +206,7 @@ export interface MutationStore {
   confirmRemote(id: UUID, actualBucketId: RemoteId): Promise<Mutation>;
   commit(id: UUID): Promise<Proposal>; // atomic ticket/version+proposal+mutation; idempotent
 }
-export interface DomainServices { chats: ChatService; records: RecordsService; proposals: ProposalService; analysis: AnalysisQueue }
+export interface DomainServices { chats: ChatService; records: RecordsService; proposals: ProposalService; analysis: AnalysisQueue; outreach: OutreachService }
 export interface IdempotencyStore {
   run<T extends Json>(scope: string, key: string, request: Json, work: (tx: SqlExecutor) => Promise<T>): Promise<T>;
 }

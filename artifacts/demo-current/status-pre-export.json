@@ -1,0 +1,38 @@
+{
+  "checkedAtUTC": "2026-10-17 04:11:37 UTC",
+  "components": {
+    "database": {
+      "state": "ready",
+      "code": "unknown"
+    },
+    "vikunja": {
+      "state": "ready",
+      "code": "unknown"
+    },
+    "telegram": {
+      "state": "ready",
+      "code": "unknown"
+    },
+    "telegramSync": {
+      "state": "ready",
+      "code": "unknown"
+    },
+    "extraction": {
+      "state": "unavailable",
+      "code": "timeout"
+    },
+    "control": {
+      "state": "degraded",
+      "code": "control_chat_missing"
+    },
+    "jev": {
+      "state": "unavailable",
+      "code": "provider_entitlement"
+    }
+  },
+  "loginState": "ready",
+  "accountBound": true,
+  "replayPending": 408,
+  "analysisPending": 96,
+  "proposalsPending": 0
+}

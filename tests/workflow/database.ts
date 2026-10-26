@@ -5,7 +5,7 @@ import type { Database, SqlExecutor } from '../../src/shared/ports.js';
 import { inputFixture, jobId, sourceText } from '../intelligence/fixtures.js';
 
 /** Isolated PostgreSQL engine fixture, not a production database adapter or Telegram fake. */
-export async function fixtureDatabase() {
+export async function fixtureDatabase(additionalMigrations: URL[] = []) {
   const engine = new PGlite();
   await engine.exec(await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610170001_telegram_operations.sql', import.meta.url), 'utf8'));
@@ -13,6 +13,7 @@ export async function fixtureDatabase() {
   await engine.exec(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610230001_chat_intake_approvals.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610230002_automatic_conversation_scope.sql', import.meta.url), 'utf8'));
+  for (const migration of additionalMigrations) await engine.exec(await readFile(migration, 'utf8'));
   let tail: Promise<unknown> = Promise.resolve();
   const executor: SqlExecutor = { async query<R extends QueryResultRow = QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<R>> {
     const result = await engine.query<R>(text, values); return { rows: result.rows, rowCount: result.rows.length || result.affectedRows || 0, fields: [], command: '', oid: 0 };

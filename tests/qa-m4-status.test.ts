@@ -21,7 +21,7 @@ describe.skipIf(!project)('QA M4 real protocol and dependency status',()=> {
     db.withLock=async(key,work)=>{if(!held&&key==='antseed:migrations'){held=true;await release.promise;}return original(key,work);};
     const workflow=await createWorkflowModule(platform.services),app=await buildApp({modules:[platform,workflow]}),address=await app.listen({host:'127.0.0.1',port:0}),client=await sdk(address);
     try {
-      const r=await app.inject('/api/status'),s=r.json();expect(r.statusCode).toBe(200);expect(s.components.database.code).toBe('database_pending');expect(s.components.jev.code).toBe('database_pending');expect(s).toHaveProperty('configuration');expect((await app.inject('/health/ready')).statusCode).toBe(503);expect((await client.listTools()).tools).toHaveLength(27);
+      const r=await app.inject('/api/status'),s=r.json();expect(r.statusCode).toBe(200);expect(s.components.database.code).toBe('database_pending');expect(s.components.jev.code).toBe('database_pending');expect(s).toHaveProperty('configuration');expect((await app.inject('/health/ready')).statusCode).toBe(503);expect((await client.listTools()).tools).toHaveLength(36);
       const call=await client.callTool({name:'list_companies',arguments:{}});expect(call.isError).toBe(true);expect(value(call).error.code).toBe('upstream_unavailable');
       expect((await h.db.query('SELECT count(*)::int n FROM pg_tables WHERE schemaname=$1',[schema])).rows).toEqual([{n:0}]);
       release.resolve();for(let i=0;i<200;i++){if((await app.inject('/api/companies')).statusCode===200)break;await delay(10);}
@@ -31,7 +31,7 @@ describe.skipIf(!project)('QA M4 real protocol and dependency status',()=> {
   it('official SDK discovery plus raw protocol rejects REST/invalid JSON and unsupported verbs',async()=> {
     const f=await canonicalFixture(),client=await sdk(f.url);
     try {
-      expect((await client.listTools()).tools).toHaveLength(27);
+      expect((await client.listTools()).tools).toHaveLength(36);
       for(const method of ['GET','DELETE']) {const r=await fetch(`${f.url}/mcp`,{method});expect(r.status).toBe(405);expect(r.headers.get('allow')).toBe('POST');}
       // Pinned official SDK classifies invalid JSON-RPC schema as -32700 too
       // (webStandardStreamableHttp.js), rather than generic JSON-RPC -32600.

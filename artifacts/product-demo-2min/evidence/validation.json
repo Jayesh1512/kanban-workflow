@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-25T20:03:01.415084+00:00",
+  "metadata": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "30/1",
+        "nb_frames": "3600"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "48000",
+        "r_frame_rate": "0/0",
+        "nb_frames": "5626"
+      }
+    ],
+    "format": {
+      "duration": "120.000000",
+      "size": "6917346"
+    }
+  },
+  "fullDecode": "PASS",
+  "timeline": "PASS",
+  "captionCues": 31,
+  "volumeDb": {
+    "mean_volume": -18.5,
+    "max_volume": -3.8
+  },
+  "sha256": "717ba97fe0bbc676baf654a43b764fa5f2e43ec9e991dad60a0f42c9ffaf56b0",
+  "visualReviewFrames": [
+    3,
+    12,
+    27,
+    38,
+    49,
+    61,
+    74,
+    91,
+    105,
+    116
+  ],
+  "visualReview": "PASS: ten sampled final frames inspected; full-resolution card/search frames checked; labels/captions readable; no credential screen; card phone masking verified.",
+  "credentialScan": {
+    "exactCredentialByteMatches": 0,
+    "scannedFilesBeforeFinalMux": 170,
+    "limit": "Not OCR; pre-capture authentication and visual review are separate evidence."
+  }
+}

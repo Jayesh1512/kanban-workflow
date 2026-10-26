@@ -1,0 +1,1 @@
+The separate sales CRM uses five stages: Lead or Prospect, Qualification, Negotiation, Deal Won, and Archived. This local preview uses synthetic companies. Search the pipeline, inspect a relationship, and export the visible records. CRM rollout is still pending.

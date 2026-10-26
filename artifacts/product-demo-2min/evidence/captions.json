@@ -1,0 +1,226 @@
+[
+  {
+    "text": "AntSeed connects conversations, company knowledge, and follow ups.",
+    "startMs": 0,
+    "endMs": 2909,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "In two minutes, see the work board, the sales pipeline, and the approval flow.",
+    "startMs": 2909,
+    "endMs": 8000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "The work Kanban tracks delivery across six lanes.",
+    "startMs": 8000,
+    "endMs": 11294,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Start with a prospect, move into work in progress and integrations, and keep blockers, completed work, and archived conversations visible.",
+    "startMs": 11294,
+    "endMs": 19529,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Workstream labels describe the relationship separately.",
+    "startMs": 19529,
+    "endMs": 22000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "The separate sales CRM uses five stages: Lead or Prospect, Qualification, Negotiation, Deal Won, and Archived.",
+    "startMs": 22000,
+    "endMs": 28737,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "This local preview uses synthetic companies.",
+    "startMs": 28737,
+    "endMs": 31263,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Search the pipeline, inspect a relationship, and export the visible records.",
+    "startMs": 31263,
+    "endMs": 35895,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "CRM rollout is still pending.",
+    "startMs": 35895,
+    "endMs": 38000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Each relationship links people, source conversations, and next actions.",
+    "startMs": 38000,
+    "endMs": 42000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Here, Mira is the CTO and Jo leads engineering.",
+    "startMs": 42000,
+    "endMs": 46000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "AntSeed owes pricing and integration notes tomorrow.",
+    "startMs": 46000,
+    "endMs": 49111,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Jo owns the external review.",
+    "startMs": 49111,
+    "endMs": 51333,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Responsibilities and calendar dates stay separate.",
+    "startMs": 51333,
+    "endMs": 54000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "The AI workflow extracts company information, contacts, commitments, and supporting evidence.",
+    "startMs": 54000,
+    "endMs": 57771,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "It then recommends the next work lane.",
+    "startMs": 57771,
+    "endMs": 60171,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Uncertain or invalid results stay held for review.",
+    "startMs": 60171,
+    "endMs": 62914,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "A recommendation is a proposal, not a completed move.",
+    "startMs": 62914,
+    "endMs": 66000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Work lane proposals can be reviewed through the Telegram control group.",
+    "startMs": 66000,
+    "endMs": 70213,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "In this recorded example, approval is submitted through the operator API.",
+    "startMs": 70213,
+    "endMs": 74426,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "The normal worker then moves Cedar into Work in progress and verifies the result.",
+    "startMs": 74426,
+    "endMs": 79787,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "This footage uses authored decisions, not a fresh live model run.",
+    "startMs": 79787,
+    "endMs": 84000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Ask what needs attention today.",
+    "startMs": 84000,
+    "endMs": 86000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Priorities connect the next action, the responsible person, the date, and its source evidence.",
+    "startMs": 86000,
+    "endMs": 91600,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Chat inclusion and exclusions control what enters the system.",
+    "startMs": 91600,
+    "endMs": 95200,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Conversation edits and deletions invalidate stale recommendations.",
+    "startMs": 95200,
+    "endMs": 98000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Nous Research Hermes accesses the same records through MCP.",
+    "startMs": 98000,
+    "endMs": 101176,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Recorded independent testing verified context reads and a pending lane change proposal.",
+    "startMs": 101176,
+    "endMs": 105412,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Hermes can help inspect and propose work, while approval remains a separate step.",
+    "startMs": 105412,
+    "endMs": 110000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Work and sales progress, connected to the conversation.",
+    "startMs": 110000,
+    "endMs": 113333,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Verified recordings and a local CRM preview.",
+    "startMs": 113333,
+    "endMs": 116250,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Live AI validation and CRM deployment remain in progress.",
+    "startMs": 116250,
+    "endMs": 120000,
+    "timestampMs": null,
+    "confidence": null
+  }
+]

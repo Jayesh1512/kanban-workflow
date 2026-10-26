@@ -28,6 +28,7 @@ export function registerHttp(app: FastifyInstance, bindings: Record<string, Bind
     app.route({ method: operation.method, url: operation.path,
       errorHandler(error, request, reply) { const invalid = 'statusCode' in error && typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500; const result = apiError(invalid ? new DomainError('validation', 'Invalid request') : error, request.id); return reply.code(ERROR_HTTP_STATUS[result.error.code]).send(result); },
       async handler(request, reply) {
+        if (operation.service.startsWith('outreach.')) reply.header('Cache-Control', 'no-store');
         try { return await track(() => bindings[operation.service]!.call(inputFor(request), ready)); }
         catch (error) { const result = apiError(error, request.id); return reply.code(ERROR_HTTP_STATUS[result.error.code]).send(result); }
       },

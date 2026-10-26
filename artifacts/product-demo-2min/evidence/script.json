@@ -1,0 +1,56 @@
+[
+  {
+    "id": "intro",
+    "seconds": 8,
+    "title": "Conversations become action",
+    "narration": "AntSeed connects conversations, company knowledge, and follow ups. In two minutes, see the work board, the sales pipeline, and the approval flow."
+  },
+  {
+    "id": "work",
+    "seconds": 14,
+    "title": "01 / Work Kanban",
+    "narration": "The work Kanban tracks delivery across six lanes. Start with a prospect, move into work in progress and integrations, and keep blockers, completed work, and archived conversations visible. Workstream labels describe the relationship separately."
+  },
+  {
+    "id": "crm",
+    "seconds": 16,
+    "title": "02 / Sales CRM",
+    "narration": "The separate sales CRM uses five stages: Lead or Prospect, Qualification, Negotiation, Deal Won, and Archived. This local preview uses synthetic companies. Search the pipeline, inspect a relationship, and export the visible records. CRM rollout is still pending."
+  },
+  {
+    "id": "context",
+    "seconds": 16,
+    "title": "03 / One card, the full context",
+    "narration": "Each relationship links people, source conversations, and next actions. Here, Mira is the CTO and Jo leads engineering. AntSeed owes pricing and integration notes tomorrow. Jo owns the external review. Responsibilities and calendar dates stay separate."
+  },
+  {
+    "id": "intelligence",
+    "seconds": 12,
+    "title": "04 / Evidence before recommendations",
+    "narration": "The AI workflow extracts company information, contacts, commitments, and supporting evidence. It then recommends the next work lane. Uncertain or invalid results stay held for review. A recommendation is a proposal, not a completed move."
+  },
+  {
+    "id": "approval",
+    "seconds": 18,
+    "title": "05 / Review, approve, verify",
+    "narration": "Work lane proposals can be reviewed through the Telegram control group. In this recorded example, approval is submitted through the operator API. The normal worker then moves Cedar into Work in progress and verifies the result. This footage uses authored decisions, not a fresh live model run."
+  },
+  {
+    "id": "priorities",
+    "seconds": 14,
+    "title": "06 / Follow-ups that keep their meaning",
+    "narration": "Ask what needs attention today. Priorities connect the next action, the responsible person, the date, and its source evidence. Chat inclusion and exclusions control what enters the system. Conversation edits and deletions invalidate stale recommendations."
+  },
+  {
+    "id": "hermes",
+    "seconds": 12,
+    "title": "07 / Ask Hermes",
+    "narration": "Nous Research Hermes accesses the same records through MCP. Recorded independent testing verified context reads and a pending lane change proposal. Hermes can help inspect and propose work, while approval remains a separate step."
+  },
+  {
+    "id": "close",
+    "seconds": 10,
+    "title": "One place to keep the relationship moving",
+    "narration": "Work and sales progress, connected to the conversation. Verified recordings and a local CRM preview. Live AI validation and CRM deployment remain in progress."
+  }
+]

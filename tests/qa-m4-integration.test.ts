@@ -4,14 +4,14 @@ import { canonicalFixture, project, sdk, value } from './qa-m4-support.js';
 import { checkpoint, enqueue } from './qa-m31-support.js';
 import { SqlAnalysisQueue } from '../src/workflow/analysis.js';
 
-const expectedTools = ['list_chats','set_chat_inclusion','get_import_status','request_import','get_mapping_candidates','correct_company_mapping','list_companies','get_company','create_company','update_company','list_contacts','get_contact','create_contact','update_contact','list_tickets','get_ticket','ensure_ticket','get_ticket_context','get_evidence','update_ticket_actions','list_ticket_facts','update_fact','today_priorities','propose_lane_change','list_proposals','get_proposal','replay_analysis'];
+const expectedTools = ['list_outreach_relationships','get_outreach_relationship','list_chats','set_chat_inclusion','get_import_status','request_import','get_mapping_candidates','correct_company_mapping','list_companies','get_company','create_company','update_company','list_contacts','get_contact','create_contact','update_contact','list_tickets','get_ticket','ensure_ticket','get_ticket_context','get_evidence','update_ticket_actions','list_ticket_facts','update_fact','today_priorities','propose_lane_change','list_proposals','get_proposal','replay_analysis'];
 describe.skipIf(!project)('QA M4 canonical modules, actual HTTP/official SDK/PG/Vikunja; synthetic company only', () => {
   let f: Awaited<ReturnType<typeof canonicalFixture>> | undefined, client: Awaited<ReturnType<typeof sdk>> | undefined;
   afterEach(async () => { await client?.close(); client = undefined; await f?.close(); f = undefined; });
   async function setup() { f = await canonicalFixture(); client = await sdk(f.url); return f; }
   async function tool(name: string, args: Record<string, unknown> = {}) { const r = await client!.callTool({ name, arguments: args }); expect(r.isError, JSON.stringify(value(r))).not.toBe(true); return value(r); }
   async function http(method: 'GET'|'POST'|'PUT', url: string, payload?: Record<string, unknown>) { const r = await f!.app.inject({ method, url, ...(payload ? { payload } : {}) }); expect(r.statusCode, r.body).toBe(200); return r.json(); }
-  it('negotiates exactly27 tools with no approval/send/login/move escape; real record read families match HTTP', async () => {
+  it('negotiates exactly29 tools with no approval/send/login/move escape; real record read families match HTTP', async () => {
     const { h } = await setup(); expect(client!.getServerVersion()?.name).toBe('antseed');
     const list = await client!.listTools(); expect(list.tools.map((t) => t.name)).toEqual(expectedTools);
     for (const denied of ['decide_proposal','approve_proposal','move_task','send_message','login']) { const r = await client!.callTool({ name: denied, arguments: {} }); expect(r.isError).toBe(true); expect(value(r).error.code).toBe('validation'); }

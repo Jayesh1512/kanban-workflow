@@ -48,3 +48,27 @@ it('optional company cleanup never admits unsupported primary names, evidence, c
  for(const kind of ['name','evidence','identity','phone','role','date']){const input=inputFixture(),raw=extractionFixture();raw.companies[0]!.aliases.push('Invented Alias');
   if(kind==='name')raw.companies[0]!.canonicalName='Invented Company';if(kind==='evidence')raw.companies[0]!.evidenceIds=['00000000-0000-4000-8000-999999999999'];if(kind==='identity')raw.contacts[0]!.telegramUserIds=['9999'];if(kind==='phone')raw.contacts[0]!.phones=['+99999999999'];if(kind==='role')raw.contacts[0]!.roles[0]!.role='Invented Role';if(kind==='date')raw.facts[0]!.dates[0]!.localDate='1999-01-01';expect(()=>normalizeExtraction(raw,input)).toThrow();}
 });
+function metadataCompanyFixture(){
+ const input=inputFixture(),raw=extractionFixture(),id='00000000-0000-4000-8000-000000000099';
+ input.chat.mappingStatus='confirmed';input.chat.companyId=id;
+ input.companies=[{id,canonicalName:'Cedar Labs',aliases:[],domains:[],workstream:'Buyer',summary:'',buyerIds:[],providerIds:[],evidenceIds:[],version:1}];
+ input.messages[0]!.text='Our engineers will review the documents.';input.evidence[0]!.excerpt=input.messages[0]!.text;
+ raw.contacts=[];raw.facts=[];raw.dates=[];raw.companyCandidates=[{...raw.companyCandidates[0]!,companyId:id}];
+ return{input,raw};
+}
+it('omits a redundant metadata-confirmed company record instead of manufacturing message evidence',()=>{
+ const{input,raw}=metadataCompanyFixture();expect(()=>validateExtraction(raw,input)).toThrow('Company name absent');
+ const n=normalizeExtraction(raw,input);expect(n.omittedKnownCompanyRecords).toBe(1);expect(n.value.companies).toEqual([]);
+ expect(n.value.companyCandidates).toEqual(raw.companyCandidates);expect(raw.companies).toHaveLength(1);expect(()=>validateExtraction(n.value,input)).not.toThrow();
+});
+it('never uses metadata abstention to accept an unconfirmed or different primary company',()=>{
+ for(const kind of ['unconfirmed','different']){const{input,raw}=metadataCompanyFixture();if(kind==='unconfirmed')input.chat.mappingStatus='unresolved';else raw.companies[0]!.canonicalName='Invented Company';expect(()=>normalizeExtraction(raw,input)).toThrow('Company name absent');}
+});
+it('metadata company abstention still rejects invalid citations and unsafe retained identities or dates',()=>{
+ for(const kind of ['evidence','identity','date']){const{input,raw}=metadataCompanyFixture();
+  if(kind==='evidence')raw.companies[0]!.evidenceIds=['00000000-0000-4000-8000-999999999999'];
+  if(kind==='identity')raw.contacts=[{...extractionFixture().contacts[0]!,telegramUserIds:['99999999']}];
+  if(kind==='date')raw.dates=[{...extractionFixture().facts[0]!.dates[0]!,localDate:'1999-01-01'}];
+  expect(()=>normalizeExtraction(raw,input)).toThrow();
+ }
+});

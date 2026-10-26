@@ -17,8 +17,13 @@ import { SqlMutationStore } from './mutations.js';
 import { ProposalWorkflow } from './apply.js';
 import { TicketProjector } from './projection.js';
 import { resetJevBreaker, seedKnownJevRestriction, withDurableJevBreaker } from './breaker.js';
+import { OutreachWorkflow } from '../outreach/service.js';
+import { OutreachPublisher } from '../outreach/publisher.js';
+import { outreachPage } from '../outreach/page.js';
 
 export function createWorkflowServices(platform: PlatformServices) {
+  const outreach = new OutreachWorkflow(platform.db, platform.clock, platform.config.jev,{vikunjaPublicUrl:platform.config.vikunja.publicUrl??platform.config.vikunja.baseUrl});
+  const outreachPublisher = new OutreachPublisher(platform.db, platform.config.vikunja, outreach);
   const records = new RecordsRepository(platform.db, platform.clock, platform.config.timezone);
   const proposalRecords = new ProposalRepository(platform.db, platform.control, platform.clock);
   const mutations = new SqlMutationStore(platform.db, platform.clock);
@@ -29,7 +34,7 @@ export function createWorkflowServices(platform: PlatformServices) {
   });
   const extraction = createOpenAIExtractor(platform.config.extraction, { clock: platform.clock });
   const jev = withDurableJevBreaker(platform.db, (platform.config.jev.provider === 'openai' ? createOpenAIDecisions : createJevAdapter)(platform.config.jev, { clock: platform.clock }), platform.config, platform.clock);
-  return { records, analysis, extraction, jev, proposals, proposalRecords, mutations, projector,
+  return { outreachPublisher, records, analysis, extraction, jev, proposals, proposalRecords, mutations, projector, outreach,
     processOnce: (options: AnalysisClaimOptions & { signal?: AbortSignal }) => processAnalysisOnce({ queue: analysis, extraction, jev }, options) };
 }
 
@@ -41,6 +46,9 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   const expectedMigrations = new Map(await Promise.all(names.map(async (name) => [name, createHash('sha256').update(await readFile(new URL(name, directory))).digest('hex')] as const)));
   let stopping: Promise<void> | null = null;
   let started = false, stopped = false, timer: ReturnType<typeof setTimeout> | null = null, task: Promise<void> | null = null;
+  let nextOutreachSweep = 0;
+  let outreachTimer: ReturnType<typeof setTimeout> | null = null, outreachTask: Promise<void> | null = null;
+  let outreachFailed = false;
   const analysisTasks = new Set<Promise<void>>(), analysisTimers = new Set<ReturnType<typeof setTimeout>>();
   const analysisFailed = [false, false];
   let transports: ReturnType<typeof registerTransports> | null = null;
@@ -81,7 +89,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       await phase(() => services.proposals.applyNext(abort.signal));
       const providers = await Promise.all([services.extraction.status(), services.jev.status()]);
       const waiting = (await platform.db.query("SELECT 1 FROM proposals WHERE decision='pending' AND last_error='control_chat_missing' LIMIT 1")).rows.length > 0;
-      const workerFailed = phaseFailed || analysisFailed.some(Boolean);
+      const workerFailed = phaseFailed || outreachFailed || analysisFailed.some(Boolean);
       const degraded = workerFailed || waiting || providers.some((p) => p.state !== 'ready');
       state = { state: degraded ? 'degraded' : 'ready', code: waiting ? 'control_chat_missing' : workerFailed ? 'workflow_retry' : degraded ? 'provider_pending_or_unavailable' : null,
         detail: waiting ? 'Pending proposals await an explicitly configured control group' : degraded ? 'Workers running; provider configuration/access remains incomplete' : 'Workflow workers running', checkedAt: platform.clock.now().toISOString() };
@@ -92,6 +100,31 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   function schedule(): void {
     if (stopped) return;
     task = tick().finally(() => { task = null; if (!stopped) { timer = setTimeout(schedule, 1000); timer.unref(); } });
+  }
+  function scheduleOutreach(): void {
+    if (stopped) return;
+    outreachTask = (async () => {
+      if (await migrationsReady() !== 'ready' || abort.signal.aborted) return;
+      let failed = false;
+      const phase = async (work: () => Promise<unknown>) => {
+        try { abort.signal.throwIfAborted(); await work(); }
+        catch { failed = true; abort.signal.throwIfAborted(); }
+      };
+      const sweep = platform.clock.now().getTime() >= nextOutreachSweep;
+      if (sweep) {
+        nextOutreachSweep = platform.clock.now().getTime() + 30_000;
+        await phase(() => services.outreach.reconcile(5));
+      }
+      await phase(() => services.outreach.refreshDetails());
+      await phase(() => services.outreachPublisher.tick(abort.signal));
+      if (sweep && (await platform.db.query("SELECT mode FROM outreach_board_binding WHERE singleton")).rows[0]?.mode === 'publish') {
+        await phase(() => services.outreach.assessNext(abort.signal));
+      }
+      outreachFailed = failed;
+    })().catch(() => { if (!abort.signal.aborted) outreachFailed = true; }).finally(() => {
+      outreachTask = null;
+      if (!stopped) { outreachTimer = setTimeout(scheduleOutreach, 1000); outreachTimer.unref(); }
+    });
   }
   function scheduleAnalysis(slot: 0 | 1): void {
     if (stopped) return;
@@ -118,13 +151,13 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   }
   function stop(): Promise<void> {
     if (stopping) return stopping;
-    stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer);
+    stopped = true; abort.abort(new Error('Workflow stopping')); if (timer) clearTimeout(timer); if (outreachTimer) clearTimeout(outreachTimer);
     for (const analysisTimer of analysisTimers) clearTimeout(analysisTimer); analysisTimers.clear();
     const errors: unknown[] = [];
     try { unsubscribe?.(); } catch (error) { errors.push(error); } finally { unsubscribe = null; }
     // Publish one shutdown promise for preClose, root onClose and direct callers.
     // All captured work drains even if an earlier cleanup action fails.
-    stopping = Promise.allSettled([transports?.close(), task, ...analysisTasks, ...replies]).then((results) => {
+    stopping = Promise.allSettled([transports?.close(), task, outreachTask, ...analysisTasks, ...replies]).then((results) => {
       for (const result of results) if (result.status === 'rejected') errors.push(result.reason);
       if (errors.length) throw new AggregateError(errors, 'Workflow shutdown failed');
     });
@@ -137,7 +170,8 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       // Fastify onClose runs after active HTTP drains. Begin workflow stop in
       // preClose so SDK sockets cannot block the cleanup that closes them.
       app.addHook('preClose', stop);
-      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis }, requireDatabaseReady);
+      app.get('/outreach', async (_request, reply) => reply.header('Cache-Control', 'no-store').type('text/html').send(outreachPage));
+      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach }, requireDatabaseReady);
       registerStatus(app, async () => {
         const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
           try { return await read(); } catch (error) {
@@ -146,15 +180,21 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
           }
         };
         const [extraction, jev] = await Promise.all([safe(() => services.extraction.status()), safe(() => services.jev.status())]);
-        return { workflow: { ...state }, extraction, jev };
+        const sales=await safe(async()=>{const s=await services.outreach.status();return {state:s.unresolved_requests!=='0'&&Number(s.unresolved_requests)>0?'degraded':s.mode==='publish'&&s.state==='ready'?'ready':'connecting',code:Number(s.unresolved_requests)>0?'publication_unresolved':s.mode!=='publish'?'observe_only':null,detail:`Sales board ${s.state}; ${s.pending_proposals} proposals; ${s.pending_publications} publications; ${s.unresolved_requests} unresolved requests`,checkedAt:platform.clock.now().toISOString()};});
+        return { workflow: { ...state }, extraction, jev, outreach:sales };
       });
-      unsubscribe = platform.control.subscribe(async (message) => {
+      const operational = async (message:import('../shared/ports.js').ControlMessage) => {
         if (stopped) throw new Error('Workflow stopping; retain inbox reply');
         const reply = requireDatabaseReady().then(() => services.proposals.handleControlReply(message)); replies.add(reply);
         try { await reply; } finally { replies.delete(reply); }
-      });
+      };
+      if(platform.control.subscribeOwner){
+        const offWork=platform.control.subscribeOwner('operational',operational);
+        const offSales=platform.control.subscribeOwner('outreach',async message=>{if(stopped)throw new Error('Workflow stopping');const reply=requireDatabaseReady().then(()=>services.outreach.handleControlReply(message));replies.add(reply);try{await reply;}finally{replies.delete(reply);}},id=>services.outreach.isProposalCurrent(id));
+        unsubscribe=()=>{offSales();offWork();};
+      }else unsubscribe=platform.control.subscribe(operational);
     },
-    async start() { if (started || stopped) return; started = true; schedule(); scheduleAnalysis(0); scheduleAnalysis(1); },
+    async start() { if (started || stopped) return; started = true; schedule(); scheduleOutreach(); scheduleAnalysis(0); scheduleAnalysis(1); },
     stop,
     async status() { return { ...state }; },
   };

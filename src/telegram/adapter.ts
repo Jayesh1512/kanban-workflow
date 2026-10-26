@@ -41,7 +41,9 @@ export class MtcuteAdapter implements TelegramPort {
     this.login = { state: configured ? 'disconnected' : 'unconfigured', detail: configured ? 'Enter your phone number to connect Telegram' : 'Configure TELEGRAM_API_ID and TELEGRAM_API_HASH' };
     this.component = status(configured ? 'degraded' : 'unconfigured', 'login_required', this.login.detail);
     this.queue = new AwaitedQueue(async (event) => { for (const handler of this.listeners) await handler(event); }, async () => {
-      this.component = status('degraded', 'ingestion_replay_required', 'Persistence is delayed; missed updates require replay');
+      // Persist a replay obligation without replacing the transport state. The
+      // queue reports degradation while persistence is pending; after it drains,
+      // a recovered connection must unblock control delivery automatically.
       for (const handler of this.listeners) await handler({ type: 'replay_required', chatId: null, reason: 'queue_failure' });
     });
     this.factory = factory ?? ((mode, onTooLong) => {
@@ -63,7 +65,7 @@ export class MtcuteAdapter implements TelegramPort {
   async authorizedSelf(): Promise<string | null> { return this.selfId; }
   async loginState(): Promise<TelegramLoginState> { return this.login; }
   async status(): Promise<ServiceStatus> {
-    if (this.queue.size || this.queue.requiresReplay) return status('degraded', 'ingestion_pending', 'Telegram updates are waiting for durable ingestion/replay');
+    if (this.queue.size || this.queue.requiresReplay || this.queue.isProcessing) return status('degraded', 'ingestion_pending', 'Telegram updates are waiting for durable ingestion/replay');
     return this.component;
   }
   subscribe(handler: (event: TelegramEvent) => Promise<void>): () => void { this.listeners.add(handler); return () => { this.listeners.delete(handler); }; }

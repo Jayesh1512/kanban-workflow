@@ -1,6 +1,7 @@
 import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
 import { ChatIntake } from './intake.js';
 import { randomBytes, randomUUID } from 'node:crypto';
+import type { QueryResultRow } from 'pg';
 import type { TelegramClient } from '@mtcute/node';
 import { DomainError } from '../shared/api.js';
 import type { ServiceStatus } from '../shared/domain.js';
@@ -93,6 +94,7 @@ export class ControlSetupManager {
 
 export class DurableControlBus implements ControlBus {
   private readonly subscribers = new Set<(message: ControlMessage) => Promise<void>>();
+  private readonly owners = new Map<string,{handle:(m:ControlMessage)=>Promise<void>;validate?:((id:string)=>Promise<boolean>)|undefined}>();
   private readonly intake: ChatIntake | null;
   constructor(private readonly db: PgDatabase, private readonly telegram: TelegramPort, store?: TelegramStore, private readonly ready?: () => Promise<void>) { this.intake = store ? new ChatIntake(db, store, telegram) : null; }
   async status(): Promise<ServiceStatus> {
@@ -102,6 +104,7 @@ export class DurableControlBus implements ControlBus {
     return { state: code ? 'degraded' : 'ready', code, detail: code === 'control_setup_unknown' ? 'Group creation outcome unknown; reconcile its operation key before creating another group' : code === 'control_chat_missing' ? 'Configure an operational control group to deliver pending proposals' : code === 'control_delivery_failed' ? 'Control delivery exhausted bounded retries; inspect persisted outbox and reconcile message receipts' : code === 'control_replies_pending' ? `${row['inbox']} durable control replies await workflow processing` : `Operational control group configured${intake ? `; ${intake['pending']} chats await intake approval (${intake['queued']} requests queued)` : ''}`, checkedAt: new Date().toISOString() };
   }
   subscribe(handler: (message: ControlMessage) => Promise<void>): () => void { this.subscribers.add(handler); return () => { this.subscribers.delete(handler); }; }
+  subscribeOwner(owner:'operational'|'outreach',handle:(m:ControlMessage)=>Promise<void>,validateDelivery?:(id:string)=>Promise<boolean>):()=>void {if(this.owners.has(owner))throw new DomainError('conflict','Control owner already registered');this.owners.set(owner,{handle,validate:validateDelivery});return ()=>{this.owners.delete(owner);};}
   async enqueueProposal(tx: SqlExecutor, input: Parameters<ControlBus['enqueueProposal']>[1]): Promise<void> {
     if (!(await tx.query('SELECT 1 FROM chats WHERE id=$1 AND is_control', [input.chatId])).rowCount) throw new DomainError('not_configured', 'Configure a control group before proposal delivery');
     let randomId = 0n; while (randomId === 0n) randomId = randomBytes(8).readBigInt64BE();
@@ -112,8 +115,9 @@ export class DurableControlBus implements ControlBus {
     if ((await this.telegram.status()).state !== 'ready') return;
     await this.ready?.();
     await this.db.withSessionLock('antseed:control-worker', async () => {
-      if (this.subscribers.size || this.intake) await this.deliverOne();
+      if (this.subscribers.size || this.owners.size || this.intake) await this.deliverOne();
       await this.sendOne();
+      await this.sendOutreachOne();
       await this.intake?.sendOne();
     });
   }
@@ -127,11 +131,46 @@ export class DurableControlBus implements ControlBus {
     if (!row) return;
     try {
       const message: ControlMessage = { chatId: String(row['chat_id']), messageId: Number(row['message_id']), senderId: row['sender_id'] == null ? null : String(row['sender_id']), replyToMessageId: row['reply_to_id'] as number | null, text: String(row['text']), sentAt: new Date(row['sent_at'] as Date).toISOString() };
-      if (!await this.intake?.handle(message)) for (const handler of this.subscribers) await handler(message);
+      await this.route(message);
       await this.db.query("UPDATE control_inbox SET state='done',claim_token=NULL,lease_until=NULL,last_error=NULL WHERE chat_id=$1 AND message_id=$2 AND claim_token=$3 AND lease_until>now()", [message.chatId, message.messageId, token]);
     } catch {
       await this.db.query("UPDATE control_inbox SET state='pending',claim_token=NULL,lease_until=now()+LEAST(attempts*2,60)*interval '1 second',last_error='Control handler unavailable; decision retained for retry' WHERE chat_id=$1 AND message_id=$2 AND claim_token=$3 AND lease_until>now()", [row['chat_id'], row['message_id'], token]);
     }
+  }
+  private async hasOutreach():Promise<boolean>{return !!(await this.db.query("SELECT to_regclass(quote_ident(current_schema())||'.outreach_control_outbox') AS name")).rows[0]?.name;}
+  private async route(message:ControlMessage):Promise<void>{
+    // Legacy subscribers remain supported for a platform-only harness. Composed
+    // production uses exactly one receipt owner, never broadcast decisions.
+    if(!this.owners.size){if(!await this.intake?.handle(message)){if(this.subscribers.size>1)throw new DomainError('conflict','Ambiguous legacy control handlers');for(const h of this.subscribers)await h(message);}return;}
+    if(!message.replyToMessageId)return;
+    const matches:Array<{owner:string}>=[];
+    if((await this.db.query('SELECT 1 FROM chat_intake_requests WHERE control_chat_id=$1 AND message_id=$2',[message.chatId,message.replyToMessageId])).rowCount)matches.push({owner:'intake'});
+    if((await this.db.query('SELECT 1 FROM control_outbox WHERE chat_id=$1 AND message_id=$2',[message.chatId,message.replyToMessageId])).rowCount)matches.push({owner:'operational'});
+    const outreach=await this.hasOutreach();
+    if(outreach&&(await this.db.query('SELECT 1 FROM outreach_control_outbox WHERE chat_id=$1 AND message_id=$2',[message.chatId,message.replyToMessageId])).rowCount)matches.push({owner:'outreach'});
+    if(matches.length>1)throw new DomainError('conflict','Ambiguous control receipt; retained for reconciliation');
+    if(matches.length===1){const owner=matches[0]!.owner;if(owner==='intake'){await this.intake?.handle(message);return;}const handler=this.owners.get(owner);if(!handler)throw new DomainError('upstream_unavailable','Control receipt owner is not registered',true);await handler.handle(message);return;}
+    if(!/^(approve|reject|correct)(?:\s|:|[.!]|$)/i.test(message.text.trim()))return;
+    const unknown=(await this.db.query(`SELECT 1 FROM control_outbox WHERE chat_id=$1 AND message_id IS NULL AND attempts>0 AND state IN ('sending','failed') UNION ALL SELECT 1 FROM chat_intake_requests WHERE control_chat_id=$1 AND message_id IS NULL AND attempts>0 AND delivery_state IN ('sending','failed') LIMIT 1`,[message.chatId])).rowCount;
+    const sales=outreach&&(await this.db.query("SELECT 1 FROM outreach_control_outbox WHERE chat_id=$1 AND message_id IS NULL AND attempts>0 AND state IN ('sending','failed') LIMIT 1",[message.chatId])).rowCount;
+    if(unknown||sales)throw new DomainError('upstream_unavailable','Approval receipt linkage is being reconciled',true);
+  }
+  private async sendOutreachOne():Promise<void>{
+    const owner=this.owners.get('outreach');if(!owner?.validate||!await this.hasOutreach())return;
+    const token=randomUUID();
+    const row=await this.db.transaction(async (tx):Promise<QueryResultRow|null>=>{
+      const control=(await tx.query('SELECT id FROM chats WHERE is_control')).rows[0];if(!control)return null;
+      const item=(await tx.query(`SELECT o.* FROM outreach_control_outbox o JOIN outreach_sales_proposals p ON p.id=o.proposal_id WHERE p.state='pending' AND o.state IN ('pending','sending','failed') AND o.attempts<10 AND (o.lease_until IS NULL OR o.lease_until<now()) ORDER BY o.created_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1`)).rows[0];if(!item)return null;
+      if(item.chat_id!=null&&String(item.chat_id)!==String(control.id)){await tx.query("UPDATE outreach_control_outbox SET state='cancelled',last_error='Control destination changed; old receipt retained' WHERE id=$1",[item.id]);return null;}
+      await tx.query("UPDATE outreach_control_outbox SET chat_id=$2,state='sending',claim_token=$3,lease_until=now()+interval '60 seconds',attempts=attempts+1 WHERE id=$1",[item.id,control.id,token]);return {...item,chat_id:control.id};
+    });if(!row)return;
+    try{
+      const chatId=String(row.chat_id);
+      if(Number(row.attempts)>0){const self=await this.telegram.authorizedSelf();const history=await this.telegram.getHistory(chatId,{chatId,nextMessageId:null,nextDate:null,status:'pending',importedCount:0,lastError:null,updatedAt:new Date().toISOString(),generation:0,leaseUntil:null},100);const receipts=history.messages.filter(m=>m.senderId===self&&m.text===row.text);if(receipts.length>1)throw new DomainError('conflict','Duplicate sales delivery receipts');if(receipts.length===1){await this.db.query("UPDATE outreach_control_outbox SET state='sent',message_id=$2,claim_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1 AND claim_token=$3 AND lease_until>now()",[row.id,receipts[0]!.id,token]);return;}}
+      if(!await owner.validate(String(row.proposal_id))){await this.db.query("UPDATE outreach_control_outbox SET state='cancelled',claim_token=NULL,lease_until=NULL,last_error='Sales source revision changed' WHERE id=$1 AND claim_token=$2",[row.id,token]);return;}
+      const result=await this.telegram.sendControlMessage({chatId,text:String(row.text),randomId:String(row.random_id)});
+      await this.db.query("UPDATE outreach_control_outbox SET state='sent',message_id=$2,claim_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1 AND claim_token=$3 AND lease_until>now()",[row.id,result.messageId,token]);
+    }catch{await this.db.query("UPDATE outreach_control_outbox SET state='failed',claim_token=NULL,lease_until=now()+LEAST(attempts*5,300)*interval '1 second',last_error='Sales delivery outcome unknown; stable random ID retained' WHERE id=$1 AND claim_token=$2 AND lease_until>now()",[row.id,token]);}
   }
   private async sendOne(): Promise<void> {
     const automatic=await automaticPolicy(this.db);
