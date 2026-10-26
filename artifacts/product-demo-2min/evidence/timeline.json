@@ -1,0 +1,307 @@
+[
+  {
+    "id": "intro",
+    "start": 0,
+    "end": 8,
+    "seconds": 8,
+    "title": "Conversations become action",
+    "captions": [
+      {
+        "text": "AntSeed connects conversations, company knowledge, and follow ups.",
+        "startMs": 0,
+        "endMs": 2909,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "In two minutes, see the work board, the sales pipeline, and the approval flow.",
+        "startMs": 2909,
+        "endMs": 8000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "work",
+    "start": 8,
+    "end": 22,
+    "seconds": 14,
+    "title": "01 / Work Kanban",
+    "captions": [
+      {
+        "text": "The work Kanban tracks delivery across six lanes.",
+        "startMs": 0,
+        "endMs": 3294,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Start with a prospect, move into work in progress and integrations, and keep blockers, completed work, and archived conversations visible.",
+        "startMs": 3294,
+        "endMs": 11529,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Workstream labels describe the relationship separately.",
+        "startMs": 11529,
+        "endMs": 14000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "crm",
+    "start": 22,
+    "end": 38,
+    "seconds": 16,
+    "title": "02 / Sales CRM",
+    "captions": [
+      {
+        "text": "The separate sales CRM uses five stages: Lead or Prospect, Qualification, Negotiation, Deal Won, and Archived.",
+        "startMs": 0,
+        "endMs": 6737,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "This local preview uses synthetic companies.",
+        "startMs": 6737,
+        "endMs": 9263,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Search the pipeline, inspect a relationship, and export the visible records.",
+        "startMs": 9263,
+        "endMs": 13895,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "CRM rollout is still pending.",
+        "startMs": 13895,
+        "endMs": 16000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "context",
+    "start": 38,
+    "end": 54,
+    "seconds": 16,
+    "title": "03 / One card, the full context",
+    "captions": [
+      {
+        "text": "Each relationship links people, source conversations, and next actions.",
+        "startMs": 0,
+        "endMs": 4000,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Here, Mira is the CTO and Jo leads engineering.",
+        "startMs": 4000,
+        "endMs": 8000,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "AntSeed owes pricing and integration notes tomorrow.",
+        "startMs": 8000,
+        "endMs": 11111,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Jo owns the external review.",
+        "startMs": 11111,
+        "endMs": 13333,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Responsibilities and calendar dates stay separate.",
+        "startMs": 13333,
+        "endMs": 16000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "intelligence",
+    "start": 54,
+    "end": 66,
+    "seconds": 12,
+    "title": "04 / Evidence before recommendations",
+    "captions": [
+      {
+        "text": "The AI workflow extracts company information, contacts, commitments, and supporting evidence.",
+        "startMs": 0,
+        "endMs": 3771,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "It then recommends the next work lane.",
+        "startMs": 3771,
+        "endMs": 6171,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Uncertain or invalid results stay held for review.",
+        "startMs": 6171,
+        "endMs": 8914,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "A recommendation is a proposal, not a completed move.",
+        "startMs": 8914,
+        "endMs": 12000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "approval",
+    "start": 66,
+    "end": 84,
+    "seconds": 18,
+    "title": "05 / Review, approve, verify",
+    "captions": [
+      {
+        "text": "Work lane proposals can be reviewed through the Telegram control group.",
+        "startMs": 0,
+        "endMs": 4213,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "In this recorded example, approval is submitted through the operator API.",
+        "startMs": 4213,
+        "endMs": 8426,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "The normal worker then moves Cedar into Work in progress and verifies the result.",
+        "startMs": 8426,
+        "endMs": 13787,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "This footage uses authored decisions, not a fresh live model run.",
+        "startMs": 13787,
+        "endMs": 18000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "priorities",
+    "start": 84,
+    "end": 98,
+    "seconds": 14,
+    "title": "06 / Follow-ups that keep their meaning",
+    "captions": [
+      {
+        "text": "Ask what needs attention today.",
+        "startMs": 0,
+        "endMs": 2000,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Priorities connect the next action, the responsible person, the date, and its source evidence.",
+        "startMs": 2000,
+        "endMs": 7600,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Chat inclusion and exclusions control what enters the system.",
+        "startMs": 7600,
+        "endMs": 11200,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Conversation edits and deletions invalidate stale recommendations.",
+        "startMs": 11200,
+        "endMs": 14000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "hermes",
+    "start": 98,
+    "end": 110,
+    "seconds": 12,
+    "title": "07 / Ask Hermes",
+    "captions": [
+      {
+        "text": "Nous Research Hermes accesses the same records through MCP.",
+        "startMs": 0,
+        "endMs": 3176,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Recorded independent testing verified context reads and a pending lane change proposal.",
+        "startMs": 3176,
+        "endMs": 7412,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Hermes can help inspect and propose work, while approval remains a separate step.",
+        "startMs": 7412,
+        "endMs": 12000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "close",
+    "start": 110,
+    "end": 120,
+    "seconds": 10,
+    "title": "One place to keep the relationship moving",
+    "captions": [
+      {
+        "text": "Work and sales progress, connected to the conversation.",
+        "startMs": 0,
+        "endMs": 3333,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Verified recordings and a local CRM preview.",
+        "startMs": 3333,
+        "endMs": 6250,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Live AI validation and CRM deployment remain in progress.",
+        "startMs": 6250,
+        "endMs": 10000,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  }
+]

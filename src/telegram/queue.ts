@@ -8,6 +8,7 @@ export class AwaitedQueue<T> {
   constructor(private readonly sink: (event: T) => Promise<void>, private readonly onGap: () => Promise<void>, private readonly capacity = 512) {}
   get size(): number { return this.items.length; }
   get requiresReplay(): boolean { return this.gap; }
+  get isProcessing(): boolean { return this.active !== null; }
   push(event: T): void {
     if (this.closed) return;
     if (this.items.length >= this.capacity) { this.gap = true; this.pump(); return; }

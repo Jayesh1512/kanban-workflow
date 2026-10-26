@@ -4,7 +4,7 @@ import type { BusinessFact, ContactDetail, DateFact, Page, Priority, Ticket } fr
 import type { Clock, CompanyWrite, ContactWrite, Database, RecordsService, SqlExecutor } from '../shared/ports.js';
 import { updateActionsSchema, updateFactSchema, uuidSchema, workstreamSchema } from '../shared/schemas.js';
 import { addDays, localDay } from '../intelligence/validation.js';
-import { assert, assertEvidence, chatRow, command, companyRow, evidenceFor, evidenceRow, iso, links, messageRow, nullableIso, page, ticketRow, type Row } from './sql.js';
+import { assert, assertEvidence, chatRow, command, companyRow, companyRows, evidenceFor, evidenceRow, iso, links, messageRow, nullableIso, page, ticketRow, type Row } from './sql.js';
 
 const companyInput = z.strictObject({ idempotencyKey: z.string().min(1).max(200), canonicalName: z.string().trim().min(1).max(500), aliases: z.array(z.string()), domains: z.array(z.string()),
   workstream: workstreamSchema.nullable(), summary: z.string().max(16000), buyerIds: z.array(z.string()), providerIds: z.array(z.string()), evidenceIds: z.array(uuidSchema) });
@@ -84,7 +84,7 @@ export async function factRow(tx: SqlExecutor, r: Row): Promise<BusinessFact> {
 }
 /** A full card can contain hundreds of tasks. Hydrate each page in two queries
  * rather than issuing separate cloud round trips for every fact and date. */
-async function factRows(tx: SqlExecutor, rows: Row[]): Promise<BusinessFact[]> {
+export async function factRows(tx: SqlExecutor, rows: Row[]): Promise<BusinessFact[]> {
   if (!rows.length) return [];
   const children = (await tx.query('SELECT facts.*,local_date::text AS local_date FROM facts WHERE parent_fact_id=ANY($1::uuid[]) ORDER BY id', [rows.map(r => r.id)])).rows;
   const evidence = (await tx.query<{ fact_id: string; evidence_id: string }>(`SELECT fe.fact_id,e.id AS evidence_id FROM fact_evidence fe JOIN evidence e ON e.id=fe.evidence_id
@@ -127,7 +127,7 @@ export class RecordsRepository implements RecordsService {
   async updateCompany(id: string, expectedVersion: number, raw: CompanyWrite) { uuidSchema.parse(id); const input = companyInput.parse(raw); return command(this.db, `company:${id}`, input.idempotencyKey, { id, expectedVersion, input }, (tx) => writeCompanyTx(tx, input, id, expectedVersion)); }
   async listCompanies(input: Parameters<RecordsService['listCompanies']>[0]) {
     const p = page(input); const rows = (await this.db.query(`SELECT * FROM companies WHERE ($1::uuid IS NULL OR id>$1) AND ($2::text IS NULL OR canonical_name ILIKE $2 OR array_to_string(aliases,' ') ILIKE $2 OR array_to_string(domains,' ') ILIKE $2) ORDER BY id LIMIT $3`, [p.after, input.query ? `%${input.query.slice(0, 500)}%` : null, p.limit + 1])).rows;
-    return { items: await Promise.all(rows.slice(0, p.limit).map((r) => companyRow(this.db, r))), nextCursor: rows.length > p.limit ? String(rows[p.limit - 1]!.id) : null };
+    return { items: await companyRows(this.db, rows.slice(0, p.limit)), nextCursor: rows.length > p.limit ? String(rows[p.limit - 1]!.id) : null };
   }
   async getContact(id: string) { uuidSchema.parse(id); return getContactTx(this.db, id); }
   async createContact(raw: ContactWrite) { const input = contactInput.parse(raw); return command(this.db, 'contact:create', input.idempotencyKey, input, (tx) => writeContactTx(tx, input)); }

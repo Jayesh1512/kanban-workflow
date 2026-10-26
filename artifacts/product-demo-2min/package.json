@@ -1,0 +1,23 @@
+{
+  "name": "antseed-product-demo-2min",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts --port=19394 --no-open",
+    "render": "remotion render src/real-index.ts AntSeedRealPlatformDemo out/antseed-real-platform-demo-2min.mp4 --codec=h264 --crf=18 --concurrency=2",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "@remotion/fonts": "4.0.534",
+    "@remotion/media": "4.0.534",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  },
+  "description": "Two-minute tour using real AntSeed platform recordings and saved real outreach evidence"
+}

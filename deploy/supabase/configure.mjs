@@ -24,13 +24,18 @@ export function databaseConfiguration(values, { ca = false } = {}) {
   if(sslmode==='require')url.searchParams.set('uselibpqcompat','true');
   if(ca)url.searchParams.set('sslrootcert','/run/antseed/database-ca.crt');
   const backend=new URL(url); backend.searchParams.set('schema','antseed');
+  // Both apps share a session-pooler budget. Reserve headroom instead of
+  // allowing independent default pools to exhaust it during concurrent startup.
+  backend.searchParams.set('pool_max','6');backend.searchParams.set('connect_timeout_ms','10000');
   return [
     `SUPABASE_DATABASE_URL=${url}`, `DATABASE_URL=${backend}`,
     `VIKUNJA_DATABASE_HOST=${url.hostname}:5432`, `VIKUNJA_DATABASE_USER=${user}`,
     `VIKUNJA_DATABASE_DATABASE=${database}`, 'VIKUNJA_DATABASE_SCHEMA=vikunja',
     `VIKUNJA_DATABASE_PASSWORD_B64=${Buffer.from(password).toString('base64')}`,
     `VIKUNJA_DATABASE_SSLMODE=${sslmode}`, ...(ca?['VIKUNJA_DATABASE_SSLROOTCERT=/run/antseed/database-ca.crt']:[]),
-    'VIKUNJA_DATABASE_MAXOPENCONNECTIONS=5', 'VIKUNJA_DATABASE_MAXIDLECONNECTIONS=2','',
+    // Five connections can all be occupied by nested native task reads, leaving
+    // even the database-backed health endpoint waiting for a free connection.
+    'VIKUNJA_DATABASE_MAXOPENCONNECTIONS=8', 'VIKUNJA_DATABASE_MAXIDLECONNECTIONS=2','',
   ].join('\n');
 }
 export async function privateWrite(path,content) {

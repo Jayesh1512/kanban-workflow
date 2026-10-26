@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { API_OPERATIONS, DomainError, type ApiError } from '../shared/api.js';
 import type { DomainServices } from '../shared/ports.js';
+import { outreachIdentitySchema, emailReportSchema, importCommitSchema, outreachActionsSchema, salesAssessmentSchema, salesDecisionSchema, salesProposalListSchema, salesProposalSchema, outreachGetSchema, outreachListSchema } from '../shared/outreach-schemas.js';
 import { chatIdSchema, correctMappingSchema, dateFactSchema, decideProposalSchema, idempotencyKeySchema, laneSchema, pageInputSchema, proposeLaneSchema, setInclusionSchema, updateActionsSchema, updateFactSchema, uuidSchema, workstreamSchema } from '../shared/schemas.js';
 
 type ServiceName = (typeof API_OPERATIONS)[number]['service'];
@@ -22,6 +23,20 @@ export function createBindings(s: DomainServices, transport: Transport): Record<
   const mapping = z.strictObject({ ...correctMappingSchema.shape, source: z.literal(transport === 'http' ? 'http' : 'mcp').default(transport === 'http' ? 'http' : 'mcp') }).refine((v) => correctMappingSchema.safeParse(v).success, 'Invalid company mapping');
   const proposal = proposeLaneSchema.extend({ origin: z.literal(transport === 'http' ? 'manual' : 'hermes').default(transport === 'http' ? 'manual' : 'hermes') });
   return {
+    'outreach.list': bind(outreachListSchema, 'Read persisted commercial relationships. Sales stages are distinct from operational lanes; provisional and unknown placements are not approved.', (v) => s.outreach.list(pageOutreach(v)), true),
+    'outreach.get': bind(outreachGetSchema, 'Read active relationship sources separately from pending source-enrollment review. Pending facts/contacts do not contribute to the approved relationship.', (v) => s.outreach.get(v.id), true),
+    'outreach.propose': bind(salesProposalSchema, 'Propose ONLY a five-stage commercial placement and pending source enrollment. Work lanes stay independent; approval is HTTP/Telegram only.',v=>sales(s,'propose',v,transport==='mcp'?'hermes':'manual')),
+    'outreach.listProposals': bind(salesProposalListSchema,'Read pending and decided commercial proposals.',v=>sales(s,'listProposals',v),true),
+    'outreach.getProposal': bind(outreachGetSchema,'Read one commercial proposal and its immutable source manifest.',v=>sales(s,'getProposal',v.id),true),
+    'outreach.decide': bind(salesDecisionSchema,'HTTP operator sales decision. Corrections create a separate pending replacement.',v=>sales(s,'decide',v)),
+    'outreach.previewImport': bind(emailReportSchema,'Preview and validate a user-supplied email report. Does not enroll sources or publish cards.',v=>sales(s,'previewImport',v)),
+    'outreach.commitImport': bind(importCommitSchema,'Commit a validated report as pending source context; report claims are not original email messages.',v=>sales(s,'commitImport',v.id)),
+    'outreach.getImport': bind(importCommitSchema,'Read stored report provenance and coverage.',v=>sales(s,'getImport',v.id),true),
+    'outreach.updateActions': bind(outreachActionsSchema,'Correct AntSeed/external actions and date-only or exact deadlines using the current actions version; no stage movement.',v=>sales(s,'updateActions',v)),
+    'outreach.assess': bind(salesAssessmentSchema,'Request a bounded paid OpenAI sales classification for the current source revision. Creates at most a pending sales proposal; never approves.',v=>sales(s,'assess',v)),
+    'outreach.correctIdentity': bind(outreachIdentitySchema,'Correct the displayed relationship identity with expected version and audit reason. Does not merge different companies or change Telegram mappings.',v=>sales(s,'correctIdentity',v)),
+    'outreach.setMode': bind(z.strictObject({mode:z.enum(['observe','publish','paused'])}),'HTTP operator publication mode; does not release unresolved remote request barriers.',v=>sales(s,'setMode',v)),
+    'outreach.status': bind(z.strictObject({}),'Read sales board publication state and unresolved request count.',()=>sales(s,'status'),true),
     'chats.list': bind(pageInputSchema, 'List discovered chats, inclusion policy and company mapping. Includes archived chats.', (v) => s.chats.list(page(v)), true),
     'chats.setInclusion': bind(setInclusionSchema, 'Include or exclude one chat using its expected policy version and durable idempotency key.', (v) => s.chats.setInclusion(v)),
     'chats.importStatus': bind(z.strictObject({ chatId: chatIdSchema }), 'Read durable bounded history-import status for a chat.', (v) => s.chats.importStatus(v.chatId), true),
@@ -52,8 +67,13 @@ export function createBindings(s: DomainServices, transport: Transport): Record<
     'analysis.replayUnavailable': bind(z.strictObject({ idempotencyKey: idempotencyKeySchema, chatId: chatIdSchema.optional(), includeCompletedUnmapped: z.boolean().optional(), includeCompletedDecisions: z.boolean().optional() }).refine(v => !(v.includeCompletedUnmapped || v.includeCompletedDecisions) || v.chatId !== undefined, 'Completed replay requires one explicit chat'), 'Explicitly recover unavailable analysis and clear the durable decision pause. With one chatId, optionally replay completed unmapped analysis or the latest completed decision after a rubric repair. Current extraction checkpoints are reused; this may permit paid provider calls. It does not approve or apply movement.', (v) => s.analysis.replayUnavailable({ idempotencyKey: v.idempotencyKey, ...(v.chatId !== undefined ? { chatId: v.chatId } : {}), ...(v.includeCompletedUnmapped !== undefined ? { includeCompletedUnmapped: v.includeCompletedUnmapped } : {}), ...(v.includeCompletedDecisions !== undefined ? { includeCompletedDecisions: v.includeCompletedDecisions } : {}) })),
   };
 }
+function pageOutreach(v: { cursor?: string | undefined; limit: number; query?: string | undefined; stage?: 'lead' | 'qualification' | 'negotiation' | 'won' | 'archived' | undefined; disposition?: 'pipeline' | 'context_review' | undefined }) {
+  return { ...page(v), ...(v.query !== undefined ? { query: v.query } : {}), ...(v.stage !== undefined ? { stage: v.stage } : {}), ...(v.disposition !== undefined ? { disposition: v.disposition } : {}) };
+}
 export function apiError(error: unknown, requestId: string): ApiError {
   if (error instanceof z.ZodError) return { error: { code: 'validation', message: 'Invalid request', retryable: false, requestId } };
   if (error instanceof DomainError && error.code !== 'internal') return { error: { code: error.code, message: error.message.slice(0, 1000), retryable: error.retryable, requestId } };
   return { error: { code: 'internal', message: 'Internal server error', retryable: false, requestId } };
 }
+
+async function sales(s:DomainServices,method:keyof import('../shared/outreach-domain.js').OutreachCommands,...args:unknown[]):Promise<unknown>{const fn=s.outreach[method];if(!fn)throw new DomainError('not_configured','Commercial workflow is not configured');return (fn as (...v:unknown[])=>Promise<unknown>).apply(s.outreach,args);}

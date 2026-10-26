@@ -53,7 +53,7 @@ console.log('PASS actual native v2 managed six lanes/four labels/default/done/fi
 
 async function connectSdk(){const c=new Client({name:'antseed-m5-canonical-qa',version:'1'});await c.connect(new StreamableHTTPClientTransport(new URL('/mcp',base)));return c;}
 const decode=r=>JSON.parse(r.content[0].text);let client=await connectSdk();
-const tools=(await client.listTools()).tools;assert.equal(tools.length,27);assert(!tools.some(t=>/approve|decide|move|send|login/.test(t.name)));
+const tools=(await client.listTools()).tools;assert.equal(tools.length,36);assert(!tools.some(t=>/approve|decide|move|send|login/.test(t.name)));
 const companyInput={idempotencyKey:'qa-m5-company',canonicalName:'QA M5 Cedar Relay',aliases:['QA M5 Cedar'],domains:[],workstream:'Buyer',summary:'Isolated synthetic deployment acceptance dataset',buyerIds:[],providerIds:[],evidenceIds:[]};
 let company=await http('/api/companies','POST',companyInput);assert.equal(company.status,200);company=company.data;assert.deepEqual((await http('/api/companies','POST',companyInput)).data,company);
 const chatId='-1000000005050',sentAt='2026-10-17T10:00:00Z',text='Noor from QA M5 Cedar Relay here. Our engineers are reviewing the integration documents; testing has not started.',evidenceId=m.syntheticEvidenceId??randomUUID();
@@ -72,7 +72,7 @@ const proposal=decode(await client.callTool({name:'propose_lane_change',argument
 async function persistentSnapshot(){const local={};for(const[k,sql]of Object.entries({tickets:'SELECT id,vikunja_task_id,lane,stage_version FROM tickets ORDER BY id',proposals:'SELECT id,decision,apply_state,target_lane FROM proposals ORDER BY id',migrations:'SELECT version,checksum FROM schema_migrations ORDER BY version',buckets:'SELECT lane,bucket_id FROM board_buckets ORDER BY lane',labels:'SELECT workstream,label_id FROM board_labels ORDER BY workstream'}))local[k]=(await pool.query(sql)).rows;const task=await vapi(`/tasks/${ticket.vikunjaTaskId}`);const grouped=await vapi(`/projects/${board.project_id}/views/${board.view_id}/buckets/tasks?filter=${encodeURIComponent(`id = ${ticket.vikunjaTaskId}`)}`);const bucket=grouped.items.find(b=>b.tasks?.some(t=>String(t.id)===ticket.vikunjaTaskId));assert(bucket);return{local,remote:{id:task.id,bucket:bucket.id,done:task.done,title:task.title,description:task.description,labels:task.labels.map(l=>l.title).sort()}};}
 for(let i=0;i<100;i++){if((await vapi(`/tasks/${ticket.vikunjaTaskId}`)).description.includes('Engineering owner'))break;await delay(100);}
 const before=await persistentSnapshot();assert(before.remote.description.includes('Engineering owner'));assert.equal(before.local.tickets[0].stage_version,0);assert.equal(before.local.tickets[0].lane,'To be started');assert.equal(String(before.remote.bucket),buckets.find(b=>b.lane==='To be started').bucket_id);assert.equal(before.remote.done,false);assert.deepEqual((await pool.query('SELECT count(*)::int n FROM mutations')).rows,[{n:0}]);
-console.log('PASS actual27 MCP discovery, real SQL HTTP/MCP company/contact/context and idempotent pending-only proposal; actual remote unchanged');
+console.log('PASS actual29 MCP discovery, real SQL HTTP/MCP company/contact/context and idempotent pending-only proposal; actual remote unchanged');
 
 // Actual current PID1 receives SIGTERM while an SDK domain read is blocked by a
 // real SQL table lock. No test hook, image command override or client abort.
@@ -89,7 +89,7 @@ console.log('PASS current LinuxNode22 canonical SIGTERM with active officialSDK/
 
 compose('up','-d');await waitFor(connected,'repeated canonical up');assert(bundle()===originalBundle,'Credential bundle changed (values withheld)');assert.deepEqual(await persistentSnapshot(),before);
 compose('down');compose('up','-d');await waitFor(connected,'persistent canonical down/up');assert(bundle()===originalBundle,'Credential bundle changed (values withheld)');assert.deepEqual(await persistentSnapshot(),before);await vapi(`/projects/${board.project_id}`);
-client=await connectSdk();assert.equal((await client.listTools()).tools.length,27);assert.equal(decode(await client.callTool({name:'get_proposal',arguments:{id:proposal.id}})).decision,'pending');
+client=await connectSdk();assert.equal((await client.listTools()).tools.length,36);assert.equal(decode(await client.callTool({name:'get_proposal',arguments:{id:proposal.id}})).decision,'pending');
 const retainedContext=decode(await client.callTool({name:'get_ticket_context',arguments:{ticketId:ticket.id}}));assert.equal(retainedContext.contacts[0].id,contact.id);assert.equal(retainedContext.contacts[0].roles[0].role,'Engineering owner');assert.equal(retainedContext.messages[0].text,text);assert.equal(retainedContext.evidence[0].id,evidenceId);await client.close();
 console.log('PASS repeated up and actual down/up retain IDs, board, pending proposal, source/contact data, credential bundle and existing JWT signing validity');
 

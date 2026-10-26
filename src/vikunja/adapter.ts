@@ -33,7 +33,8 @@ export class VikunjaAdapter implements VikunjaPort {
   async status(): Promise<ServiceStatus> { return this.state; }
   private signal(): AbortSignal {
     const session = this.db.sessionSignal;
-    return session ? AbortSignal.any([session, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000);
+    const timeout = AbortSignal.timeout(this.config.timeoutMs ?? 10_000);
+    return session ? AbortSignal.any([session, timeout]) : timeout;
   }
   private async login(): Promise<void> {
     if (!this.config.password) throw new DomainError('not_configured', 'Configure Vikunja service credentials');

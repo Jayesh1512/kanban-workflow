@@ -1,0 +1,1 @@
+Work lane proposals can be reviewed through the Telegram control group. In this recorded example, approval is submitted through the operator API. The normal worker then moves Cedar into Work in progress and verifies the result. This footage uses authored decisions, not a fresh live model run.

@@ -1,0 +1,1 @@
+Each relationship links people, source conversations, and next actions. Here, Mira is the CTO and Jo leads engineering. AntSeed owes pricing and integration notes tomorrow. Jo owns the external review. Responsibilities and calendar dates stay separate.

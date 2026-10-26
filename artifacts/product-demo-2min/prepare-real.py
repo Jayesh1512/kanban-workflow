@@ -1,0 +1,28 @@
+from pathlib import Path
+import json,re,subprocess,time
+R=Path(__file__).parent.resolve();P=R/'public';E=R/'evidence'
+scenes=[('overview',6,'AntSeed · Work + Sales CRM','AntSeed connects work, sales, and conversation evidence. This tour uses real company records.'),('board',16,'01 / Work Kanban','The actual Vikunja board tracks six work stages, from To be started through Completed. Company cards carry the next action in their title. Workstreams classify the relationship separately. This is a read only recording from the running platform.'),('card',22,'02 / Company card & next action','Open a company card to see its structured context: company, conversation, current stage, workstream, and the next action for AntSeed. Further sections hold contacts, tasks, deadlines, blockers, and source references. Our responsibilities stay separate from external commitments. Missing dates are shown as unknown, rather than invented.'),('pipeline',24,'03 / Sales CRM','The real outreach dashboard organizes relationships into Lead or Prospect, Qualification, Negotiation, Deal Won, and Archived. Phala and Fere AI sit in Qualification in this saved evidence. Commercial discussions appear separately in Negotiation. There are no evidenced wins or archive decisions here. These are sales classifications, not replacements for the operational work lanes.'),('find',16,'04 / Search, sources & export','Search for Phala to isolate its relationship and next action. Open details for the placement reason and conversation context. Filter to email outreach, then export the visible pipeline. The dashboard identifies its evidence dates because it is a saved snapshot, not a live email feed.'),('control',18,'05 / Telegram intake & approvals','The live control settings show an approval group already connected. New group intake and later work stage proposals can be reviewed through Telegram. Historical inclusion is managed separately. This recording only inspects these controls. It sends no approval and moves no live deal. The control group remains excluded from business analysis.'),('operations',10,'06 / Connections & agent access','Connection status is visible in the live operations page. The same backend is accessible to Nous Hermes through MCP. AI extraction validation still needs recovery; this is not an all healthy demonstration.'),('finish',8,'Work progress. Sales progress. Clear context.','Real boards, real company context, and clear next actions. The CRM integration rollout is still pending. This was a read only product tour.')]
+T=[];allcaps=[];cursor=0
+for key,secs,title,speech in scenes:
+ text=E/f'real-{key}.txt';text.write_text(speech);voice=P/f'real-{key}.aiff';out=P/f'real-{key}.wav'
+ subprocess.run(['say','-v','Samantha','-r','165','-f',str(text),'-o',str(voice)],check=True)
+ d=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0',str(voice)],text=True));speed=max(1,d/(secs-.35));subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(voice),'-af',f'atempo={speed},apad,atrim=duration={secs},afade=t=out:st={secs-.25}:d=0.25','-ar','48000',str(out)],check=True);voice.unlink()
+ chunks=re.split(r'(?<=[.!?])\s+',speech);words=sum(len(s.split()) for s in chunks);pos=0;caps=[]
+ for c in chunks:
+  end=pos+secs*1000*len(c.split())/words;caps.append({'text':c,'startMs':round(pos),'endMs':round(end),'timestampMs':None,'confidence':None});pos=end
+ T.append({'id':key,'start':cursor,'end':cursor+secs,'seconds':secs,'title':title,'narration':speech,'captions':caps});allcaps.extend({**c,'startMs':c['startMs']+cursor*1000,'endMs':c['endMs']+cursor*1000} for c in caps);cursor+=secs;print(key,'voice speed',round(speed,2),flush=True)
+(R/'src/real-timeline.json').write_text(json.dumps(T));(E/'real-timeline.json').write_text(json.dumps(T,indent=2));(E/'real-captions.json').write_text(json.dumps(allcaps,indent=2))
+def ts(ms):
+ s,mil=divmod(ms,1000);m,s=divmod(s,60);h,m=divmod(m,60);return f'{h:02}:{m:02}:{s:02},{mil:03}'
+(R/'out/antseed-real-platform-demo-2min.srt').write_text('\n\n'.join(f'{i+1}\n{ts(c["startMs"])} --> {ts(c["endMs"])}\n{c["text"]}' for i,c in enumerate(allcaps))+'\n')
+def media(meta,sourceStart,sourceDuration,target,name,speed=1):
+ f=f'fps=30,trim=start={sourceStart}:duration={sourceDuration},setpts=(PTS-STARTPTS)/{speed},scale=1920:1080,tpad=stop_mode=clone:stop_duration={target},fps=30'
+ subprocess.run(['ffmpeg','-y','-loglevel','error','-i',meta['path'],'-an','-vf',f,'-t',str(target),'-c:v','libx264','-pix_fmt','yuv420p','-preset','fast','-crf','18',str(P/f'real-{name}.mp4')],check=True)
+deadline=time.time()+60
+while not (E/'real-crm-features-capture.json').exists():
+ if time.time()>deadline:raise SystemExit('Real CRM feature capture did not complete')
+ time.sleep(1)
+work=json.loads((E/'real-work-capture.json').read_text());crm=json.loads((E/'real-crm-capture.json').read_text());feature=json.loads((E/'real-crm-features-capture.json').read_text());ops=json.loads((E/'real-operations-capture.json').read_text())
+live_work=json.loads((E/'real-live-work-usable.json').read_text());live_card=json.loads((E/'real-live-card-capture.json').read_text());assert live_card['privacy']['phoneHidden'] and not live_card['privacy']['visibleLongNumber']
+media(live_work,live_work['usableStart'],11,16,'work');media(live_card,live_card['cardReady'],22,22,'detail');media(crm,crm['boardReady'],24,24,'pipeline');media(feature,feature['ready']+.1,feature['end']-feature['ready']-.2,16,'find',speed=(feature['end']-feature['ready']-.2)/16);media(ops,ops['controlReady'],ops['end']-ops['controlReady']-.1,18,'control');media(ops,ops['ready'],6.5,10,'operations')
+print('Real platform media ready; 120 seconds',flush=True)

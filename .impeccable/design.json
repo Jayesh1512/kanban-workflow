@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T11:38:54.623973Z",
+  "title": "Design System: AntSeed outreach operating interface",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Restrained interaction green",
+        "tonalRamp": [
+          "oklch(15% 0.0568 170.38)",
+          "oklch(27% 0.0568 170.38)",
+          "oklch(38% 0.0568 170.38)",
+          "oklch(49% 0.0568 170.38)",
+          "oklch(61% 0.0568 170.38)",
+          "oklch(72% 0.0568 170.38)",
+          "oklch(84% 0.0568 170.38)",
+          "oklch(95% 0.0568 170.38)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Reading ink",
+        "tonalRamp": [
+          "oklch(15% 0.0292 169.97)",
+          "oklch(27% 0.0292 169.97)",
+          "oklch(38% 0.0292 169.97)",
+          "oklch(49% 0.0292 169.97)",
+          "oklch(61% 0.0292 169.97)",
+          "oklch(72% 0.0292 169.97)",
+          "oklch(84% 0.0292 169.97)",
+          "oklch(95% 0.0292 169.97)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Supporting ink",
+        "tonalRamp": [
+          "oklch(15% 0.0243 165.25)",
+          "oklch(27% 0.0243 165.25)",
+          "oklch(38% 0.0243 165.25)",
+          "oklch(49% 0.0243 165.25)",
+          "oklch(61% 0.0243 165.25)",
+          "oklch(72% 0.0243 165.25)",
+          "oklch(84% 0.0243 165.25)",
+          "oklch(95% 0.0243 165.25)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Card paper",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(27% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Column wash",
+        "tonalRamp": [
+          "oklch(15% 0.0045 134.85)",
+          "oklch(27% 0.0045 134.85)",
+          "oklch(38% 0.0045 134.85)",
+          "oklch(49% 0.0045 134.85)",
+          "oklch(61% 0.0045 134.85)",
+          "oklch(72% 0.0045 134.85)",
+          "oklch(84% 0.0045 134.85)",
+          "oklch(95% 0.0045 134.85)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Separator",
+        "tonalRamp": [
+          "oklch(15% 0.0128 149.23)",
+          "oklch(27% 0.0128 149.23)",
+          "oklch(38% 0.0128 149.23)",
+          "oklch(49% 0.0128 149.23)",
+          "oklch(61% 0.0128 149.23)",
+          "oklch(72% 0.0128 149.23)",
+          "oklch(84% 0.0128 149.23)",
+          "oklch(95% 0.0128 149.23)"
+        ]
+      },
+      "brandwash": {
+        "role": "neutral",
+        "displayName": "Subtle interaction wash",
+        "tonalRamp": [
+          "oklch(15% 0.0011 197.14)",
+          "oklch(27% 0.0011 197.14)",
+          "oklch(38% 0.0011 197.14)",
+          "oklch(49% 0.0011 197.14)",
+          "oklch(61% 0.0011 197.14)",
+          "oklch(72% 0.0011 197.14)",
+          "oklch(84% 0.0011 197.14)",
+          "oklch(95% 0.0011 197.14)"
+        ]
+      },
+      "warning-ink": {
+        "role": "tertiary",
+        "displayName": "Warning ink",
+        "tonalRamp": [
+          "oklch(15% 0.0879 74.40)",
+          "oklch(27% 0.0879 74.40)",
+          "oklch(38% 0.0879 74.40)",
+          "oklch(49% 0.0879 74.40)",
+          "oklch(61% 0.0879 74.40)",
+          "oklch(72% 0.0879 74.40)",
+          "oklch(84% 0.0879 74.40)",
+          "oklch(95% 0.0879 74.40)"
+        ]
+      },
+      "warning-wash": {
+        "role": "tertiary",
+        "displayName": "Warning wash",
+        "tonalRamp": [
+          "oklch(15% 0.0240 85.79)",
+          "oklch(27% 0.0240 85.79)",
+          "oklch(38% 0.0240 85.79)",
+          "oklch(49% 0.0240 85.79)",
+          "oklch(61% 0.0240 85.79)",
+          "oklch(72% 0.0240 85.79)",
+          "oklch(84% 0.0240 85.79)",
+          "oklch(95% 0.0240 85.79)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page heading",
+        "purpose": "The snapshot heading above its source warning and operating controls."
+      },
+      "headline-mobile": {
+        "displayName": "Mobile page heading",
+        "purpose": "Heading role at viewport widths at or below 650px."
+      },
+      "title": {
+        "displayName": "Relationship title",
+        "purpose": "Wrapped names within relationship cards."
+      },
+      "stage-title": {
+        "displayName": "Stage heading",
+        "purpose": "Compact sticky column headers."
+      },
+      "body": {
+        "displayName": "Base text",
+        "purpose": "Host-inherited system sans at the snapshot base size."
+      },
+      "card-body": {
+        "displayName": "Next action",
+        "purpose": "Compact next-action text in collapsed cards."
+      },
+      "detail-body": {
+        "displayName": "Expanded context",
+        "purpose": "Source context within opened cards."
+      },
+      "label": {
+        "displayName": "Compact label",
+        "purpose": "Field labels, source badges and stage navigation."
+      },
+      "supporting": {
+        "displayName": "Supporting text",
+        "purpose": "Small metadata and supporting copy."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "card-border",
+        "value": "border-color .16s ease-out",
+        "purpose": "Subtle card hover and disclosure border change."
+      },
+      {
+        "name": "stage-scroll",
+        "value": "smooth",
+        "purpose": "Stage jumps scroll the board and focus its column; instant under reduced motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}",
+        "purpose": "Preserve immediate state changes without animated movement."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "snapshot-mobile",
+        "value": "650px"
+      },
+      {
+        "name": "snapshot-wide",
+        "value": "1500px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Utility Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Reset and export actions share the inherited plain control treatment.",
+      "html": "<button class=\"ds-button\" type=\"button\">Reset</button>",
+      "css": ".ds-button{font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));border:1px solid var(--line,var(--border,#d4dcd5));border-radius:7px;background:var(--paper,var(--card,#fff));padding:9px 12px;min-height:40px;font-size:14px;font-weight:600;cursor:pointer;}.ds-button:hover{background:var(--wash,var(--secondary,#f4f6f3));border-color:var(--soft,var(--muted-foreground,#52635b))}.ds-button:disabled{opacity:.5;cursor:default}.ds-button:focus-visible{outline:3px solid var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));outline-offset:3px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A labelled field for finding a company, person or action.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-search\">Find a company, person or action</label><input class=\"ds-input\" id=\"ds-search\" type=\"search\" placeholder=\"Search outreach evidence\"></div>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:5px;font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));}.ds-field label{font-size:12px;font-weight:600}.ds-input{font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));font-size:14px;min-height:42px;padding:9px 11px;border:1px solid var(--line,var(--border,#d4dcd5));border-radius:7px;background:var(--paper,var(--card,#fff));caret-color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366))}.ds-input::placeholder{color:var(--soft,var(--muted-foreground,#52635b));opacity:1}.ds-input:focus-visible{outline:3px solid var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));outline-offset:3px}"
+    },
+    {
+      "name": "Stage Navigation",
+      "kind": "nav",
+      "refersTo": "stage-button",
+      "description": "Scroll and focus the corresponding column in the application; this snippet demonstrates selected and unselected states.",
+      "html": "<nav class=\"ds-stage-nav\" aria-label=\"Pipeline stage\"><button class=\"ds-stage\" type=\"button\" aria-pressed=\"true\">Lead / Prospect<span>14</span></button><button class=\"ds-stage\" type=\"button\" aria-pressed=\"false\">Qualification<span>12</span></button></nav>",
+      "css": ".ds-stage-nav{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 9px;scrollbar-width:thin}.ds-stage{font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));border:1px solid var(--line,var(--border,#d4dcd5));border-radius:7px;background:var(--paper,var(--card,#fff));padding:9px 12px;min-height:40px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:12px;min-height:36px;padding:7px 10px}.ds-stage span{margin-left:8px;font-variant-numeric:tabular-nums;color:var(--soft,var(--muted-foreground,#52635b))}.ds-stage:hover{background:var(--wash,var(--secondary,#f4f6f3));border-color:var(--soft,var(--muted-foreground,#52635b))}.ds-stage[aria-pressed=true]{color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));border-color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));background:var(--brandwash,color-mix(in srgb,var(--foreground,#192d26) 6%,var(--card,#fff)))}.ds-stage:focus-visible{outline:3px solid var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));outline-offset:3px}"
+    },
+    {
+      "name": "Source Badges",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Informational text badges distinguish neutral, reported-email and historical evidence.",
+      "html": "<div class=\"ds-badges\"><span class=\"ds-badge\">Telegram</span><span class=\"ds-badge ds-email\">Reported email</span><span class=\"ds-badge ds-research\">Historical / research</span></div>",
+      "css": ".ds-badges{display:flex;gap:8px;font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif)}.ds-badge{display:inline-block;font-size:12px;font-weight:600;line-height:1.4;padding:3px 6px;border-radius:4px;background:var(--wash,var(--secondary,#f4f6f3));color:var(--soft,var(--muted-foreground,#52635b))}.ds-email{background:var(--brandwash,color-mix(in srgb,var(--foreground,#192d26) 6%,var(--card,#fff)));color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366))}.ds-research{background:var(--warnwash,var(--warning-surface,#fbf3e2));color:var(--warn,var(--warning-foreground,#755014))}"
+    },
+    {
+      "name": "Relationship Disclosure",
+      "kind": "card",
+      "refersTo": "relationship-card",
+      "description": "Native inline inspection retains the relationship within its board column. Sample copy contains no record data.",
+      "html": "<details class=\"ds-card\"><summary><h3>Relationship</h3><p class=\"ds-signal\">Business fit under review</p><p class=\"ds-next\"><strong>Next for AntSeed</strong>Review the available source context.</p><div class=\"ds-foot\"><span>Evidence: dated snapshot</span><span class=\"ds-detail-label\">Details</span></div></summary><div class=\"ds-detail\"><p>Placement reason and source context appear inline.</p></div></details>",
+      "css": ".ds-card{font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));border:1px solid var(--line,var(--border,#d4dcd5));border-radius:12px;background:var(--paper,var(--card,#fff));overflow:hidden;transition:border-color .16s ease-out}.ds-card:hover{border-color:var(--soft,var(--muted-foreground,#52635b))}.ds-card[open]{border-color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366))}.ds-card>summary{padding:14px;list-style:none;display:block;cursor:pointer}.ds-card>summary::-webkit-details-marker{display:none}.ds-card h3{font-size:15px;line-height:1.4;font-weight:700;margin:0;overflow-wrap:anywhere}.ds-card p{margin:0}.ds-card .ds-signal{font-size:12px;line-height:1.5;color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));margin:11px 0 8px;font-weight:600}.ds-next{font-size:13px;line-height:1.55;overflow-wrap:anywhere}.ds-next strong{display:block;font-size:12px;margin-bottom:4px;color:var(--soft,var(--muted-foreground,#52635b));font-weight:600}.ds-foot{margin-top:12px;display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.4;color:var(--soft,var(--muted-foreground,#52635b))}.ds-detail-label{color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));text-decoration:underline;text-underline-offset:3px}.ds-card[open] .ds-detail-label::after{content:\" −\"}.ds-card:not([open]) .ds-detail-label::after{content:\" +\"}.ds-detail{border-top:1px solid var(--line,var(--border,#d4dcd5));padding:14px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}.ds-card>summary:focus-visible{outline:3px solid var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-card{transition:none}}"
+    },
+    {
+      "name": "Source-age Warning",
+      "kind": "custom",
+      "refersTo": "source-warning",
+      "description": "Dated evidence limits precede the operating board.",
+      "html": "<aside class=\"ds-warning\"><strong>Saved evidence, not a live feed.</strong> Consult the dated source context before drawing conclusions.</aside>",
+      "css": ".ds-warning{font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));padding:12px 14px;border-radius:8px;background:var(--warnwash,var(--warning-surface,#fbf3e2));color:var(--warn,var(--warning-foreground,#755014));font-size:13px;line-height:1.5}.ds-warning strong{font-weight:650;color:inherit}"
+    },
+    {
+      "name": "External Source Link",
+      "kind": "custom",
+      "description": "One authored SVG stroke treatment is shared by external source links.",
+      "html": "<a class=\"ds-source-link\" href=\"https://example.invalid/\" target=\"_blank\" rel=\"noopener noreferrer\">Open source card<svg aria-hidden=\"true\" viewBox=\"0 0 20 20\"><path d=\"M8 4H4v12h12v-4M11 4h5v5M9 11l7-7\"/></svg></a>",
+      "css": ".ds-source-link{font-family:var(--font-sans,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);color:var(--ink,var(--foreground,#192d26));font-size:13px;font-weight:600;color:var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));text-underline-offset:3px}.ds-source-link:hover{text-decoration-thickness:2px}.ds-source-link svg{width:14px;height:14px;vertical-align:-2px;margin-left:3px;stroke:currentColor;stroke-width:1.6;fill:none}.ds-source-link:focus-visible{outline:3px solid var(--brand,color-mix(in srgb,var(--foreground,#192d26) 70%,#168366));outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "overview": "This records the inherited AntSeed operating interface as implemented in the finished outreach snapshot. It establishes no new brand metaphor or visual identity. Compact system typography, restrained green accents and neutral layers support reading evidence, locating a relationship and inspecting its next action.\n\nThe normative tokens above describe `artifacts/outreach-dashboard/index.html`, whose styles match `.local/outreach-dashboard/template.html`. They apply to this snapshot and compatible extensions. `src/platform/page.ts` remains a separate production operational page: it uses a system sans body (16px/1.6), a centered reading width (58rem), page padding (1.5rem), article corners (8px) and its own source-owned colors and focus treatment. The snapshot's density, edge-to-edge embedding and board breakpoints do not supersede that page's existing rules.",
+    "keyCharacteristics": [
+      "Compact evidence-first reading with dates, source labels and visible uncertainty.",
+      "Flat neutral layers, thin separators and restrained green interaction cues.",
+      "Native inline disclosure and keyboard-visible navigation.",
+      "Host-theme colors and font inheritance on a transparent, unpadded embedding field."
+    ],
+    "rules": [
+      {
+        "name": "The Theme Inheritance Rule",
+        "body": "Preserve the host-variable fallbacks and mixed-color accent when extending the snapshot; hardcoded light-only surfaces would break its embedding contract.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Density Rule",
+        "body": "Keep card content compact through hierarchy and disclosure rather than reducing supporting text below the implemented minimum.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Surface Rule",
+        "body": "Preserve tonal containment and borders when adding compatible snapshot components; there is no shadow vocabulary to extend.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** inherit the host theme and sans font through the recorded CSS expressions.",
+      "**Do** preserve readable compact labels, visible focus and native inline disclosure.",
+      "**Do** keep evidence dates, source attribution and uncertainty visible alongside operational content.",
+      "**Do** preserve the snapshot's horizontal board and explicit stage navigation at narrow widths.",
+      "**Do** use flat surface contrast and thin separators for containment."
+    ],
+    "donts": [
+      "**Don't** apply snapshot density or responsive board rules to the separate production operational page without a scoped implementation request.",
+      "**Don't** encode stages or source categories through color alone; retain their text labels.",
+      "**Don't** promote this surface's five-stage composition into a system-wide layout requirement.",
+      "**Don't** replace authored external-link SVGs with glyph icons or image dependencies.",
+      "**Don't** hide source-age limits or present an unsupported outcome as a confirmed result."
+    ]
+  }
+}

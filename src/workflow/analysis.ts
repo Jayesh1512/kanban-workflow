@@ -3,7 +3,7 @@ import type { AnalysisInput, ExtractionCheckpoint, JevDecision, ProviderProvenan
 import type { AnalysisJob, AnalysisQueue, Clock, Database, ProviderResult, SqlExecutor } from '../shared/ports.js';
 import { validateExtraction, EXTRACTION_VERSION } from '../intelligence/validation.js';
 import { strongChoice } from '../intelligence/jev.js';
-import { assert, assertEvidence, chatRow, command, companyRow, evidenceRow, hash, links, messageRow, ticketRow, type Row } from './sql.js';
+import { assert, assertEvidence, chatRow, command, companyRows, evidenceRow, hash, links, messageRow, ticketRow, type Row } from './sql.js';
 import { ensureContactProspectTx, ensureTicketTx, getCompanyTx, getContactTx, refreshInferredActions, replaceDates, writeCompanyTx, writeContactTx } from './records.js';
 import { ANALYSIS_WINDOW_MESSAGES, ANALYSIS_WINDOW_CHARACTERS, enqueueAnalysisWindows, type AnalysisSourceRow } from '../shared/analysis-windows.js';
 
@@ -116,7 +116,7 @@ export class SqlAnalysisQueue implements AnalysisQueue {
     }
     const evidence = (await tx.query(`SELECT e.* FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id WHERE e.chat_id=$1 AND e.message_id=ANY($2::int[])
       AND e.message_version=m.version AND e.invalidated_at IS NULL AND m.deleted_at IS NULL ORDER BY e.id`, [c.id, messages.map((m) => m.id)])).rows.map(evidenceRow);
-    const companies = await Promise.all((await tx.query('SELECT * FROM companies ORDER BY id LIMIT 100')).rows.map((row) => companyRow(tx, row)));
+    const companies = await companyRows(tx, (await tx.query('SELECT * FROM companies ORDER BY id LIMIT 100')).rows);
     const ticket = (await tx.query('SELECT * FROM tickets WHERE chat_id=$1 FOR UPDATE', [c.id])).rows[0];
     const account = (await tx.query('SELECT self_user_id::text FROM telegram_account WHERE singleton')).rows[0];
     assert(account, 'not_configured', 'Telegram dataset account is not bound');

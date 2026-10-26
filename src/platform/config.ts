@@ -63,7 +63,11 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     vikunja: {
       baseUrl: url('VIKUNJA_URL', 'http://127.0.0.1:3456', ['http:', 'https:']).replace(/\/$/, ''),
       apiToken: nonblank(values['VIKUNJA_API_TOKEN']), username: str('VIKUNJA_USERNAME', 'antseed'),
+      publicUrl: url('VIKUNJA_PUBLIC_URL',str('VIKUNJA_URL','http://127.0.0.1:3456'),['http:','https:']).replace(/\/$/, ''),
       password: nonblank(values['VIKUNJA_PASSWORD']), projectTitle: str('VIKUNJA_PROJECT_TITLE', 'AntSeed'),
+      // Native task enrichment makes several database round trips. An external
+      // database needs a bounded WAN budget rather than the local ten seconds.
+      timeoutMs: int('VIKUNJA_TIMEOUT_MS', env['DATABASE_ENV_PATH'] ? 45_000 : 10_000, 120_000),
     },
     extraction: { provider: 'openai', model: str('OPENAI_MODEL', 'gpt-6.1-sol'), apiKey: nonblank(values['OPENAI_API_KEY']), timeoutMs: int('OPENAI_TIMEOUT_MS', 30_000), maxAttempts: int('OPENAI_MAX_ATTEMPTS', 2, 10), maxOutputTokens: int('OPENAI_MAX_OUTPUT_TOKENS', 4096, 100_000) },
     jev: { provider, endpoint, model, apiKey: provider === 'openai' ? nonblank(values['OPENAI_API_KEY']) : nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },

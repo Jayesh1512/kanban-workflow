@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-25T19:30:55.017356+00:00",
+  "components": {
+    "database": {
+      "state": "ready",
+      "code": null
+    },
+    "vikunja": {
+      "state": "ready",
+      "code": null
+    },
+    "telegram": {
+      "state": "ready",
+      "code": null
+    },
+    "telegramSync": {
+      "state": "ready",
+      "code": null
+    },
+    "automaticIntake": {
+      "state": "ready",
+      "code": null
+    },
+    "control": {
+      "state": "ready",
+      "code": null
+    },
+    "extraction": {
+      "state": "degraded",
+      "code": "invalid_response"
+    },
+    "jev": {
+      "state": "connecting",
+      "code": "not_checked"
+    },
+    "workflow": {
+      "state": "degraded",
+      "code": "provider_pending_or_unavailable"
+    }
+  },
+  "counts": null,
+  "accountBound": true
+}

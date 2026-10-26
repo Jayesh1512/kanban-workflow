@@ -59,8 +59,21 @@ export function messageRow(r: Row): Message { return { chatId: String(r.chat_id)
   sourceUrl: r.source_url as string | null, version: Number(r.version), sender: r.sender_snapshot as Message['sender'], peer: r.peer_snapshot as Message['peer'], forward: r.forward_metadata as Message['forward'] }; }
 export function evidenceRow(r: Row): Evidence { return { id: String(r.id), chatId: String(r.chat_id), messageId: Number(r.message_id), messageVersion: Number(r.message_version),
   excerpt: String(r.excerpt), sourceUrl: r.source_url as string | null, observedAt: iso(r.observed_at), invalidatedAt: nullableIso(r.invalidated_at) }; }
-export async function companyRow(tx: SqlExecutor, r: Row): Promise<Company> { return { id: String(r.id), canonicalName: String(r.canonical_name), aliases: r.aliases as string[], domains: r.domains as string[],
-  workstream: r.workstream as Company['workstream'], summary: String(r.summary), buyerIds: r.buyer_ids as string[], providerIds: r.provider_ids as string[], version: Number(r.version), evidenceIds: await evidenceFor(tx, 'company_evidence', 'company_id', String(r.id)) }; }
+export async function companyRows(tx: SqlExecutor, rows: Row[]): Promise<Company[]> {
+  if (!rows.length) return [];
+  // These all share one SQL session during analysis. Queuing one query for each
+  // directory entry starts query deadlines before they can run over a WAN.
+  const evidence = (await tx.query<{ company_id: string; evidence_id: string }>(`SELECT l.company_id,l.evidence_id FROM company_evidence l JOIN evidence e ON e.id=l.evidence_id
+    JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id JOIN chats c ON c.id=e.chat_id
+    WHERE l.company_id=ANY($1::uuid[]) AND e.invalidated_at IS NULL AND e.message_version=m.version AND m.deleted_at IS NULL
+    AND c.inclusion='included' AND NOT c.is_control ORDER BY l.company_id,l.evidence_id`, [rows.map((r) => r.id)])).rows;
+  const byCompany = new Map<string, string[]>();
+  for (const e of evidence) { const ids = byCompany.get(e.company_id) ?? []; ids.push(e.evidence_id); byCompany.set(e.company_id, ids); }
+  return rows.map((r) => ({ id: String(r.id), canonicalName: String(r.canonical_name), aliases: r.aliases as string[], domains: r.domains as string[],
+    workstream: r.workstream as Company['workstream'], summary: String(r.summary), buyerIds: r.buyer_ids as string[], providerIds: r.provider_ids as string[],
+    version: Number(r.version), evidenceIds: byCompany.get(String(r.id)) ?? [] }));
+}
+export async function companyRow(tx: SqlExecutor, r: Row): Promise<Company> { return (await companyRows(tx, [r]))[0]!; }
 export async function ticketRow(tx: SqlExecutor, r: Row): Promise<Ticket> { return { id: String(r.id), chatId: String(r.chat_id), kind: r.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: r.company_id == null ? null : String(r.company_id), vikunjaTaskId: r.vikunja_task_id == null ? null : String(r.vikunja_task_id),
   lane: r.lane as Ticket['lane'], stageVersion: Number(r.stage_version), previousActiveLane: r.previous_active_lane as Ticket['previousActiveLane'], workstream: r.workstream as Ticket['workstream'],
   summary: String(r.summary), nextAction: r.next_action as string | null, followUpAt: nullableIso(r.follow_up_at), etaAt: nullableIso(r.eta_at), latestSubstantiveAt: nullableIso(r.latest_substantive_at),

@@ -22,6 +22,7 @@ describe('deterministic mtcute transport seam (not authenticated Telegram)', () 
     if (existing) await writeFile(path, 'synthetic session marker');
     const log: string[] = [], events: TelegramEvent[] = [], modes: string[] = [];
     let bound = false, owners = 0;
+    let connection: ((state: string) => void) | null = null;
     const store = { async bindAccount() { log.push('bind'); if (mismatch) throw new DomainError('conflict', 'different dataset account'); bound = true; }, async upsertDialog() { expect(bound).toBe(true); log.push('dialog'); }, db: { async query() { return { rowCount: 1, rows: [] }; } } } as unknown as TelegramStore;
     const adapter = new MtcuteAdapter({ apiId: 1, apiHash: 'synthetic-api-hash', sessionPath: path, historyBatchSize: 100, historyMaxBatches: 2 }, store, (mode) => {
       modes.push(mode); if (mode === 'live') expect(owners).toBe(0);
@@ -36,10 +37,11 @@ describe('deterministic mtcute transport seam (not authenticated Telegram)', () 
         async *iterDialogs() { expect(bound).toBe(true); yield { peer: group, isArchived: true, isPinned: false, raw: { topMessage: 1 }, lastMessage: { raw: { date: 1 } } }; },
         async notifyLoggedIn() { expect(bound).toBe(true); expect(mode).toBe('live'); log.push('updates-started'); client.onNewMessage.emit(nativeMessage()); return user.raw; },
       };
+      if (mode === 'live') connection = (state) => client.onConnectionState.emit(state);
       return client as unknown as TelegramClient;
     });
     adapter.subscribe(async (event) => { expect(bound).toBe(true); events.push(event); });
-    return { adapter, log, events, modes, owners: () => owners, cleanup: async () => { await adapter.stop(); await rm(dir, { recursive: true, force: true }); } };
+    return { adapter, log, events, modes, owners: () => owners, connection: (state: string) => connection?.(state), cleanup: async () => { await adapter.stop(); await rm(dir, { recursive: true, force: true }); } };
   }
   it('performs explicit phone/code login; binds before updates; closes auth owner before live owner', async () => {
     const f = await fixture();
@@ -68,6 +70,31 @@ describe('deterministic mtcute transport seam (not authenticated Telegram)', () 
     try { await f.adapter.start(); expect((await f.adapter.loginState()).state).toBe('ready'); expect(f.modes).toEqual(['auth', 'live']); expect(f.log.indexOf('bind')).toBeLessThan(f.log.indexOf('auth-closed')); }
     finally { await f.cleanup(); }
   });
+  it('recovers ready status after transient persistence failure so durable approvals can resume', async () => {
+    const f = await fixture(true); let failed = false;
+    f.adapter.subscribe(async (event) => { if (event.type === 'message' && !failed) { failed = true; throw new Error('Synthetic transient storage outage'); } });
+    try {
+      await f.adapter.start();
+      await expect.poll(() => failed).toBe(true);
+      expect(await f.adapter.status()).toMatchObject({ state: 'degraded', code: 'ingestion_pending' });
+      await expect.poll(async () => (await f.adapter.status()).state, { timeout: 4000 }).toBe('ready');
+      expect(f.events.some((e) => e.type === 'replay_required' && e.reason === 'queue_failure')).toBe(true);
+      expect((await f.adapter.loginState()).state).toBe('ready');
+      expect(f.modes).toEqual(['auth', 'live']); // No new code or session owner.
+    } finally { await f.cleanup(); }
+  });
+  it('does not erase a real transport disconnection when the persistence queue recovers', async () => {
+    const f = await fixture(true); let failed = false;
+    f.adapter.subscribe(async (event) => { if (event.type === 'message' && !failed) { failed = true; throw new Error('Synthetic transient storage outage'); } });
+    try {
+      await f.adapter.start(); await expect.poll(() => failed).toBe(true);
+      f.connection('disconnected');
+      await expect.poll(async () => (await f.adapter.status()).code, { timeout: 4000 }).toBe('telegram_disconnected');
+      expect((await f.adapter.status()).state).toBe('degraded');
+      f.connection('connected');
+      await expect.poll(async () => (await f.adapter.status()).state).toBe('ready');
+    } finally { await f.cleanup(); }
+  });
   it.each([false, true])('account mismatch never opens or dispatches a live owner (resume=%s)', async (resume) => {
     const f = await fixture(resume, true);
     try {
@@ -87,6 +114,13 @@ describe('deterministic mtcute transport seam (not authenticated Telegram)', () 
 });
 
 describe('bounded awaited update queue', () => {
+  it('keeps replay-marker persistence visible until its awaited write completes', async () => {
+    let release!: () => void; const gate = new Promise<void>((r) => { release = r; });
+    const queue = new AwaitedQueue<number>(async () => {}, () => gate, 0);
+    queue.push(1);
+    expect(queue.size).toBe(0); expect(queue.requiresReplay).toBe(false); expect(queue.isProcessing).toBe(true);
+    release(); expect(await queue.flush()).toBe(true); expect(queue.isProcessing).toBe(false); await queue.close();
+  });
   it('awaits persistence, signals overflow and retains ordered work within capacity', async () => {
     let release!: () => void; const gate = new Promise<void>((r) => { release = r; }), completed: number[] = []; let gaps = 0;
     const queue = new AwaitedQueue<number>(async (n) => { if (n === 1) await gate; completed.push(n); }, async () => { gaps++; }, 2);

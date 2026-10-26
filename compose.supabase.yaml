@@ -19,6 +19,19 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_ENV_PATH: /run/antseed/database.env
+      # Supabase's session pooler is a shared WAN service. Vikunja's defaults
+      # (100 open / 50 idle) can exhaust the project pool and surface as slow
+      # queries or unexpected EOFs. Keep this deployment deliberately small.
+      VIKUNJA_DATABASE_MAXOPENCONNECTIONS: "5"
+      VIKUNJA_DATABASE_MAXIDLECONNECTIONS: "2"
+      VIKUNJA_DATABASE_MAXCONNECTIONLIFETIME: "30000"
+    # This probe still checks PostgreSQL, but a WAN/TLS round trip must not be
+    # judged by the local database's three-second deadline.
+    healthcheck:
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 45s
   backend:
     environment:
       DATABASE_ENV_PATH: /run/antseed/database.env

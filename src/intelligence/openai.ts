@@ -40,7 +40,7 @@ export function createOpenAIExtractor(config: RuntimeConfig['extraction'], optio
         const output = blocks.filter((block) => block.type === 'output_text').map((block) => block.text ?? '').join('');
         const normalized = normalizeExtraction(JSON.parse(output), input),value=normalized.value;
         return { ok: true, value, provenance: { provider: 'openai', model: response.model.slice(0, 160), requestId: result.requestId,
-          schemaVersion: EXTRACTION_VERSION, completedAt: http.clock.now().toISOString(), usage: usageProjection(response.usage),...(normalized.omittedContactNames||normalized.omittedContactAffiliations||normalized.omittedCompanyAttributes?{validation:{omittedContactNames:normalized.omittedContactNames,omittedContactAffiliations:normalized.omittedContactAffiliations,omittedCompanyAttributes:normalized.omittedCompanyAttributes}}:{}) } };
+          schemaVersion: EXTRACTION_VERSION, completedAt: http.clock.now().toISOString(), usage: usageProjection(response.usage),...(normalized.omittedContactNames||normalized.omittedContactAffiliations||normalized.omittedCompanyAttributes||normalized.omittedKnownCompanyRecords?{validation:{omittedContactNames:normalized.omittedContactNames,omittedContactAffiliations:normalized.omittedContactAffiliations,omittedCompanyAttributes:normalized.omittedCompanyAttributes,omittedKnownCompanyRecords:normalized.omittedKnownCompanyRecords}}:{}) } };
       } catch { return http.invalid(); }
     },
   };

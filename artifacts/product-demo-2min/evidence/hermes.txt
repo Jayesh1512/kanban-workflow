@@ -1,0 +1,1 @@
+Nous Research Hermes accesses the same records through MCP. Recorded independent testing verified context reads and a pending lane change proposal. Hermes can help inspect and propose work, while approval remains a separate step.

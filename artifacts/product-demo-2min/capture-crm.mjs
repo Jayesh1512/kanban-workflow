@@ -1,0 +1,12 @@
+import{chromium}from'/Users/jys/.t3/projects/video-creater/node_modules/playwright/index.mjs';import fs from'node:fs/promises';import path from'node:path';const root=path.resolve('artifacts/product-demo-2min');const evidence=path.join(root,'evidence');
+const redact = () => { const clean=()=>{if(!document.body)return;const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){if(n.parentElement?.closest('script,style,input,textarea'))continue;const t=n.textContent;const v=t.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email hidden]').replace(/\+?\d[\d ()-]{9,}\d/g,'[phone hidden]');if(t!==v)n.textContent=v;}};new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true});clean();};
+
+const browser=await chromium.launch({headless:true,executablePath:'/Users/jys/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',args:['--no-sandbox']});try{
+ const crm=await browser.newContext({viewport:{width:1920,height:1080},recordVideo:{dir:path.join(evidence,'real-raw'),size:{width:1920,height:1080}}});await crm.addInitScript(redact);const cp=await crm.newPage();let cs=Date.now();await cp.goto('http://127.0.0.1:19395/crm',{waitUntil:'networkidle'});await cp.waitForTimeout(1500);const cc={boardReady:(Date.now()-cs)/1000};await cp.screenshot({path:path.join(evidence,'real-crm.png')});console.log(JSON.stringify({crmReady:true,title:await cp.title(),headings:await cp.locator('h1,h2').allTextContents()}));await cp.waitForTimeout(12000);
+ // Use real report cards and source evidence disclosures; no mutable controls.
+ const details=cp.locator('details').filter({hasText:/FlexAI|hosted.ai|Divyam/i}).first();if(await details.count()){await details.locator('summary').first().click();await cp.waitForTimeout(1800);cc.detailReady=(Date.now()-cs)/1000;await cp.screenshot({path:path.join(evidence,'real-crm-detail.png')});await cp.waitForTimeout(11000);}
+ const search=cp.locator('input[type=search]');if(await search.count()){await search.fill('Phala');await cp.waitForTimeout(1200);cc.searchReady=(Date.now()-cs)/1000;await cp.waitForTimeout(6000);await search.fill('');await cp.waitForTimeout(1000);}
+ cc.end=(Date.now()-cs)/1000;const cv=cp.video();await cp.close();await crm.close();cc.path=await cv.path();await fs.writeFile(path.join(evidence,'real-crm-capture.json'),JSON.stringify(cc,null,2));console.log(JSON.stringify({crmRecorded:true,seconds:cc.end}));
+
+
+}finally{await browser.close()}
