@@ -14,11 +14,11 @@ beforeEach(async()=>{
 afterEach(async()=>{await f.db.close();});
 async function discover(id='7',latest='2026-10-23T00:00:00Z'){await f.store.upsertDialog({id,kind:'user',title:'Synthetic conversation',username:null,archived:false,latestMessageAt:latest});}
 async function again(){await f.db.query("DELETE FROM app_settings WHERE key='telegram:automatic:last-scan'");await worker.tick();}
-it('includes only first conversations at/after the inclusive IST cutoff, without intake request or message-body capture',async()=>{
- await discover();await worker.tick();expect(reads).toBe(1);expect((await f.db.query('SELECT inclusion FROM chats WHERE id=7')).rows[0]!['inclusion']).toBe('included');
- expect((await f.db.query('SELECT lane,stage_version FROM tickets')).rows[0]).toEqual({lane:'To be started',stage_version:0});expect((await f.db.query('SELECT state FROM telegram_conversation_starts')).rows[0]!['state']).toBe('qualifies');
- expect((await f.db.query('SELECT * FROM chat_intake_requests')).rowCount).toBe(0);expect((await f.db.query('SELECT * FROM messages')).rowCount).toBe(0);expect((await f.store.getCursor('7')).status).toBe('pending');
- await again();expect(reads).toBe(1);expect((await f.db.query('SELECT * FROM tickets')).rowCount).toBe(1);
+it('classifies a qualifying conversation but waits for correlated control approval before import or card creation',async()=>{
+ await discover();await worker.tick();expect(reads).toBe(1);expect((await f.db.query('SELECT inclusion FROM chats WHERE id=7')).rows[0]!['inclusion']).toBe('undecided');
+ expect((await f.db.query('SELECT * FROM tickets')).rowCount).toBe(0);expect((await f.db.query('SELECT state FROM telegram_conversation_starts')).rows[0]!['state']).toBe('qualifies');
+ expect((await f.db.query('SELECT decision FROM chat_intake_requests')).rows).toEqual([{decision:'pending'}]);expect((await f.db.query('SELECT * FROM messages')).rowCount).toBe(0);expect((await f.store.getCursor('7')).status).toBe('paused');
+ await again();expect(reads).toBe(1);expect((await f.db.query('SELECT * FROM chat_intake_requests')).rowCount).toBe(1);
 });
 it.each([['2026-10-04T18:29:59.999Z','older'],[cutoff,'qualifies']])('uses exact midnight IST boundary %s -> %s',async(at,state)=>{
  await discover();result.at=at;await worker.tick();expect((await f.db.query('SELECT state FROM telegram_conversation_starts')).rows[0]!['state']).toBe(state);
@@ -47,15 +47,15 @@ it('retains a native flood wait for global backoff rather than marking a new cha
  await expect(worker.tick()).rejects.toHaveProperty('seconds',60);expect((await f.db.query('SELECT state,reason FROM telegram_conversation_starts')).rows[0]).toEqual({state:'error',reason:'history_probe_retry'});expect((await f.db.query('SELECT * FROM tickets')).rowCount).toBe(0);
 });
 
-it('holds existing intake requests during automatic classification and cancels them on qualification without a send',async()=>{
+it('retains and sends an existing intake request after automatic classification',async()=>{
  await discover();await f.store.setInclusion({chatId:'7',inclusion:'included',expectedPolicyVersion:0,idempotencyKey:'old-queued-request'});
  await f.store.upsertDialog({id:'-1001',kind:'supergroup',title:'Control',username:null,archived:false});await f.db.query("UPDATE chats SET inclusion='excluded',is_control=true WHERE id=-1001");
  let sends=0;const bus=new DurableControlBus(f.db,{status:async()=>({state:'ready'}),sendControlMessage:async()=>{sends++;return {messageId:50};}} as unknown as TelegramPort,f.store);
- await bus.tick();expect(sends).toBe(0);await worker.tick();await bus.tick();expect(sends).toBe(0);expect((await f.db.query('SELECT decision FROM chat_intake_requests')).rows[0]!['decision']).toBe('cancelled');
+ await bus.tick();expect(sends).toBe(1);await worker.tick();await bus.tick();expect(sends).toBe(1);expect((await f.db.query('SELECT decision FROM chat_intake_requests')).rows[0]!['decision']).toBe('pending');
 });
-it('preserves an already placed card and treats its later recommendations as ordinary approval work',async()=>{
+it('does not reinterpret an already placed card while classifying its conversation',async()=>{
  await discover();await f.db.query("UPDATE chats SET inclusion='included' WHERE id=7");await f.db.query("INSERT INTO tickets(chat_id,company_id,kind,lane,stage_version) VALUES(7,NULL,'contact_prospect','Integrations',2)");
- await worker.tick();expect((await f.db.query('SELECT lane,stage_version FROM tickets')).rows[0]).toEqual({lane:'Integrations',stage_version:2});expect((await f.db.query('SELECT initial_result FROM telegram_conversation_starts')).rows[0]).toEqual({initial_result:'no_change'});
+ await worker.tick();expect((await f.db.query('SELECT lane,stage_version FROM tickets')).rows[0]).toEqual({lane:'Integrations',stage_version:2});expect((await f.db.query('SELECT initial_result FROM telegram_conversation_starts')).rows[0]).toEqual({initial_result:null});
 });
 
 it('sends a future group intake approval before creating a card/importing, then retains lane approval semantics',async()=>{
@@ -74,10 +74,10 @@ it('sends a future group intake approval before creating a card/importing, then 
  expect(await intake.handle({chatId:'-1001',messageId:51,senderId:'123',replyToMessageId:50,text:'approve',sentAt:new Date().toISOString()})).toBe(true);
  expect((await f.db.query('SELECT inclusion FROM chats WHERE id=-42')).rows[0]).toEqual({inclusion:'included'});
  expect((await f.db.query('SELECT lane,stage_version FROM tickets WHERE chat_id=-42')).rows[0]).toEqual({lane:'To be started',stage_version:0});
- expect((await worker.status()).detail).toContain('1 groups require first-placement approval');
+ expect((await worker.status()).detail).toContain('No chat is admitted automatically');
 });
-it('keeps an older group in the automatic import even when newly discovered after the boundary',async()=>{
+it('requires approval for an older qualifying group too',async()=>{
  await f.db.query("UPDATE app_settings SET value=value||$1::jsonb WHERE key='telegram:automatic-since'",[JSON.stringify({groupApprovalFrom:'2026-10-23T13:48:42.677Z'})]);
  await f.store.upsertDialog({id:'-42',kind:'group',title:'AntSeed <> Existing import',username:null,archived:false,latestMessageAt:'2026-10-23T14:00:00Z'});
- await worker.tick();expect((await f.db.query('SELECT inclusion FROM chats WHERE id=-42')).rows[0]).toEqual({inclusion:'included'});expect((await f.db.query('SELECT * FROM chat_intake_requests')).rowCount).toBe(0);
+ await worker.tick();expect((await f.db.query('SELECT inclusion FROM chats WHERE id=-42')).rows[0]).toEqual({inclusion:'undecided'});expect((await f.db.query('SELECT decision FROM chat_intake_requests')).rows).toEqual([{decision:'pending'}]);
 });

@@ -1,5 +1,6 @@
 import type { BusinessFact, DateFact } from '../shared/domain.js';
 import type { RecordsService } from '../shared/ports.js';
+import { ticketTitle } from '../shared/ticket-title.js';
 
 export type CardContext = Awaited<ReturnType<RecordsService['getContext']>>;
 const singleLine = (value: string) => value.replace(/\s+/gu, ' ').trim();
@@ -59,16 +60,50 @@ function actionTitle(value: string, dates: DateFact[] = []): string {
   return clip(imperative ? imperative[0]!.toUpperCase() + imperative.slice(1) : 'Confirm next step', 110);
 }
 
-function nextAction(context: CardContext, ours: BusinessFact[]): { title: string; detail: string } {
+function nextAction(context: CardContext, ours: BusinessFact[]): { title: string; detail: string; dates: DateFact[] } {
   const { ticket, outreach } = context;
-  if (ticket.actionsSource === 'manual' && ticket.nextAction?.trim()) return { title: actionTitle(ticket.nextAction), detail: ticket.nextAction };
-  if (ours.length) return { title: actionTitle(ours[0]!.text, ours[0]!.dates), detail: ours[0]!.text };
-  if (ticket.lane === 'Completed') return { title: 'Completed', detail: 'No open AntSeed task is recorded. Review completed items below.' };
-  if (ticket.lane === 'Archived') return { title: 'Archived', detail: 'No open AntSeed task is recorded. Revisit this conversation when needed.' };
-  if (ticket.lane === 'Blocked') return { title: 'Resolve blocker', detail: ticket.blockers[0] ?? 'Review the blocker and confirm the next step.' };
-  if (outreach?.waitingForReply) return { title: 'Follow up', detail: 'Follow up on our last message; no later reply is present in the captured conversation. No follow-up deadline is assumed.' };
-  if (context.facts.some(f => f.state === 'open' && f.kind === 'question' && f.actor.party === 'external')) return { title: 'Review their questions', detail: 'Review the other party’s open questions and confirm which need our response.' };
-  return { title: 'Confirm next step', detail: 'No open AntSeed task is recorded. Review the conversation and set the next action.' };
+  if (ticket.actionsSource === 'manual' && ticket.nextAction?.trim()) return { title: actionTitle(ticket.nextAction), detail: ticket.nextAction, dates: [] };
+  if (ours.length) return { title: actionTitle(ours[0]!.text, ours[0]!.dates), detail: ours[0]!.text, dates: ours[0]!.dates };
+  if (ticket.lane === 'Completed') return { title: 'Completed', detail: 'No open AntSeed task is recorded. Review completed items below.', dates: [] };
+  if (ticket.lane === 'Archived') return { title: 'Archived', detail: 'No open AntSeed task is recorded. Revisit this conversation when needed.', dates: [] };
+  if (ticket.lane === 'Blocked') return { title: 'Resolve blocker', detail: ticket.blockers[0] ?? 'Review the blocker and confirm the next step.', dates: [] };
+  if (outreach?.waitingForReply) return { title: 'Follow up', detail: 'Follow up on our last message; no later reply is present in the captured conversation. No follow-up deadline is assumed.', dates: [] };
+  if (context.facts.some(f => f.state === 'open' && f.kind === 'question' && f.actor.party === 'external')) return { title: 'Review their questions', detail: 'Review the other party’s open questions and confirm which need our response.', dates: [] };
+  return { title: 'Confirm next step', detail: 'No open AntSeed task is recorded. Review the conversation and set the next action.', dates: [] };
+}
+
+function compactInstant(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'Clarify date';
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date) + ' IST';
+}
+
+function compactDate(date: DateFact): string | null {
+  if (date.ambiguous || date.precision === 'unresolved') return 'Clarify date';
+  if (date.precision === 'date' && date.localDate) return date.localDate;
+  if (date.precision === 'instant' && date.resolvedAt) return compactInstant(date.resolvedAt);
+  return null;
+}
+
+function titleEta(context: CardContext, dates: DateFact[]): string {
+  if (context.ticket.etaAt) return compactInstant(context.ticket.etaAt);
+  const sourced = dates.map(compactDate).find((value): value is string => !!value);
+  if (sourced) return sourced;
+  if (context.ticket.followUpAt) return compactInstant(context.ticket.followUpAt);
+  return 'Not set';
+}
+
+function titleDescription(context: CardContext): string {
+  const businessText = (value: string | null | undefined) => {
+    const clean = value?.trim();
+    return clean && !/(?:model provider failed|provider_unavailable|no_providers_available|restrictedmodelserror|ai gateway logs?|openai extraction|jev provider|gateway entitlement)/i.test(clean) ? clean : null;
+  };
+  const summary = businessText(context.ticket.summary) || businessText(context.company?.summary);
+  if (summary) return summary;
+  const evidence = context.evidence.map(item => businessText(item.excerpt)).find((item): item is string => !!item);
+  if (evidence) return evidence;
+  if (context.ticket.kind === 'contact_prospect' && !context.company) return 'New contact prospect';
+  return `${context.ticket.workstream} relationship in ${context.ticket.lane}`;
 }
 
 /** Combine repeated extractions without losing different owners, dates or states. */
@@ -102,7 +137,7 @@ export function formatCard(context: CardContext): { title: string; description: 
   ours.sort((a, b) => due(a).localeCompare(due(b)) || Number(b.source === 'manual') - Number(a.source === 'manual') || a.id.localeCompare(b.id));
   const next = nextAction(context, ours);
   const identity = singleLine(company?.canonicalName || chat.title || contacts[0]?.names[0] || 'Unnamed prospect');
-  const title = `${clip(identity, 160)} — ${next.title}`;
+  const title = ticketTitle({ identity, description: titleDescription(context), nextAction: next.title, eta: titleEta(context, next.dates) });
   const contactItems = contacts.map(contact => {
     const roles = contact.roles.filter(role => role.companyId === company?.id).map(role => role.role);
     return paragraph(contact.names.join(' / ') || contact.usernames.map(name => `@${name.replace(/^@/, '')}`).join(' / ') || 'Unnamed contact')

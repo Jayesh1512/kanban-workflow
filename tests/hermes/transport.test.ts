@@ -9,6 +9,7 @@ const id = '00000000-0000-4000-8000-000000000001';
 const company = { idempotencyKey: 'company', canonicalName: 'Synthetic transport company', aliases: [], domains: [], workstream: 'Buyer', summary: '', buyerIds: [], providerIds: [], evidenceIds: [] };
 const contact = { idempotencyKey: 'contact', telegramUserIds: [], names: ['Synthetic contact'], usernames: [], phones: [], emails: [], affiliation: 'unknown', evidenceIds: [], roles: [] };
 const input: Record<string, Record<string, unknown>> = {
+  'outreach.proposeWork': { relationshipId: id, chatId: '-1001', expectedEvidenceRevision: 0, idempotencyKey: 'crm-work', action: 'Prepare the integration test plan', reason: 'Approved CRM needs this deliverable' },
   'outreach.propose':{relationshipId:id,idempotencyKey:'sales',expectedEvidenceRevision:0,targetStage:'qualification',reason:'Substantive evaluation'},
   'outreach.listProposals':{},'outreach.getProposal':{id},'outreach.decide':{proposalId:id,idempotencyKey:'sales-decision',action:'approve',reason:'Operator review'},
   'outreach.previewImport':{namespace:'synthetic',checkedAt:'2026-10-26T00:00:00Z',coverage:'Synthetic report',threads:[{key:'thread',companyName:'Cedar',title:'Synthetic email',summary:'Reported conversation',sourceAt:null,contacts:[],provisionalStage:'lead',nextAction:'Follow up',claims:['First email sent']}]},
@@ -38,7 +39,8 @@ describe('actual SDK Streamable HTTP and catalog binding contract (synthetic ser
     expect(list.tools.some((t) => /decide|approve|move|send|login/.test(t.name))).toBe(false);
     for (const operation of MCP_OPERATIONS) {
       const response = await h.client.callTool({ name: operation.tool!, arguments: input[operation.service]! }); expect(response.isError).not.toBe(true);
-      expect(result(response).service).toBe(operation.service); expect(h.calls.at(-1)!.service).toBe(operation.service);
+      const service = ['records.updateActions', 'records.updateFact'].includes(operation.service) ? 'outreach.proposeRecordChange' : operation.service;
+      expect(result(response).service).toBe(service); expect(h.calls.at(-1)!.service).toBe(service);
       if (operation.service === 'proposals.propose') expect(h.calls.at(-1)!.args[0]).toMatchObject({ origin: 'hermes' });
       if (operation.service === 'chats.correctMapping') expect(h.calls.at(-1)!.args[0]).toMatchObject({ source: 'mcp' });
     }
@@ -51,7 +53,8 @@ describe('actual SDK Streamable HTTP and catalog binding contract (synthetic ser
       const data = { ...input[operation.service]! }; const path = operation.path.replace(/:([A-Za-z]+)/g, (_whole, key: string) => { const value = String(data[key]); delete data[key]; return value; });
       const query = new URLSearchParams(Object.entries(data).map(([key, value]) => [key, String(value)])).toString();
       const response = await h.app.inject({ method: operation.method, url: operation.method === 'GET' ? `${path}?${query}` : path, ...(operation.method !== 'GET' ? { payload: data } : {}) });
-      expect(response.statusCode, `${operation.method} ${path}: ${response.body}`).toBe(200); expect(response.json().service).toBe(operation.service);
+      const service = ['records.updateActions', 'records.updateFact'].includes(operation.service) ? 'outreach.proposeRecordChange' : operation.service;
+      expect(response.statusCode, `${operation.method} ${path}: ${response.body}`).toBe(200); expect(response.json().service).toBe(service);
       if (operation.service === 'proposals.propose') expect(response.json().args[0]).toMatchObject({ origin: 'manual' });
     }
   });

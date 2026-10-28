@@ -45,11 +45,12 @@ describe('approval-first incoming chat intake, real SQL and controlled Telegram 
   expect((await f.store.setInclusion(input)).inclusion).toBe('undecided');await f.store.setInclusion(input);expect((await f.db.query('SELECT 1 FROM chat_intake_requests')).rowCount).toBe(1);await bus.tick();expect(sent).toHaveLength(1);
   expect((await f.db.query('SELECT 1 FROM tickets')).rowCount).toBe(0);await reply('approve');expect((await f.db.query('SELECT 1 FROM tickets')).rowCount).toBe(1);
  });
- it('outbound messages, old catch-up messages, edits, control and excluded chats do not request intake',async()=>{
+ it('our first outbound enquiry requests intake; old catch-up messages, edits, control and excluded chats do not add another request',async()=>{
   await discover();await f.store.ingest({type:'message',message:{...fixtureMessage(1,'7'),sentAt:new Date().toISOString()}});
+  expect((await f.db.query("SELECT decision FROM chat_intake_requests WHERE chat_id=7")).rows).toEqual([{decision:'pending'}]);
   await f.store.ingest({type:'message',message:{...fixtureMessage(2,'7'),senderId:'7'}});
   await f.store.ingest({type:'edit',message:{...fixtureMessage(3,'7'),senderId:'7',sentAt:new Date(Date.now()+1000).toISOString()}});
-  await bus.tick();expect(sent).toHaveLength(0);
+  await bus.tick();expect(sent).toHaveLength(1);expect((await f.db.query('SELECT 1 FROM chat_intake_requests')).rowCount).toBe(1);
  });
  it('keeps an early approval pending while accepted-send linkage is recovered; one physical message and one card',async()=>{
   await discover();await incoming();lost=true;await bus.tick();expect(sent).toHaveLength(1);

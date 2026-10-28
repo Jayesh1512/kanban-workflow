@@ -20,10 +20,11 @@ function inputFor(request: FastifyRequest): Record<string, unknown> {
   if (request.method === 'GET' && typeof input.limit === 'string') {
     if (!/^\d+$/.test(input.limit)) throw new DomainError('validation', 'Invalid page limit'); input.limit = Number(input.limit);
   }
+
   return input;
 }
-export function registerHttp(app: FastifyInstance, bindings: Record<string, Binding>, ready: () => Promise<void>, track: <T>(work: () => Promise<T>) => Promise<T>): void {
-  for (const operation of API_OPERATIONS) {
+export function registerHttp(app: FastifyInstance, bindings: Record<string, Binding>, ready: () => Promise<void>, track: <T>(work: () => Promise<T>) => Promise<T>, catalog: readonly (typeof API_OPERATIONS)[number][] = API_OPERATIONS): void {
+  for (const operation of catalog) {
     if (operation.service.startsWith('chats.')) continue;
     app.route({ method: operation.method, url: operation.path,
       errorHandler(error, request, reply) { const invalid = 'statusCode' in error && typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500; const result = apiError(invalid ? new DomainError('validation', 'Invalid request') : error, request.id); return reply.code(ERROR_HTTP_STATUS[result.error.code]).send(result); },

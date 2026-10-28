@@ -39,6 +39,7 @@ export async function workflowHarness(options?: { db: Database; vikunja: Vikunja
     async getTask(id) { const task = [...tasks.values()].find((t) => t.id === id); return task ? { ...task } : null; },
     async updateTaskDetails(input) { const task = [...tasks.values()].find((t) => t.id === input.taskId); if (!task) throw new Error('missing fake task'); task.title = input.title; task.description = input.description; return { ...task }; },
     async moveTask(input) { const task = [...tasks.values()].find((t) => t.id === input.taskId); if (!task) throw new Error('missing fake task'); moves++; task.bucketId = input.targetBucketId; if (failAfterMove) { failAfterMove = false; throw new Error('Injected remote accepted / response lost'); } },
+    async retireTask(input) { const entry = [...tasks.entries()].find(([, task]) => task.id === input.taskId); if (entry) tasks.delete(entry[0]); },
   };
   const projector = new TicketProjector(db, vikunja, records, clock); const service = new ProposalWorkflow(proposals, mutations, vikunja, projector);
   return { db, clock, records, proposals, mutations, service, projector, vikunja, ticket, evidenceId: input.evidence[0]!.id, tasks, control, handlers, disconnect: scheduling.disconnect,

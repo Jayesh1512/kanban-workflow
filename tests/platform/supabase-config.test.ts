@@ -29,12 +29,17 @@ it('refuses known Supabase transaction endpoints even when constructed outside r
  expect(()=>new PgDatabase('postgresql://u:private@aws-0-x.pooler.supabase.com:6543/postgres')).toThrow('session-pooler');
 });
 it('uses bounded application pool settings without forwarding private adapter parameters to PostgreSQL',async()=>{
- const db=new PgDatabase('postgresql://u:synthetic@localhost:5432/test?pool_max=6&connect_timeout_ms=10000');
- expect(db.pool.options.max).toBe(6);expect(db.pool.options.connectionTimeoutMillis).toBe(10_000);
- const endpoint=new URL(db.pool.options.connectionString!);expect(endpoint.searchParams.has('pool_max')).toBe(false);expect(endpoint.searchParams.has('connect_timeout_ms')).toBe(false);
+ const db=new PgDatabase('postgresql://u:synthetic@localhost:5432/test?pool_max=6&connect_timeout_ms=10000&query_timeout_ms=20000');
+ expect(db.pool.options.max).toBe(6);expect(db.pool.options.connectionTimeoutMillis).toBe(10_000);expect(db.pool.options.query_timeout).toBe(20_000);
+ const endpoint=new URL(db.pool.options.connectionString!);expect(endpoint.searchParams.has('pool_max')).toBe(false);expect(endpoint.searchParams.has('connect_timeout_ms')).toBe(false);expect(endpoint.searchParams.has('query_timeout_ms')).toBe(false);
  await db.close();
  expect(()=>new PgDatabase('postgresql://u:synthetic@localhost/test?pool_max=0')).toThrow('pool_max');
  expect(()=>new PgDatabase('postgresql://u:synthetic@localhost/test?connect_timeout_ms=60001')).toThrow('connect_timeout_ms');
+ expect(()=>new PgDatabase('postgresql://u:synthetic@localhost/test?query_timeout_ms=120001')).toThrow('query_timeout_ms');
+});
+it('allows bounded WAN latency for Supabase session-pooler reads',async()=>{
+ const db=new PgDatabase('postgresql://u:synthetic@aws-0-example.pooler.supabase.com:5432/postgres');
+ expect(db.pool.options.query_timeout).toBe(45_000);await db.close();
 });
 it('writes private credentials and CA files and gives explicit database config precedence over the generated local URL',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'antseed-supabase-config-'));directories.push(dir);const input=join(dir,'credentials.env'),ca=join(dir,'root.pem');

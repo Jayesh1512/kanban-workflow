@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { uuidSchema } from './schemas.js';
+import { chatIdSchema, uuidSchema } from './schemas.js';
 export const salesStageSchema = z.enum(['lead', 'qualification', 'negotiation', 'won', 'archived']);
 export const outreachListSchema = z.strictObject({
     cursor: uuidSchema.optional(), limit: z.number().int().min(1).max(100).default(50),
@@ -19,6 +19,11 @@ export const salesDecisionSchema = z.strictObject({
 }).refine(v => (v.action === 'correct') === (v.correctedStage !== undefined), 'A correction requires a separate replacement stage');
 export const salesProposalListSchema = z.strictObject({ relationshipId: uuidSchema.optional(), limit: z.number().int().min(1).max(100).default(50) });
 export const salesAssessmentSchema = z.strictObject({ relationshipId: uuidSchema, expectedEvidenceRevision: z.number().int().nonnegative(), retry: z.boolean().default(false) });
+export const crmWorkProposalSchema = z.strictObject({
+    relationshipId: uuidSchema, chatId: chatIdSchema,
+    idempotencyKey: z.string().trim().min(1).max(200), expectedEvidenceRevision: z.number().int().nonnegative(),
+    action: z.string().trim().min(1).max(2000), reason: z.string().trim().min(1).max(4000),
+});
 const reportContact = z.strictObject({ name: z.string().trim().min(1).max(300), role: z.string().max(300).default(''), email: z.email().optional() });
 export const emailReportSchema = z.strictObject({
     namespace: z.string().trim().min(1).max(200), checkedAt: z.iso.datetime({ offset: true }),

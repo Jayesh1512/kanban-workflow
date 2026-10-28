@@ -7,6 +7,8 @@ export function groupInitialApprovalSql(chat:string,scope:string,boundary:string
  return `(${boundary}::timestamptz IS NOT NULL AND ${chat}.kind IN ('group','supergroup') AND ${scope}.first_message_at >= ${boundary}::timestamptz)`;
 }
 export async function automaticPolicy(db:SqlExecutor):Promise<AutomaticPolicy|null>{
+ const approvalExclusive=(await db.query("SELECT value->>'enabled' AS enabled FROM app_settings WHERE key='telegram:approval-exclusive-sources'")).rows[0];
+ if(approvalExclusive?.['enabled']==='true')return null;
  const value=(await db.query('SELECT value FROM app_settings WHERE key=$1',[AUTOMATIC_POLICY_KEY])).rows[0]?.['value'] as Partial<AutomaticPolicy>|undefined;
  if(value?.enabled!==true||typeof value.revision!=='string'||!value.revision||typeof value.cutoff!=='string'||!Number.isFinite(Date.parse(value.cutoff))||typeof value.initialPlacement!=='boolean')return null;
  if(value.groupApprovalFrom!=null&&(typeof value.groupApprovalFrom!=='string'||!Number.isFinite(Date.parse(value.groupApprovalFrom))))return null;

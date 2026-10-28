@@ -5,7 +5,7 @@ import { LANES, WORKSTREAMS } from '../src/shared/domain.js';
 import type { AnalysisInput, ExtractionCheckpoint, JevDecision, Message, PeerSnapshot, ProviderProvenance, UUID } from '../src/shared/domain.js';
 import type { AnalysisJob, AnalysisQueue, DomainServices, ExtractionPort, ProviderResult, RecordsService, TelegramMessageInput } from '../src/shared/ports.js';
 
-type ServiceMethod = { [K in keyof DomainServices]: `${K}.${Extract<keyof DomainServices[K], string>}` }[keyof DomainServices];
+type ServiceMethod = { [K in keyof DomainServices]-?: `${K}.${Extract<keyof NonNullable<DomainServices[K]>, string>}` }[keyof DomainServices];
 const bindings: readonly { service: ServiceMethod }[] = API_OPERATIONS;
 const id = '00000000-0000-4000-8000-000000000001';
 const sender: PeerSnapshot = { id: '123', kind: 'user', names: ['Riya Fixture'], usernames: ['riya_fixture'], visiblePhones: ['+10000000001'], visibleEmails: ['riya@example.invalid'], observedAt: '2026-10-17T00:00:00Z' };

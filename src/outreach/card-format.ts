@@ -1,5 +1,6 @@
 import type { BusinessFact, DateFact } from '../shared/domain.js';
 import { SALES_STAGES, type OutreachAction, type OutreachDetail, type OutreachSourceContext, type SalesStage } from '../shared/outreach-domain.js';
+import { ticketTitle } from '../shared/ticket-title.js';
 
 const esc = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -45,6 +46,22 @@ const actionDeadline = (action: OutreachAction) => action.precision === 'date'
   ? `${action.localDate ?? 'Date unresolved'} (${action.timezone}; date only)`
   : action.precision === 'instant' ? (action.instant ?? 'Date unresolved') : 'No deadline stated';
 
+const titleEta = (action: OutreachAction | undefined) => action?.precision === 'date'
+  ? action.localDate ?? 'Clarify date'
+  : action?.precision === 'instant' ? action.instant ?? 'Clarify date' : 'Not set';
+
+const titleDescription = (snapshot: OutreachDetail, stage: SalesStage) => {
+  const active = snapshot.activeSources;
+  const businessText = (value: string | null | undefined) => {
+    const clean = value?.trim();
+    return clean && !/(?:model provider failed|provider_unavailable|no_providers_available|restrictedmodelserror|ai gateway logs?|openai extraction|jev provider|gateway entitlement)/i.test(clean) ? clean : null;
+  };
+  return active.map(source => businessText(source.reportSummary)).find((value): value is string => !!value)
+    ?? active.flatMap(source => source.facts).filter(fact => fact.kind === 'fact').map(fact => businessText(fact.text)).find((value): value is string => !!value)
+    ?? active.flatMap(source => source.evidence).map(item => businessText(item.excerpt)).find((value): value is string => !!value)
+    ?? `${SALES_STAGES.find(item => item.id === stage)?.label ?? 'Sales'} opportunity`;
+};
+
 export interface SalesCardInput {
   snapshot: OutreachDetail;
   stage: SalesStage;
@@ -69,6 +86,8 @@ export function salesCard({ snapshot, stage, action, marker, generation }: Sales
   const contacts = allContacts.length ? `<ul>${allContacts.map(contact => `<li><strong>${esc(contact.names.join(', ') || contact.usernames.join(', ') || 'Unnamed contact')}</strong> — ${esc(contact.roles.join(', ') || 'Role unknown')} (${esc(contact.affiliation)})${contact.emails?.length ? `<br>Email: ${esc(contact.emails.join(', '))}` : ''}${contact.phones?.length ? `<br>Phone: ${esc(contact.phones.join(', '))}` : ''}</li>`).join('')}</ul>` : esc(UNKNOWN);
   const sourceLabels = uniq(sources.map(source => `${source.title} (${source.kind === 'telegram' ? 'Telegram' : 'email report'})`));
   const openActions = (snapshot.actions ?? []).filter(item => item.state === 'open');
+  const titleAction = openActions.find(item => item.actor === 'antseed' && item.text.trim() === action.trim())
+    ?? openActions.find(item => item.actor === 'antseed');
   const actionRows = openActions.length ? `<ul>${openActions.map(item => `<li><strong>${esc(item.actor === 'antseed' ? 'AntSeed' : item.actor)}:</strong> ${esc(item.text)}<br><strong>Deadline:</strong> ${esc(actionDeadline(item))}</li>`).join('')}</ul>` : `<p>${esc(action)} — owner: AntSeed; deadline: not established</p>`;
   const evidence = sources.map(source => `<h3>${esc(source.title)} · ${esc(source.kind === 'telegram' ? 'Telegram' : 'email report')}</h3>${source.reportSummary ? `<p>${esc(source.reportSummary)}</p>` : ''}${source.evidence.length ? source.evidence.map(item => `<blockquote>${esc(item.excerpt)}${item.sourceUrl ? `<br><a href="${esc(item.sourceUrl)}">Open source</a>` : ''}</blockquote>`).join('') : `<p>${esc(UNKNOWN)}</p>`}`).join('');
 
@@ -96,11 +115,11 @@ export function salesCard({ snapshot, stage, action, marker, generation }: Sales
     '<h2>Approved conversation evidence</h2>', evidence || `<p>${esc(UNKNOWN)}</p>`,
     `<h2>Record controls</h2><p>Only approved source context is shown. Missing fields are deliberately marked as unknown; they are not inferred from silence. Sales stages do not rename work-board lanes. Email-report claims are attributed summaries, not authenticated original emails.</p><p>${esc(TEMPLATE_MARKER)}<br>${esc(marker)}<br>${esc(generation)}</p>`,
   ].join('');
-  return { title: `${snapshot.relationship.displayName} — ${action}`.slice(0, 500), description };
+  return { title: ticketTitle({ identity: snapshot.relationship.displayName, description: titleDescription(snapshot, stage), nextAction: action, eta: titleEta(titleAction) }), description };
 }
 
 export function reviewCard(displayName: string, relationshipId: string, generation: string, sourceCount: number): { title: string; description: string } {
-  const title = `${displayName} — Review initial sales stage`.slice(0, 500);
+  const title = ticketTitle({ identity: displayName, description: 'Initial sales stage awaiting review', nextAction: 'Review initial sales stage', eta: 'Not set' });
   const unknown = esc(UNKNOWN);
   const description = [
     `<h2>Opportunity summary</h2><p><strong>Account / person:</strong> ${esc(displayName)}<br><strong>Relationship status:</strong> Awaiting initial source and stage review<br><strong>Linked source conversations:</strong> ${sourceCount}</p>`,
@@ -118,7 +137,7 @@ export function reviewCard(displayName: string, relationshipId: string, generati
 /** Remove stale business claims while retaining a useful, consistently structured card. */
 export function redactionCard(displayName: string, acceptedStage: SalesStage | null, marker: string, generation: string): { title: string; description: string } {
   const unknown = esc(UNKNOWN);
-  const title = `${displayName} — Review changed sources`.slice(0, 500);
+  const title = ticketTitle({ identity: displayName, description: 'Approved source context changed', nextAction: 'Review changed sources', eta: 'Not set' });
   const description = [
     '<h2>Opportunity summary</h2>',
     `<p><strong>Account / person:</strong> ${esc(displayName)}<br><strong>Source status:</strong> Changed — previously published conversation claims were removed</p>`,

@@ -74,6 +74,6 @@ describe('durable per-chat replay isolation (synthetic transport; actual local S
   it('SQL commit failure uses global backoff and cannot masquerade as chat access or advance replay', async () => {
     failure = null; const error = new Error('synthetic database outage'); vi.spyOn(f.store, 'commitReplay').mockRejectedValueOnce(error);
     const before = await f.store.getLiveCheckpoint(inaccessible); await expect(sync.tick()).rejects.toBe(error); await sync.tick();
-    expect(calls).toEqual([inaccessible]); expect(await f.store.getLiveCheckpoint(inaccessible)).toEqual(before); expect(await retries()).toEqual([]); expect(sync.status().code).toBe('telegram_sync_retry');
+    expect(calls).toEqual([inaccessible]); expect(await f.store.getLiveCheckpoint(inaccessible)).toEqual(before); expect(await retries()).toEqual([]); expect(sync.status()).toMatchObject({code:'telegram_sync_retry',detail:expect.stringContaining('live replay')});
   });
 });

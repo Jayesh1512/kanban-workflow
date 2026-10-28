@@ -41,8 +41,10 @@ contains separate `antseed` and `vikunja` databases. The shell-capable wrapper r
 the pinned Vikunja binary, lists users successfully, and creates the configured
 service account only if its exact email is absent. Public registration is disabled.
 Repeated bootstrap reconciles the project/view, six buckets and four workstream
-labels. Tickets for included, confirmed company chats start in **To be started**;
-workstream labels are separate from lanes.
+labels. Approved Telegram chats enter the CRM without creating Work. A concrete action
+proposed from an accepted CRM relationship creates a Work ticket only after its
+separate Telegram approval; that ticket starts in **To be started**. Workstream
+labels are separate from lanes. See [the CRM-first workflow](../docs/CRM_OPERATIONS.md).
 
 The ordered lanes are **To be started**, **Work in progress**, **Integrations**,
 **Blocked**, **Archived**, **Completed**. Workstreams are **Buyer**, **Provider**,
@@ -94,7 +96,7 @@ does not block the connected session behind a full rescan. Pagination offsets
 are process-local; after a restart, discovery safely starts another bounded sweep.
 
 Login starts archived/cloud dialog discovery, bounded history import and eligible
-workflow analysis. New chats wait outside business ingestion. Only a fresh incoming message in a new chat triggers an intake request in the configured approvals group. Reply **approve to that message** to create its To be started card and begin bounded import/analysis; reply **reject**, or leave it unanswered, to keep it out. This is separate from approving a later lane change. Discovery sends no requests by itself and does not store waiting-chat message bodies. Requests are paced at one per 30 seconds with at most five awaiting replies.
+workflow analysis. New chats wait outside business ingestion. Only a fresh incoming message in a new chat triggers an intake request in the configured approvals group. Reply **approve to that message** to admit it to CRM and begin bounded import/analysis; reply **reject**, or leave it unanswered, to keep it out. This creates no Work ticket. Work creation, CRM data changes, sales-stage changes and Work lane changes require their own Telegram approvals. Discovery sends no requests by itself and does not store waiting-chat message bodies. Requests are paced at one per 30 seconds with at most five awaiting replies.
 
 Historical chats are handled manually: find the chat on the setup page and choose **Request approval / prioritize**, then approve its request in the control group. Existing tracked cards retain their stage and settings. Previously auto-included historical entries without a card are paused for manual selection; stored data is retained. Rediscovery preserves exclusions. HTTP/MCP include commands also request approval instead of bypassing it.
 
@@ -105,7 +107,7 @@ Exclusion fences in-flight results, cancels older analysis, stales unapplied
 proposals and suspends tracking. The operational control group is excluded from
 business analysis while its replies remain eligible for operational processing.
 
-`TELEGRAM_HISTORY_BATCH_SIZE` (1..100, default 100) and
+`TELEGRAM_HISTORY_BATCH_SIZE` (1..100, default 20) and
 `TELEGRAM_HISTORY_MAX_BATCHES` (1..10000, default 10) bound descending backfill.
 Budgets/cursors persist. Independent live coverage starts with one current-head
 window, then replays forward in bounded pages until an empty probe. Recent-message

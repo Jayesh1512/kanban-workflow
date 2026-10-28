@@ -3,7 +3,7 @@ import { tl } from '@mtcute/node';
 import type { ServiceStatus } from '../shared/domain.js';
 import type { PgDatabase } from '../platform/database.js';
 import type { TelegramStore } from './store.js';
-import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
+import { automaticPolicy } from '../shared/automatic-policy.js';
 import { queueIntake } from './intake.js';
 export interface ConversationStart { at:string|null; messageId:number|null; uncertain:boolean; reason:string }
 export interface ConversationReader { conversationStart(chatId:string,cutoff:string):Promise<ConversationStart> }
@@ -55,21 +55,9 @@ export class AutomaticIntake {
     await tx.query(`UPDATE telegram_conversation_starts SET state=$3,first_message_at=$4,first_message_id=$5,reason=$6,checked_cutoff=$7,
      claim_token=NULL,lease_until=NULL,next_check_at=now()+interval '1 day',updated_at=now() WHERE chat_id=$1 AND claim_token=$2`,[chatId,token,state,result.at,result.messageId,result.reason,policy.cutoff]);
     if(!qualifies||chat.isControl||chat.inclusion==='excluded')return;
-    if(current.groupApprovalFrom && ['group','supergroup'].includes(chat.kind)
-      && Date.parse(result.at!)>=Date.parse(current.groupApprovalFrom) && chat.inclusion==='undecided'){
-     // A future group is not added to the board or imported until the user
-     // approves intake. Its first AI lane change needs a separate approval.
-     await queueIntake(tx,chatId,true);return;
-    }
-    await this.store.changeInclusion(tx,chat,'included'); // fresh policy snapshot for the initial current-state analysis
-    await tx.query("UPDATE chat_intake_requests SET decision='cancelled',decided_at=now(),last_error='Admitted by explicit automatic-since policy' WHERE chat_id=$1 AND decision='pending'",[chatId]);
-    if(chat.mappingStatus!=='non_company')await tx.query("INSERT INTO tickets(chat_id,company_id,kind) VALUES($1,$2,CASE WHEN $2::uuid IS NULL THEN 'contact_prospect' ELSE 'company' END) ON CONFLICT(chat_id) DO NOTHING",[chatId,chat.companyId]);
-    // A card already moved/placed before this policy keeps that placement;
-    // older imported windows must not turn into new automatic stage changes.
-    await tx.query(`UPDATE telegram_conversation_starts SET initial_placement_at=now(),initial_result='no_change'
-      WHERE chat_id=$1 AND initial_placement_at IS NULL AND EXISTS(SELECT 1 FROM tickets WHERE chat_id=$1 AND stage_version>0)`,[chatId]);
-    // Keep this distinct from a Telegram approve: the user authorized a scoped policy.
-    await tx.query("INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb) ON CONFLICT DO NOTHING",[`telegram:automatic:admitted:${chatId}:${policy.revision}`,JSON.stringify({cutoff:policy.cutoff,firstMessageAt:result.at,reason:result.reason,revision:policy.revision})]);
+    // The cutoff only classifies a conversation. It never authorizes business
+    // ingestion: every qualifying chat waits for a correlated Telegram reply.
+    if(chat.inclusion==='undecided')await queueIntake(tx,chatId,true);
    });
   }catch(error){
    await this.db.query("UPDATE telegram_conversation_starts SET state='error',claim_token=NULL,lease_until=NULL,next_check_at=now()+interval '5 minutes',reason=$3,updated_at=now() WHERE chat_id=$1 AND claim_token=$2",[chatId,token,scopedAccess(error)?'history_access_unavailable':'history_probe_retry']);
@@ -82,10 +70,8 @@ export class AutomaticIntake {
    count(*) FILTER(WHERE s.state='older' AND s.checked_cutoff=$1) AS older,
    count(*) FILTER(WHERE s.checked_cutoff IS DISTINCT FROM $1 OR s.state IN ('pending','checking','error')) AS pending,
    count(*) FILTER(WHERE s.state='unknown' AND s.checked_cutoff=$1) AS unknown,
-   count(*) FILTER(WHERE s.state='qualifies' AND s.checked_cutoff=$1 AND s.initial_placement_at IS NULL AND NOT ${groupInitialApprovalSql('c','s','$2')}) AS initial_pending,
-   count(*) FILTER(WHERE s.state='qualifies' AND s.checked_cutoff=$1 AND s.initial_result='uncertain') AS initial_uncertain,
-   count(*) FILTER(WHERE s.state='qualifies' AND s.checked_cutoff=$1 AND ${groupInitialApprovalSql('c','s','$2')}) AS approval_groups
-   FROM telegram_conversation_starts s JOIN chats c ON c.id=s.chat_id WHERE NOT c.is_control AND c.inclusion<>'excluded' AND NOT EXISTS(SELECT 1 FROM telegram_account a WHERE a.self_user_id=c.id)`,[policy.cutoff,policy.groupApprovalFrom])).rows[0]!;
-  return {state:'ready',code:null,detail:`First-conversation cutoff ${policy.cutoff}: ${r['qualified']} qualify, ${r['older']} older, ${r['pending']} pending, ${r['unknown']} unknown; ${r['initial_pending']} initial assessments pending, ${r['initial_uncertain']} uncertain. Initial AI placement ${policy.initialPlacement?'automatic':'requires approval'}; ${r['approval_groups']} groups require first-placement approval${policy.groupApprovalFrom?` (created from ${policy.groupApprovalFrom})`:''}; subsequent lane changes require approval.`,checkedAt:new Date().toISOString()};
+   count(*) FILTER(WHERE s.state='qualifies' AND s.checked_cutoff=$1 AND c.inclusion='undecided') AS approval_pending
+   FROM telegram_conversation_starts s JOIN chats c ON c.id=s.chat_id WHERE NOT c.is_control AND c.inclusion<>'excluded' AND NOT EXISTS(SELECT 1 FROM telegram_account a WHERE a.self_user_id=c.id)`,[policy.cutoff])).rows[0]!;
+  return {state:'ready',code:null,detail:`First-conversation cutoff ${policy.cutoff}: ${r['qualified']} qualify, ${r['older']} older, ${r['pending']} pending, ${r['unknown']} unknown; ${r['approval_pending']} qualifying chats await Telegram control approval. No chat is admitted automatically.`,checkedAt:new Date().toISOString()};
  }
 }

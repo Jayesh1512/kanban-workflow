@@ -10,6 +10,12 @@ import { OutreachRepository } from './repository.js';
 import type { Row } from '../workflow/sql.js';
 import { digest } from './hash.js';
 import { ProviderHttp, type HttpOptions } from '../intelligence/http.js';
+import { approvedChatSourceSql } from '../shared/source-approval.js';
+import { crmFirstEnabled, workParentIsCurrent } from '../shared/crm-first.js';
+import { crmWorkProposalSchema } from '../shared/outreach-schemas.js';
+import { updateActionsSchema, updateFactSchema } from '../shared/schemas.js';
+import { RecordsRepository, updateTicketActionsTx, updateFactTx } from '../workflow/records.js';
+import { assertEvidence } from '../workflow/sql.js';
 export const SALES_RUBRIC_VERSION = 'antseed.sales.v1';
 const descriptions: Record<string, string> = {
     lead: 'Lead / Prospect: not contacted, first outbound enquiry, or no substantive human reply. Silence alone never archives.',
@@ -20,6 +26,7 @@ const descriptions: Record<string, string> = {
     uncertain: 'Conflicting, stale, unrelated, third-party forwarded or insufficient evidence. Do not guess or take the highest-ranked stage.',
 };
 const replyPattern = /^(approve|reject|correct(?:\s*:\s*|\s+).+)\s*[.!]?$/i;
+type CrmCommand = { kind: 'work' | 'actions' | 'identity' | 'work_actions' | 'fact'; payload: Record<string, unknown> };
 export class OutreachWorkflow extends OutreachRepository implements OutreachCommands {
     private readonly http: ProviderHttp;
     private readonly publicVikunja: string | null;
@@ -42,14 +49,15 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             throw new DomainError('not_found', 'Outreach relationship not found');
         const sources = (await tx.query(`SELECT s.id,s.kind,s.source_revision,rs.generation,rs.version,rs.enrollment_state,
    CASE WHEN s.kind='telegram' THEN i.source_revision ELSE s.source_revision END AS current_revision,
-   CASE WHEN s.kind='telegram' THEN i.inclusion='included' AND NOT i.is_control AND i.tracking_state='active' AND i.mapping_status<>'non_company' AND i.company_id IS NOT DISTINCT FROM $2::uuid ELSE coalesce(s.coverage->>'superseded','false')<>'true' END AS eligible
-   FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id LEFT JOIN outreach_telegram_inputs i ON i.ticket_id=s.ticket_id
+   CASE WHEN s.kind='telegram' THEN i.inclusion='included' AND NOT i.is_control AND i.tracking_state='active' AND i.mapping_status<>'non_company' AND i.company_id IS NOT DISTINCT FROM $2::uuid
+     AND EXISTS(SELECT 1 FROM chats approved_chat WHERE approved_chat.id=s.chat_id AND ${approvedChatSourceSql('approved_chat')}) ELSE false END AS eligible
+   FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id LEFT JOIN outreach_telegram_inputs i ON i.chat_id=s.chat_id
    WHERE rs.relationship_id=$1 ORDER BY s.id`, [id, r.company_id])).rows;
         const value = { relationshipId: id, stageVersion: Number(r.stage_version), identityVersion: Number(r.identity_version), evidenceRevision: Number(r.evidence_revision), actionsVersion: Number(r.actions_version), sources };
         return { value, hash: digest(value), eligible: sources.filter(s => s.eligible && ['active', 'pending'].includes(String(s.enrollment_state))), r };
     }
     private async sourceContext(id: string) { return this.get(id); }
-    async propose(raw: unknown, origin: 'manual' | 'hermes' | 'openai' | 'historical_policy' = 'manual', notify = true) {
+    async propose(raw: unknown, origin: 'manual' | 'hermes' | 'openai' | 'historical_policy' = 'manual', notify = true, command?: CrmCommand) {
         const input = salesProposalSchema.parse(raw);
         if (input.restoreNative && !['manual', 'hermes'].includes(origin))
             throw new DomainError('validation', 'Only an explicit operator/agent proposal may request native drift restoration');
@@ -57,10 +65,10 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         return this.database.transaction(async (tx) => {
             await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`outreach:command:${input.idempotencyKey}`]);
             const r = await this.lock(tx, input.relationshipId), m = await this.manifest(tx, input.relationshipId);
-            const command = digest({ input, origin });
+            const commandHash = digest({ input, origin, ...(command ? { command } : {}) });
             const old = (await tx.query('SELECT * FROM outreach_sales_proposals WHERE idempotency_key=$1', [input.idempotencyKey])).rows[0];
             if (old) {
-                if (old.command_hash !== command)
+                if (old.command_hash !== commandHash)
                     throw new DomainError('conflict', 'Idempotency key belongs to a different sales proposal');
                 return old;
             }
@@ -71,13 +79,18 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             // Context is loaded outside locks, then bound to the exact current manifest.
             if (context.relationship.evidenceRevision !== Number(r.evidence_revision) || context.relationship.sourceState !== 'current')
                 throw new DomainError('conflict', 'Source context changed; retry after reconciliation');
-            return this.insertProposal(tx, input, origin, m.value, m.hash, context, command, notify);
+            if (command) await this.validateCommand(tx, r, command);
+            return this.insertProposal(tx, input, origin, m.value, m.hash, context, commandHash, notify, command);
         });
     }
-    private async insertProposal(tx: SqlExecutor, input: z.infer<typeof salesProposalSchema>, origin: string, manifest: unknown, hash: string, context: unknown, command: string, notify = true): Promise<Row> {
+    private async insertProposal(tx: SqlExecutor, input: z.infer<typeof salesProposalSchema>, origin: string, manifest: unknown, hash: string, context: unknown, command: string, notify = true, change?: CrmCommand): Promise<Row> {
         await tx.query("UPDATE outreach_sales_proposals SET state='stale' WHERE relationship_id=$1 AND state='pending' AND input_hash<>$2", [input.relationshipId, hash]);
         const row = (await tx.query(`INSERT INTO outreach_sales_proposals(relationship_id,idempotency_key,command_hash,target_stage,reason,origin,manifest,input_hash,context)
    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [input.relationshipId, input.idempotencyKey, command, input.targetStage, input.reason, origin, JSON.stringify(manifest), hash, JSON.stringify(context)])).rows[0]!;
+        if (change) {
+            await tx.query('UPDATE outreach_sales_proposals SET command_kind=$2,command_payload=$3 WHERE id=$1', [row.id, change.kind, JSON.stringify(change.payload)]);
+            row.command_kind = change.kind; row.command_payload = change.payload;
+        }
         if (!notify)
             return row;
         let random = 0n;
@@ -93,9 +106,65 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         const pending = (context as {
             pendingSources: unknown[];
         }).pendingSources.length;
-        const text = `Sales CRM review: ${r.displayName}\n${r.acceptedStage ?? 'Initial placement'} → ${label}\n${pending} source enrollment(s) included in this decision.\n\n${input.reason.slice(0, 1800)}\n\nReply to THIS message: approve, reject, or correct: <sales stage>. A correction creates a separately pending proposal. This affects Outreach only, not work lanes.\n\n[antseed-outreach-proposal:${row.id}]`;
+        const text = change
+            ? `CRM ${change.kind === 'work' ? '→ Work ticket' : change.kind === 'identity' ? 'identity' : 'data change'} review: ${r.displayName}\n\n${change.kind === 'work' ? `Create Work ticket in To be started\nChat ID: ${change.payload.chatId}\nAction: ${String(change.payload.action).slice(0, 1800)}` : JSON.stringify(change.payload).slice(0, 1800)}\n\nReason: ${input.reason.slice(0, 1000)}\n\nReview the complete pending change in CRM. Reply to THIS message: approve or reject. This approves only this ${change.kind === 'work' ? 'Work ticket creation' : 'data change'}; CRM stage and source enrollments stay unchanged.\n\n[antseed-outreach-proposal:${row.id}]`
+            : `Sales CRM review: ${r.displayName}\n${r.acceptedStage ?? 'Initial placement'} → ${label}\n${pending} source enrollment(s) included in this decision.\n\n${input.reason.slice(0, 1800)}\n\nReply to THIS message: approve, reject, or correct: <sales stage>. A correction creates a separately pending proposal. This affects Outreach only, not work lanes.\n\n[antseed-outreach-proposal:${row.id}]`;
         await tx.query('INSERT INTO outreach_control_outbox(proposal_id,random_id,text) VALUES($1,$2,$3)', [row.id, random.toString(), text]);
         return row;
+    }
+    async proposeWork(raw: unknown) {
+        const i = crmWorkProposalSchema.parse(raw);
+        if (!await crmFirstEnabled(this.database)) throw new DomainError('conflict', 'CRM-first migration is required');
+        const r = (await this.get(i.relationshipId)).relationship;
+        return this.propose({ relationshipId: i.relationshipId, expectedEvidenceRevision: i.expectedEvidenceRevision,
+            idempotencyKey: i.idempotencyKey, targetStage: r.acceptedStage ?? 'lead', reason: i.reason }, 'manual', true,
+            { kind: 'work', payload: { chatId: i.chatId, action: i.action } });
+    }
+    async proposeRecordChange(kind: 'work_actions' | 'fact', raw: unknown): Promise<unknown> {
+        if (!await crmFirstEnabled(this.database)) {
+            const records = new RecordsRepository(this.database);
+            return kind === 'work_actions' ? records.updateActions(updateActionsSchema.parse(raw)) : records.updateFact(updateFactSchema.parse(raw));
+        }
+        const input = kind === 'work_actions' ? updateActionsSchema.parse(raw) : updateFactSchema.parse(raw);
+        const source = 'ticketId' in input
+            ? (await this.database.query('SELECT chat_id FROM tickets WHERE id=$1', [input.ticketId])).rows[0]
+            : (await this.database.query('SELECT j.chat_id FROM facts f JOIN analysis_jobs j ON j.id=f.job_id WHERE f.id=$1', [input.factId])).rows[0];
+        if (!source) throw new DomainError('not_found', 'Data change source not found');
+        const ref = (await this.database.query(`SELECT rs.relationship_id FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
+            WHERE s.chat_id=$1 AND rs.enrollment_state IN ('active','pending')`, [source.chat_id])).rows[0];
+        if (!ref) throw new DomainError('conflict', 'Reconcile and approve this conversation in CRM before proposing data changes');
+        const r = (await this.get(String(ref.relationship_id))).relationship;
+        return this.propose({ relationshipId: r.id, expectedEvidenceRevision: r.evidenceRevision, idempotencyKey: input.idempotencyKey,
+            targetStage: r.acceptedStage ?? 'lead', reason: `Review ${kind === 'fact' ? 'source fact' : 'Work action/deadline'} correction` },
+            'manual', true, { kind, payload: input });
+    }
+    private async validateCommand(tx: SqlExecutor, r: Row, command: CrmCommand): Promise<void> {
+        if (command.kind === 'work') {
+            if (!r.accepted_stage) throw new DomainError('conflict', 'Approve the CRM relationship sales placement before proposing Work');
+            const source = (await tx.query(`SELECT 1 FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
+                JOIN chats c ON c.id=s.chat_id WHERE rs.relationship_id=$1 AND s.chat_id=$2 AND rs.enrollment_state='active'
+                AND c.inclusion='included' AND NOT c.is_control AND c.mapping_status<>'non_company'
+                AND c.company_id IS NOT DISTINCT FROM $3::uuid AND ${approvedChatSourceSql('c')}`, [r.id, command.payload.chatId, r.company_id])).rowCount;
+            if (!source) throw new DomainError('conflict', 'Work requires a currently approved source of this CRM relationship');
+        } else if (command.kind === 'actions') {
+            const i = outreachActionsSchema.parse(command.payload);
+            if (Number(r.actions_version) !== i.expectedActionsVersion) throw new DomainError('conflict', 'Actions changed; request a fresh approval');
+        } else if (command.kind === 'identity') {
+            const i = outreachIdentitySchema.parse(command.payload);
+            if (Number(r.identity_version) !== i.expectedIdentityVersion) throw new DomainError('conflict', 'Identity changed; request a fresh approval');
+        } else {
+            const i = command.kind === 'work_actions' ? updateActionsSchema.parse(command.payload) : updateFactSchema.parse(command.payload);
+            const source = 'ticketId' in i
+                ? (await tx.query('SELECT chat_id,actions_version AS version FROM tickets WHERE id=$1', [i.ticketId])).rows[0]
+                : (await tx.query('SELECT j.chat_id,f.version FROM facts f JOIN analysis_jobs j ON j.id=f.job_id WHERE f.id=$1 AND f.parent_fact_id IS NULL', [i.factId])).rows[0];
+            const expectedVersion = 'expectedActionsVersion' in i ? i.expectedActionsVersion : i.expectedVersion;
+            if (!source || Number(source.version) !== expectedVersion) throw new DomainError('conflict', 'Data version changed; request a fresh approval');
+            if ('ticketId' in i && !await workParentIsCurrent(tx, i.ticketId)) throw new DomainError('conflict', 'Work source no longer belongs to its approved CRM relationship');
+            const member = (await tx.query(`SELECT 1 FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
+                WHERE rs.relationship_id=$1 AND s.chat_id=$2 AND rs.enrollment_state IN ('active','pending')`, [r.id, source.chat_id])).rowCount;
+            if (!member) throw new DomainError('conflict', 'Data no longer belongs to this CRM relationship');
+            await assertEvidence(tx, [...i.evidenceIds, ...('dates' in i ? i.dates.flatMap(d => d.evidenceIds) : [])], String(source.chat_id));
+        }
     }
     async listProposals(raw: unknown) { const i = salesProposalListSchema.parse(raw); return { items: (await this.database.query('SELECT * FROM outreach_sales_proposals WHERE ($1::uuid IS NULL OR relationship_id=$1) ORDER BY created_at DESC,id LIMIT $2', [i.relationshipId ?? null, i.limit])).rows }; }
     async getProposal(id: string) {
@@ -106,6 +175,11 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         return r;
     }
     async decide(raw: unknown, source: 'http' | 'telegram' | 'historical_policy' = 'http') {
+        if (await crmFirstEnabled(this.database) && source !== 'telegram')
+            throw new DomainError('conflict', 'Reply to the matching Telegram control message to approve, reject or correct this proposal');
+        return this.applyDecision(raw, source);
+    }
+    private async applyDecision(raw: unknown, source: 'http' | 'telegram' | 'historical_policy' = 'http') {
         const input = salesDecisionSchema.parse(raw), ref = await this.getProposal(input.proposalId);
         return this.database.transaction(async (tx) => {
             await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`outreach:command:${input.idempotencyKey}`]);
@@ -122,6 +196,9 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             const m = await this.manifest(tx, String(p.relationship_id));
             if (m.hash !== p.input_hash || !m.eligible.length || m.eligible.some(s => s.source_revision !== s.current_revision))
                 throw new DomainError('stale_proposal', 'Sales evidence or membership changed; request a fresh proposal');
+            const change: CrmCommand | null = p.command_kind && p.command_kind !== 'stage' ? { kind: p.command_kind as CrmCommand['kind'], payload: p.command_payload as Record<string, unknown> } : null;
+            if (change && input.action === 'correct') throw new DomainError('validation', 'Reject this data/Work proposal and submit a revised proposal for separate approval');
+            if (change && input.action === 'approve') await this.validateCommand(tx, m.r, change);
             let policy: unknown = {};
             if (source === 'historical_policy') {
                 const automatic = await automaticPolicy(tx);
@@ -141,6 +218,10 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             await tx.query('UPDATE outreach_sales_proposals SET state=$2,decided_at=now() WHERE id=$1', [p.id, { approve: 'approved', reject: 'rejected', correct: 'corrected' }[input.action]]);
             await tx.query("UPDATE outreach_control_outbox SET state='cancelled' WHERE proposal_id=$1 AND state<>'sent'", [p.id]);
             if (input.action === 'approve') {
+                if (change) {
+                    await this.applyCommand(tx, m.r, change, String(p.id));
+                    return d;
+                }
                 await tx.query(`UPDATE outreach_relationship_sources SET enrollment_state='active',version=version+1,updated_at=now() WHERE relationship_id=$1 AND source_thread_id=ANY($2::uuid[]) AND enrollment_state='pending'`, [p.relationship_id, m.eligible.map(s => s.id)]);
                 const r = (await tx.query(`UPDATE outreach_relationships SET accepted_stage=$2,stage_version=stage_version+CASE WHEN accepted_stage IS DISTINCT FROM $2 THEN 1 ELSE 0 END,
       evidence_revision=evidence_revision+1,provisional_stage=NULL,provisional_reason=NULL,disposition='pipeline',updated_at=now() WHERE id=$1 RETURNING *`, [p.relationship_id, p.target_stage])).rows[0]!;
@@ -152,6 +233,40 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             }
             return d;
         });
+    }
+    private async applyCommand(tx: SqlExecutor, r: Row, command: CrmCommand, proposalId: string): Promise<void> {
+        if (command.kind === 'work_actions') {
+            await updateTicketActionsTx(tx, updateActionsSchema.parse(command.payload));
+            return;
+        }
+        if (command.kind === 'fact') {
+            await updateFactTx(tx, updateFactSchema.parse(command.payload));
+            return;
+        }
+        if (command.kind === 'work') {
+            const chat = (await tx.query('SELECT * FROM chats WHERE id=$1', [command.payload.chatId])).rows[0]!;
+            const ticket = (await tx.query(`INSERT INTO tickets(chat_id,company_id,kind,crm_relationship_id,creation_proposal_id,summary,next_action,actions_source,workstream)
+                VALUES($1,$2,$3,$4,$5,$6,$6,'manual',$7) ON CONFLICT(creation_proposal_id) DO UPDATE SET creation_proposal_id=EXCLUDED.creation_proposal_id RETURNING id`,
+                [chat.id, chat.company_id, chat.company_id ? 'company' : 'contact_prospect', r.id, proposalId, command.payload.action, r.workstream ?? 'Others'])).rows[0]!;
+            await tx.query(`INSERT INTO ticket_evidence(ticket_id,evidence_id) SELECT $1::uuid,e.id FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
+                WHERE e.chat_id=$2 AND e.invalidated_at IS NULL AND m.deleted_at IS NULL AND m.version=e.message_version ON CONFLICT DO NOTHING`, [ticket.id, chat.id]);
+            await tx.query(`INSERT INTO ticket_contacts(ticket_id,contact_id) SELECT DISTINCT $1::uuid,ce.contact_id FROM contact_evidence ce
+                JOIN ticket_evidence te ON te.evidence_id=ce.evidence_id WHERE te.ticket_id=$1 ON CONFLICT DO NOTHING`, [ticket.id]);
+            return;
+        }
+        if (command.kind === 'actions') {
+            const i = outreachActionsSchema.parse(command.payload);
+            await tx.query('DELETE FROM outreach_actions WHERE relationship_id=$1', [r.id]);
+            for (const a of i.actions) await tx.query(`INSERT INTO outreach_actions(relationship_id,text,actor,state,precision,local_date,instant,timezone)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, [r.id, a.text, a.actor, a.state, a.precision, a.localDate, a.instant, a.timezone]);
+            await tx.query('UPDATE outreach_relationships SET actions_version=actions_version+1,evidence_revision=evidence_revision+1 WHERE id=$1', [r.id]);
+        } else {
+            const i = outreachIdentitySchema.parse(command.payload);
+            await tx.query('INSERT INTO outreach_identity_audit(relationship_id,reason,before_value,after_value) VALUES($1,$2,$3,$4)', [r.id, i.reason, JSON.stringify({ displayName: r.display_name }), JSON.stringify({ displayName: i.displayName })]);
+            await tx.query('UPDATE outreach_relationships SET display_name=$2,identity_version=identity_version+1,evidence_revision=evidence_revision+1 WHERE id=$1', [r.id, i.displayName]);
+        }
+        await tx.query(`INSERT INTO outreach_detail_refresh(relationship_id,reason) VALUES($1,'Telegram-approved CRM data change')
+            ON CONFLICT(relationship_id) DO UPDATE SET reason=EXCLUDED.reason,revision=gen_random_uuid(),updated_at=now()`, [r.id]);
     }
     async handleControlReply(message: ControlMessage): Promise<void> {
         if (!message.replyToMessageId || !replyPattern.test(message.text.trim()))
@@ -231,8 +346,14 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             return (await tx.query("UPDATE outreach_imports SET state='committed' WHERE id=$1 RETURNING *", [id])).rows[0]!;
         });
     }
-    async updateActions(raw: unknown) {
+    async updateActions(raw: unknown): Promise<Record<string, unknown>> {
         const i = outreachActionsSchema.parse(raw);
+        if (await crmFirstEnabled(this.database)) {
+            const r = (await this.get(i.relationshipId)).relationship;
+            return this.propose({ relationshipId: i.relationshipId, expectedEvidenceRevision: r.evidenceRevision,
+                idempotencyKey: `crm-actions:${digest(i)}`, targetStage: r.acceptedStage ?? 'lead', reason: 'Review CRM follow-up data change' },
+                'manual', true, { kind: 'actions', payload: i });
+        }
         return this.database.transaction(async (tx) => {
             const r = await this.lock(tx, i.relationshipId);
             if (Number(r.actions_version) !== i.expectedActionsVersion)
@@ -290,8 +411,14 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         }
     }
     private async failedAssessment(id: string, token: string, message: string) { await this.database.query("UPDATE outreach_assessments SET status='unavailable',last_error=$3,retry_at=now()+interval '5 minutes',updated_at=now() WHERE id=$1 AND claim_token=$2", [id, token, message.slice(0, 500)]); return { status: 'unavailable', detail: message }; }
-    async correctIdentity(raw: unknown) {
+    async correctIdentity(raw: unknown): Promise<Record<string, unknown>> {
         const i = outreachIdentitySchema.parse(raw);
+        if (await crmFirstEnabled(this.database)) {
+            const r = (await this.get(i.relationshipId)).relationship;
+            return this.propose({ relationshipId: i.relationshipId, expectedEvidenceRevision: r.evidenceRevision,
+                idempotencyKey: `crm-identity:${digest(i)}`, targetStage: r.acceptedStage ?? 'lead', reason: i.reason },
+                'manual', true, { kind: 'identity', payload: i });
+        }
         return this.database.transaction(async (tx) => {
             const r = await this.lock(tx, i.relationshipId);
             if (Number(r.identity_version) !== i.expectedIdentityVersion)
@@ -319,6 +446,13 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             detail = await this.get(id);
         }
         const r = detail.relationship;
+        if (!detail.activeSources.length && !detail.pendingSources.length) {
+            // Approval-exclusive cleanup intentionally suspends unapproved
+            // sources. Detail refresh is presentation-only and must retire its
+            // old intent instead of repeatedly trying to publish those sources.
+            await this.database.query('DELETE FROM outreach_detail_refresh WHERE relationship_id=$1 AND revision=$2', [id, row.revision]);
+            return;
+        }
         if (!r.acceptedStage) {
             await this.database.query('DELETE FROM outreach_detail_refresh WHERE relationship_id=$1 AND revision=$2', [id, row.revision]);
             return;
@@ -330,7 +464,9 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         const key = `outreach-details:${row.revision}`;
         const old = (await this.database.query('SELECT * FROM outreach_sales_proposals WHERE idempotency_key=$1', [key])).rows[0];
         const p = old ?? await this.propose({ relationshipId: id, expectedEvidenceRevision: r.evidenceRevision, targetStage: r.acceptedStage, idempotencyKey: key, reason: String(row.reason) }, 'manual', false);
-        await this.decide({ proposalId: p.id, idempotencyKey: `decision:${p.id}`, action: 'approve', reason: String(row.reason) });
+        // Presentation refresh reuses an accepted stage and accepted sources;
+        // it grants no new enrollment, work creation or movement permission.
+        await this.applyDecision({ proposalId: p.id, idempotencyKey: `decision:${p.id}`, action: 'approve', reason: String(row.reason) });
         await this.database.query('DELETE FROM outreach_detail_refresh WHERE relationship_id=$1 AND revision=$2', [id, row.revision]);
     }
     async isProposalCurrent(id: string): Promise<boolean> {
@@ -338,7 +474,24 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         if (p.state !== 'pending')
             return false;
         const m = await this.manifest(this.database, String(p.relationship_id));
-        return m.hash === p.input_hash && m.eligible.length > 0 && m.eligible.every(s => s.source_revision === s.current_revision);
+        let current = m.hash === p.input_hash && m.eligible.length > 0 && m.eligible.every(s => s.source_revision === s.current_revision);
+        if (current && p.command_kind && p.command_kind !== 'stage') {
+            try { await this.validateCommand(this.database, m.r, { kind: p.command_kind as CrmCommand['kind'], payload: p.command_payload as Record<string, unknown> }); }
+            catch (error) {
+                if (!(error instanceof DomainError) || !['conflict', 'not_found'].includes(error.code)) throw error;
+                current = false;
+            }
+        }
+        if (!current) {
+            // A proposal that can no longer be delivered must not remain visible
+            // as pending. Retain sent receipts for audit, but retire every
+            // undelivered attempt together with the stale proposal.
+            await this.database.transaction(async tx => {
+                await tx.query("UPDATE outreach_sales_proposals SET state='stale' WHERE id=$1 AND state='pending' AND input_hash=$2", [p.id, p.input_hash]);
+                await tx.query("UPDATE outreach_control_outbox SET state='cancelled',claim_token=NULL,lease_until=NULL,last_error='Sales source revision changed' WHERE proposal_id=$1 AND state<>'sent'", [p.id]);
+            });
+        }
+        return current;
     }
     async assessNext(signal?: AbortSignal): Promise<void> {
         const cursor = (await this.database.query("SELECT value FROM app_settings WHERE key='outreach:assessment-cursor'")).rows[0]?.value as {
@@ -377,9 +530,44 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
  (SELECT count(*) FROM outreach_sales_proposals WHERE state='pending') AS pending_proposals,
  (SELECT count(*) FROM outreach_publications WHERE state='pending') AS pending_publications,
  (SELECT count(*) FROM outreach_remote_requests WHERE state IN ('dispatched','remote_unresolved')) AS unresolved_requests FROM outreach_board_binding b`)).rows[0] ?? {};
+        const kpi = (await this.database.query(`WITH current_relationships AS (
+ SELECT DISTINCT r.id,r.kind,r.accepted_stage
+ FROM outreach_relationships r
+ JOIN outreach_relationship_sources rs ON rs.relationship_id=r.id
+ JOIN outreach_source_threads s ON s.id=rs.source_thread_id
+ LEFT JOIN outreach_telegram_inputs i ON i.chat_id=s.chat_id
+ WHERE r.retained AND rs.enrollment_state IN ('active','pending')
+   AND s.kind='telegram' AND i.inclusion='included' AND NOT i.is_control AND i.tracking_state='active'
+   AND i.mapping_status<>'non_company' AND r.company_id IS NOT DISTINCT FROM i.company_id
+   AND EXISTS(SELECT 1 FROM chats approved_chat WHERE approved_chat.id=s.chat_id AND ${approvedChatSourceSql('approved_chat')})
+), due_relationships AS (
+ SELECT DISTINCT a.relationship_id
+ FROM outreach_actions a JOIN current_relationships r ON r.id=a.relationship_id
+ WHERE a.actor='antseed' AND a.state='open'
+   AND ((a.precision='date' AND a.local_date<=(now() AT TIME ZONE a.timezone)::date)
+     OR (a.precision='instant' AND a.instant<=now()))
+)
+SELECT
+ count(*) FILTER (WHERE kind='company' AND (accepted_stage IS NULL OR accepted_stage IN ('lead','qualification','negotiation')))::int AS companies_in_talks,
+ count(*) FILTER (WHERE accepted_stage IS NULL OR accepted_stage<>'archived')::int AS active_conversations,
+ count(*) FILTER (WHERE kind='contact_prospect' AND (accepted_stage IS NULL OR accepted_stage IN ('lead','qualification','negotiation')))::int AS contact_prospects,
+ count(*) FILTER (WHERE accepted_stage IN ('qualification','negotiation'))::int AS active_opportunities,
+ count(*) FILTER (WHERE accepted_stage IS NULL)::int AS awaiting_placement,
+ count(*) FILTER (WHERE accepted_stage='won')::int AS deals_won,
+ (SELECT count(*)::int FROM due_relationships) AS follow_ups_due
+FROM current_relationships`)).rows[0] ?? {};
         const requests = (await this.database.query("SELECT id,resource_key,state,dispatched_at,last_error FROM outreach_remote_requests WHERE state IN ('dispatched','remote_unresolved') ORDER BY created_at LIMIT 50")).rows;
         const conflicts = (await this.database.query("SELECT id,relationship_id,last_error FROM outreach_publications WHERE state='conflict' ORDER BY created_at DESC LIMIT 50")).rows;
         const work = (await this.database.query('SELECT project_id,view_id FROM board_bindings WHERE singleton')).rows[0];
-        return { ...row, unresolved: requests, conflicts, workBoardUrl: this.publicVikunja && work ? `${this.publicVikunja.replace(/\/$/, '')}/projects/${work.project_id}/${work.view_id}` : null, nativeUrl: this.publicVikunja && row.project_id && row.view_id ? `${this.publicVikunja.replace(/\/$/, '')}/projects/${row.project_id}/${row.view_id}` : null };
+        return { ...row, kpis: {
+            companiesInTalks: Number(kpi.companies_in_talks ?? 0),
+            activeConversations: Number(kpi.active_conversations ?? 0),
+            contactProspects: Number(kpi.contact_prospects ?? 0),
+            activeOpportunities: Number(kpi.active_opportunities ?? 0),
+            awaitingPlacement: Number(kpi.awaiting_placement ?? 0),
+            followUpsDue: Number(kpi.follow_ups_due ?? 0),
+            pendingApprovals: Number(row.pending_proposals ?? 0),
+            dealsWon: Number(kpi.deals_won ?? 0),
+        }, unresolved: requests, conflicts, workBoardUrl: this.publicVikunja && work ? `${this.publicVikunja.replace(/\/$/, '')}/projects/${work.project_id}/${work.view_id}` : null, nativeUrl: this.publicVikunja && row.project_id && row.view_id ? `${this.publicVikunja.replace(/\/$/, '')}/projects/${row.project_id}/${row.view_id}` : null };
     }
 }

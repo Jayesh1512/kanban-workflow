@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { crmFirstEnabled } from '../shared/crm-first.js';
 import { randomUUID } from 'node:crypto';
 import type { Lane, Mutation, Proposal } from '../shared/domain.js';
 import type { Clock, Database, MutationStore, SqlExecutor } from '../shared/ports.js';
@@ -17,6 +18,14 @@ export async function observeRemoteTx(tx: SqlExecutor, ticketId: string, actualB
   await tx.query('SELECT c.id FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [ticketId]);
   await tx.query('SELECT id FROM tickets WHERE id=$1 FOR UPDATE', [ticketId]);
   const bucket = (await tx.query<{ lane: Lane }>('SELECT lane FROM board_buckets WHERE bucket_id=$1', [actualBucket])).rows[0]; if (!bucket) return false;
+  if (await crmFirstEnabled(tx)) {
+    const ticket = (await tx.query('SELECT lane FROM tickets WHERE id=$1', [ticketId])).rows[0];
+    if (ticket?.lane === bucket.lane) return true;
+    await tx.query(`INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb)
+      ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=now()`,
+      [`workflow:unapproved-movement:${ticketId}`, JSON.stringify({ observedLane: bucket.lane, acceptedLane: ticket?.lane, state: 'needs_telegram_approval' })]);
+    return false;
+  }
   await tx.query(`UPDATE tickets SET previous_active_lane=CASE WHEN $2='Blocked' AND lane IN ('To be started','Work in progress','Integrations') THEN lane ELSE previous_active_lane END,
     lane=$2,stage_version=stage_version+1,updated_at=now() WHERE id=$1 AND lane<>$2`, [ticketId, bucket.lane]);
   await tx.query("UPDATE proposals SET apply_state='stale',last_error='remote_stage_changed' WHERE ticket_id=$1 AND apply_state<>'applied'", [ticketId]);

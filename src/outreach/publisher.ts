@@ -7,6 +7,7 @@ import type { OutreachWorkflow } from './service.js';
 import { digest } from './hash.js';
 import { redactionCard, reviewCard, salesCard } from './card-format.js';
 import type { Row } from '../workflow/sql.js';
+import { approvedChatSourceSql } from '../shared/source-approval.js';
 type Board = {
     projectId: number;
     viewId: number;
@@ -99,6 +100,26 @@ export class OutreachPublisher {
         if (q.receipt_status == null)
             throw new DomainError('upstream_unavailable', `Publication quarantined: request ${q.id} has no terminal response. Readback alone cannot release it.`, false);
         await this.db.query(`UPDATE outreach_remote_requests SET state='verified',response_status=$2,response_body=$3,terminal_at=now(),last_error=NULL WHERE id=$1 AND state IN ('dispatched','remote_unresolved')`, [q.id, q.receipt_status, JSON.stringify(q.receipt_body)]);
+    }
+    private async settleForRetirement(resource: string, taskId: number): Promise<void> {
+        const q = (await this.db.query(`SELECT q.*,r.status AS receipt_status FROM outreach_remote_requests q
+          LEFT JOIN outreach_remote_receipts r ON r.request_id=q.id
+          WHERE q.resource_key=$1 AND q.state IN ('prepared','dispatched','remote_unresolved')`, [resource])).rows[0];
+        if (!q || q.state === 'prepared' || q.receipt_status != null) {
+            await this.settle(resource);
+            return;
+        }
+        const body = q.body && typeof q.body === 'object' && !Array.isArray(q.body) ? q.body as Row : {};
+        const targetsTask = q.path === `/tasks/${taskId}` || (q.method === 'PUT' && Number(body.task_id) === taskId);
+        // A non-creating request can no longer cause harm once the task is
+        // retired: PATCH/PUT/DELETE cannot recreate a missing Vikunja task.
+        // Preserve the unknown response as conflict audit rather than inventing
+        // a terminal receipt, then continue the stricter marker/delete/readback.
+        if (q.method === 'POST' || !targetsTask)
+            throw new DomainError('upstream_unavailable', `Publication quarantined: request ${q.id} may create or target another resource`, false);
+        await this.db.query(`UPDATE outreach_remote_requests SET state='conflict',terminal_at=now(),
+          last_error='Approval-exclusive retirement superseded a non-creating request whose response was unknown'
+          WHERE id=$1 AND state IN ('dispatched','remote_unresolved')`, [q.id]);
     }
     private async write(resource: string, method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body: unknown, signal: AbortSignal, publicationId: string | null = null): Promise<unknown> {
         signal.throwIfAborted();
@@ -262,11 +283,10 @@ export class OutreachPublisher {
           LEFT JOIN outreach_task_bindings b ON b.relationship_id=r.id
           WHERE r.retained AND r.accepted_stage IS NULL AND coalesce(b.state,'pending')<>'conflict'
             AND EXISTS(SELECT 1 FROM outreach_relationship_sources rs JOIN outreach_source_threads src ON src.id=rs.source_thread_id
-              LEFT JOIN chats c ON c.id=src.chat_id LEFT JOIN tickets t ON t.id=src.ticket_id
+              LEFT JOIN chats c ON c.id=src.chat_id LEFT JOIN outreach_telegram_inputs t ON t.chat_id=src.chat_id
               WHERE rs.relationship_id=r.id AND rs.enrollment_state IN ('active','pending') AND
-              ((src.kind='email_report' AND coalesce(src.coverage->>'superseded','false')<>'true') OR
-               (src.kind='telegram' AND c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active'
-                AND c.mapping_status<>'non_company' AND t.company_id IS NOT DISTINCT FROM r.company_id)))
+              (src.kind='telegram' AND c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active'
+                AND c.mapping_status<>'non_company' AND t.company_id IS NOT DISTINCT FROM r.company_id AND ${approvedChatSourceSql('c')}))
             AND NOT EXISTS(SELECT 1 FROM outreach_remote_requests q WHERE q.resource_key='outreach:relationship:'||r.id::text
               AND q.state IN ('dispatched','remote_unresolved') AND NOT EXISTS(SELECT 1 FROM outreach_remote_receipts receipt WHERE receipt.request_id=q.id))
           ORDER BY b.updated_at NULLS FIRST,r.id LIMIT 1`)).rows[0];
@@ -299,7 +319,11 @@ export class OutreachPublisher {
         }));
     }
     private async retireOne(board: Board, signal?: AbortSignal): Promise<void> {
-        const rows = (await this.db.query("SELECT b.* FROM outreach_task_bindings b JOIN outreach_relationships r ON r.id=b.relationship_id WHERE b.task_id IS NOT NULL AND b.state NOT IN ('retired','conflict') AND NOT EXISTS(SELECT 1 FROM outreach_remote_requests q WHERE q.resource_key='outreach:relationship:'||b.relationship_id::text AND q.state IN ('dispatched','remote_unresolved') AND NOT EXISTS(SELECT 1 FROM outreach_remote_receipts receipt WHERE receipt.request_id=q.id)) AND NOT EXISTS(SELECT 1 FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id LEFT JOIN chats c ON c.id=s.chat_id LEFT JOIN tickets t ON t.id=s.ticket_id WHERE rs.relationship_id=r.id AND (rs.enrollment_state='active' OR (r.accepted_stage IS NULL AND rs.enrollment_state='pending')) AND ((s.kind='email_report' AND coalesce(s.coverage->>'superseded','false')<>'true') OR (s.kind='telegram' AND c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active' AND c.mapping_status<>'non_company' AND t.company_id IS NOT DISTINCT FROM r.company_id))) ORDER BY b.updated_at LIMIT 25")).rows;
+        // A conflict may describe an older publication/source mismatch. Once all
+        // approved source contributions are gone, it must not make the remote
+        // card immortal. The retirement path below still verifies the managed
+        // project, marker, attachments and delete readback before clearing it.
+        const rows = (await this.db.query(`SELECT b.* FROM outreach_task_bindings b JOIN outreach_relationships r ON r.id=b.relationship_id WHERE b.task_id IS NOT NULL AND b.state<>'retired' AND NOT EXISTS(SELECT 1 FROM outreach_remote_requests q WHERE q.resource_key='outreach:relationship:'||b.relationship_id::text AND q.state IN ('dispatched','remote_unresolved') AND q.method='POST' AND NOT EXISTS(SELECT 1 FROM outreach_remote_receipts receipt WHERE receipt.request_id=q.id)) AND NOT EXISTS(SELECT 1 FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id LEFT JOIN chats c ON c.id=s.chat_id LEFT JOIN outreach_telegram_inputs t ON t.chat_id=s.chat_id WHERE rs.relationship_id=r.id AND (rs.enrollment_state='active' OR (r.accepted_stage IS NULL AND rs.enrollment_state='pending')) AND (s.kind='telegram' AND c.inclusion='included' AND NOT c.is_control AND t.tracking_state='active' AND c.mapping_status<>'non_company' AND t.company_id IS NOT DISTINCT FROM r.company_id AND ${approvedChatSourceSql('c')})) ORDER BY b.updated_at LIMIT 25`)).rows;
         for (const binding of rows) {
             signal?.throwIfAborted();
             const current = await this.workflow.manifest(this.db, String(binding.relationship_id));
@@ -307,7 +331,7 @@ export class OutreachPublisher {
                 continue;
             await this.maintain(binding, () => this.db.withSessionLock(`antseed:outreach:relationship:${binding.relationship_id}`, async (_sql, scope) => {
                 const s = AbortSignal.any([scope, ...(signal ? [signal] : [])]), resource = `outreach:relationship:${binding.relationship_id}`;
-                await this.settle(resource);
+                await this.settleForRetirement(resource, positive(binding.task_id));
                 const latest = await this.workflow.manifest(this.db, String(binding.relationship_id));
                 if (latest.eligible.some(x => x.enrollment_state === 'active' || (latest.r.accepted_stage === null && x.enrollment_state === 'pending'))) return;
                 const task = await this.read(`/tasks/${binding.task_id}`, s);

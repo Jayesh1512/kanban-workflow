@@ -33,4 +33,33 @@ if ! printf '%s\n' "$users" | grep -F "$email" > /dev/null; then
   /app/vikunja/vikunja user create --username "$username" --email "$email" --password "$password"
 fi
 unset password users
-exec /app/vikunja/vikunja "$@"
+
+# Keep Vikunja's API and embedded frontend private to the container. The local
+# nginx listener preserves the canonical port while adding the AntSeed KPI
+# dashboard shell to HTML responses. API traffic remains a transparent proxy.
+export VIKUNJA_SERVICE_INTERFACE=127.0.0.1:3457
+/app/vikunja/vikunja "$@" &
+vikunja_pid=$!
+mkdir -p /tmp/nginx/logs
+nginx -p /tmp/nginx/ -g 'daemon off;' &
+nginx_pid=$!
+
+stop_services() {
+  trap - TERM INT
+  kill -TERM "$nginx_pid" "$vikunja_pid" 2>/dev/null || true
+  wait "$nginx_pid" 2>/dev/null || true
+  wait "$vikunja_pid" 2>/dev/null || true
+}
+trap 'stop_services; exit 0' TERM INT
+
+while kill -0 "$nginx_pid" 2>/dev/null && kill -0 "$vikunja_pid" 2>/dev/null; do
+  sleep 1
+done
+status=1
+if ! kill -0 "$vikunja_pid" 2>/dev/null; then
+  wait "$vikunja_pid" || status=$?
+else
+  wait "$nginx_pid" || status=$?
+fi
+stop_services
+exit "$status"
