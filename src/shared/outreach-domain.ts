@@ -90,6 +90,7 @@ export interface OutreachDetail {
     suspendedSources: OutreachSource[];
     limits: string[];
     actions?: OutreachAction[];
+    workTickets?: Array<{ id: string; action: string | null; lane: Lane; vikunjaTaskId: string | null }>;
     publication?: {
         state: string;
         lastError: string | null;
@@ -115,6 +116,8 @@ export interface OutreachAction {
     version: number;
 }
 export interface OutreachCommands {
+    proposeWork(input: unknown): Promise<Record<string, unknown>>;
+    proposeRecordChange(kind: 'work_actions' | 'fact', input: unknown): Promise<unknown>;
     propose(input: unknown, origin?: 'manual' | 'hermes' | 'openai' | 'historical_policy'): Promise<Record<string, unknown>>;
     listProposals(input: unknown): Promise<{
         items: Record<string, unknown>[];

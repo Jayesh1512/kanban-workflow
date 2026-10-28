@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { crmFirstEnabled, workParentIsCurrent } from '../shared/crm-first.js';
 import { outreachContext } from '../shared/outreach.js';
 import type { BusinessFact, ContactDetail, DateFact, Page, Priority, Ticket } from '../shared/domain.js';
 import type { Clock, CompanyWrite, ContactWrite, Database, RecordsService, SqlExecutor } from '../shared/ports.js';
@@ -26,6 +27,7 @@ export async function getContactTx(tx: SqlExecutor, id: string): Promise<Contact
     roles: await Promise.all(roles.map(async (role) => ({ contactId: id, companyId: String(role.company_id), role: String(role.role), evidenceIds: await evidenceFor(tx, 'role_evidence', 'role_id', String(role.id)) }))) };
 }
 export async function ensureTicketTx(tx: SqlExecutor, chatId: string): Promise<Ticket> {
+  assert(!await crmFirstEnabled(tx), 'conflict', 'Propose a concrete Work action from the CRM and approve it in Telegram to create a ticket');
   const r = (await tx.query('SELECT * FROM chats WHERE id=$1 FOR UPDATE', [chatId])).rows[0]; assert(r, 'not_found', 'Chat not found');
   assert(r.inclusion === 'included' && !r.is_control, 'excluded_chat', 'Chat is not included business content');
   assert(r.mapping_status === 'confirmed' && r.company_id, 'ambiguous_mapping', 'Chat has no confirmed company');
@@ -36,6 +38,7 @@ export async function ensureTicketTx(tx: SqlExecutor, chatId: string): Promise<T
 }
 /** Called only after sourced AI outbound-enquiry validation in analysis completion. */
 export async function ensureContactProspectTx(tx: SqlExecutor, chatId: string): Promise<Ticket> {
+  assert(!await crmFirstEnabled(tx), 'conflict', 'CRM intake does not create Work tickets; propose and approve a concrete Work action');
   const chat = (await tx.query('SELECT * FROM chats WHERE id=$1 FOR UPDATE', [chatId])).rows[0];
   assert(chat, 'not_found', 'Chat not found');
   assert(chat.inclusion === 'included' && !chat.is_control, 'excluded_chat', 'Chat is not included business content');
@@ -120,6 +123,32 @@ export async function refreshInferredActions(tx: SqlExecutor, ticketId: string):
     blockers=$3,updated_at=now() WHERE id=$1`, [ticketId, next, facts.filter((f) => f.kind === 'blocker').map((f) => f.text)]);
 }
 
+export async function updateTicketActionsTx(tx: SqlExecutor, input: z.infer<typeof updateActionsSchema>) {
+  await assertEvidence(tx, input.evidenceIds);
+  const row = (await tx.query(`UPDATE tickets SET next_action=$1,follow_up_at=$2,eta_at=$3,actions_source='manual',actions_version=actions_version+1,updated_at=now()
+    WHERE id=$4 AND actions_version=$5 RETURNING id`, [input.nextAction, input.followUpAt, input.etaAt, input.ticketId, input.expectedActionsVersion])).rows[0];
+  assert(row, 'conflict', 'Ticket action version changed'); await links(tx, 'ticket_evidence', 'ticket_id', input.ticketId, input.evidenceIds, false); return getTicketTx(tx, input.ticketId);
+}
+
+export async function updateFactTx(tx: SqlExecutor, input: z.infer<typeof updateFactSchema>) {
+  const ref = (await tx.query('SELECT j.chat_id FROM facts f JOIN analysis_jobs j ON j.id=f.job_id WHERE f.id=$1 AND f.parent_fact_id IS NULL', [input.factId])).rows[0];
+  assert(ref, 'not_found', 'Fact not found');
+  // Same order as ingestion/analysis: chat, then ticket, then fact. Read the
+  // current ticket only AFTER the chat lock, since analysis may attach a
+  // previously unassociated fact while this command waits for that lock.
+  await tx.query('SELECT id FROM chats WHERE id=$1 FOR UPDATE', [ref.chat_id]);
+  const current = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.factId])).rows[0]!;
+  if (current.ticket_id) await tx.query('SELECT id FROM tickets WHERE id=$1 FOR UPDATE', [current.ticket_id]);
+  await assertEvidence(tx, [...input.evidenceIds, ...input.dates.flatMap((d) => d.evidenceIds)]);
+  if (input.answersFactId) { const answered = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.answersFactId])).rows[0]; const current = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.factId])).rows[0]; assert(answered && current && answered.ticket_id === current.ticket_id && input.answersFactId !== input.factId, 'validation', 'Invalid answering fact'); }
+  const row = (await tx.query(`UPDATE facts SET actor_party=$1,actor_contact_id=$2,actor_display_name=$3,state=$4,answers_fact_id=$5,source='manual',version=version+1
+    WHERE id=$6 AND version=$7 AND parent_fact_id IS NULL RETURNING *`, [input.actor.party, input.actor.contactId, input.actor.displayName, input.state, input.answersFactId, input.factId, input.expectedVersion])).rows[0];
+  assert(row, 'conflict', 'Fact version changed'); await links(tx, 'fact_evidence', 'fact_id', input.factId, input.evidenceIds);
+  for (const date of input.dates) { new Intl.DateTimeFormat('en', { timeZone: date.timezone }); assert(!date.ambiguous || date.precision === 'unresolved', 'validation', 'Ambiguous date cannot have a resolved instant/day'); }
+  await replaceDates(tx, input.factId, String(row.job_id), row.ticket_id as string | null, input.dates, 'manual');
+  if (row.ticket_id) await refreshInferredActions(tx, String(row.ticket_id)); return factRow(tx, row);
+}
+
 export class RecordsRepository implements RecordsService {
   constructor(readonly db: Database, private clock: Clock = { now: () => new Date() }, private timezone = 'Asia/Kolkata') {}
   async getCompany(id: string) { uuidSchema.parse(id); return getCompanyTx(this.db, id); }
@@ -157,6 +186,7 @@ export class RecordsRepository implements RecordsService {
     assert(Number.isInteger(input.limit) && input.limit > 0 && input.limit <= 200, 'validation', 'Invalid context limit');
     const ticket = await this.getTicket(input.ticketId); const row = (await this.db.query('SELECT * FROM chats WHERE id=$1', [ticket.chatId])).rows[0]!; const chat = chatRow(row);
     assert(chat.inclusion === 'included' && !chat.isControl && ticket.trackingState === 'active', 'excluded_chat', 'Ticket business context is not tracked');
+    assert(await workParentIsCurrent(this.db, ticket.id), 'conflict', 'Work source no longer belongs to its approved CRM relationship');
     const messages = (await this.db.query('SELECT * FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY sent_at DESC,id DESC LIMIT $2', [chat.id, input.limit])).rows.map(messageRow);
     const evidence = (await this.db.query(`SELECT e.* FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
       WHERE e.chat_id=$1 AND e.message_id=ANY($2::int[]) AND e.message_version=m.version AND e.invalidated_at IS NULL AND m.deleted_at IS NULL ORDER BY e.observed_at DESC,e.id`, [chat.id, messages.map((m) => m.id)])).rows.map(evidenceRow);
@@ -166,33 +196,13 @@ export class RecordsRepository implements RecordsService {
   }
   async updateActions(raw: Parameters<RecordsService['updateActions']>[0]) {
     const input = updateActionsSchema.parse(raw);
-    return command(this.db, `actions:${input.ticketId}`, input.idempotencyKey, input, async (tx) => {
-      await assertEvidence(tx, input.evidenceIds);
-      const row = (await tx.query(`UPDATE tickets SET next_action=$1,follow_up_at=$2,eta_at=$3,actions_source='manual',actions_version=actions_version+1,updated_at=now()
-        WHERE id=$4 AND actions_version=$5 RETURNING id`, [input.nextAction, input.followUpAt, input.etaAt, input.ticketId, input.expectedActionsVersion])).rows[0];
-      assert(row, 'conflict', 'Ticket action version changed'); await links(tx, 'ticket_evidence', 'ticket_id', input.ticketId, input.evidenceIds, false); return getTicketTx(tx, input.ticketId);
-    });
+    assert(!await crmFirstEnabled(this.db), 'conflict', 'Submit this data change through the CRM for Telegram approval');
+    return command(this.db, `actions:${input.ticketId}`, input.idempotencyKey, input, tx => updateTicketActionsTx(tx, input));
   }
   async updateFact(raw: Parameters<RecordsService['updateFact']>[0]) {
     const input = updateFactSchema.parse(raw);
-    return command(this.db, `fact:${input.factId}`, input.idempotencyKey, input, async (tx) => {
-      const ref = (await tx.query('SELECT j.chat_id FROM facts f JOIN analysis_jobs j ON j.id=f.job_id WHERE f.id=$1 AND f.parent_fact_id IS NULL', [input.factId])).rows[0];
-      assert(ref, 'not_found', 'Fact not found');
-      // Same order as ingestion/analysis: chat, then ticket, then fact. Read the
-      // current ticket only AFTER the chat lock, since analysis may attach a
-      // previously unassociated fact while this command waits for that lock.
-      await tx.query('SELECT id FROM chats WHERE id=$1 FOR UPDATE', [ref.chat_id]);
-      const current = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.factId])).rows[0]!;
-      if (current.ticket_id) await tx.query('SELECT id FROM tickets WHERE id=$1 FOR UPDATE', [current.ticket_id]);
-      await assertEvidence(tx, [...input.evidenceIds, ...input.dates.flatMap((d) => d.evidenceIds)]);
-      if (input.answersFactId) { const answered = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.answersFactId])).rows[0]; const current = (await tx.query('SELECT ticket_id FROM facts WHERE id=$1', [input.factId])).rows[0]; assert(answered && current && answered.ticket_id === current.ticket_id && input.answersFactId !== input.factId, 'validation', 'Invalid answering fact'); }
-      const row = (await tx.query(`UPDATE facts SET actor_party=$1,actor_contact_id=$2,actor_display_name=$3,state=$4,answers_fact_id=$5,source='manual',version=version+1
-        WHERE id=$6 AND version=$7 AND parent_fact_id IS NULL RETURNING *`, [input.actor.party, input.actor.contactId, input.actor.displayName, input.state, input.answersFactId, input.factId, input.expectedVersion])).rows[0];
-      assert(row, 'conflict', 'Fact version changed'); await links(tx, 'fact_evidence', 'fact_id', input.factId, input.evidenceIds);
-      for (const date of input.dates) { new Intl.DateTimeFormat('en', { timeZone: date.timezone }); assert(!date.ambiguous || date.precision === 'unresolved', 'validation', 'Ambiguous date cannot have a resolved instant/day'); }
-      await replaceDates(tx, input.factId, String(row.job_id), row.ticket_id as string | null, input.dates, 'manual');
-      if (row.ticket_id) await refreshInferredActions(tx, String(row.ticket_id)); return factRow(tx, row);
-    });
+    assert(!await crmFirstEnabled(this.db), 'conflict', 'Submit this data change through the CRM for Telegram approval');
+    return command(this.db, `fact:${input.factId}`, input.idempotencyKey, input, tx => updateFactTx(tx, input));
   }
   async priorities(input: Parameters<RecordsService['priorities']>[0]): Promise<Priority[]> {
     assert(Number.isInteger(input.limit) && input.limit > 0 && input.limit <= 200, 'validation', 'Invalid priorities limit');

@@ -1,10 +1,10 @@
-import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
 import type { SqlExecutor, ControlMessage, TelegramPort } from '../shared/ports.js';
 import { DomainError } from '../shared/api.js';
 import type { PgDatabase } from '../platform/database.js';
 import type { TelegramStore } from './store.js';
+import { crmFirstEnabled } from '../shared/crm-first.js';
 
 /** Metadata only: never copy a business message into an intake request. */
 export async function queueIntake(tx: SqlExecutor, chatId: string, manual = false): Promise<void> {
@@ -39,19 +39,18 @@ export class ChatIntake {
       }
       const approve = /^approve/i.test(message.text.trim());
       await this.store.changeInclusion(tx, chat, approve ? 'included' : 'excluded');
-      if (approve && chat.mappingStatus !== 'non_company') {
+      if (approve && chat.mappingStatus !== 'non_company' && !await crmFirstEnabled(tx)) {
         // Explicit intake approval is enough to create a visible prospect. Company
         // identity stays unknown until sourced; the projector owns remote creation.
         await tx.query(`INSERT INTO tickets(chat_id,company_id,kind)
           VALUES($1,$2,CASE WHEN $2::uuid IS NULL THEN 'contact_prospect' ELSE 'company' END)
           ON CONFLICT(chat_id) DO NOTHING`, [chat.id, chat.companyId]);
       }
-      await tx.query("UPDATE chat_intake_requests SET decision=$2,decided_at=now(),decided_message_id=$3 WHERE id=$1", [row['id'], approve ? 'approved' : 'rejected', message.messageId]);
+      await tx.query("UPDATE chat_intake_requests SET decision=$2,decision_origin='telegram',operator_reason=NULL,decided_at=now(),decided_message_id=$3 WHERE id=$1", [row['id'], approve ? 'approved' : 'rejected', message.messageId]);
     });
     return true;
   }
   async sendOne(): Promise<void> {
-    const automatic=await automaticPolicy(this.db);
     const token = randomUUID();
     const row = await this.db.transaction(async (tx): Promise<QueryResultRow | null> => {
       const control = (await tx.query('SELECT id FROM chats WHERE is_control')).rows[0];
@@ -59,18 +58,18 @@ export class ChatIntake {
       // Five unresolved delivered requests maximum; new live activity/manual
       // requests are prioritized. At most one new request each thirty seconds.
       const item = (await tx.query(`SELECT r.*,c.title,c.kind,c.username FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id
-        WHERE ($2::timestamptz IS NULL OR EXISTS(SELECT 1 FROM telegram_conversation_starts s WHERE s.chat_id=r.chat_id AND s.checked_cutoff=$2 AND (s.state IN ('older','unknown') OR (s.state='qualifies' AND ${groupInitialApprovalSql('c','s','$3')})))) AND r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
+        WHERE r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
         AND (r.attempts<10 OR r.control_chat_id IS DISTINCT FROM $1) AND (r.lease_until IS NULL OR r.lease_until<now())
         AND (r.delivery_state<>'sent' OR r.control_chat_id IS DISTINCT FROM $1)
         AND (r.control_chat_id=$1 AND r.attempts>0 OR (
           (SELECT count(*) FROM chat_intake_requests WHERE decision='pending' AND control_chat_id=$1 AND attempts>0)<5
           AND NOT EXISTS(SELECT 1 FROM app_settings WHERE key='telegram:intake:last-send' AND (value->>'at')::timestamptz>now()-interval '30 seconds')))
-        ORDER BY (r.attempts>0) DESC,r.priority_at DESC,r.created_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1`, [control['id'],automatic?automatic.cutoff:null,automatic?.groupApprovalFrom??null])).rows[0];
+        ORDER BY (r.attempts>0) DESC,r.priority_at DESC,r.created_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1`, [control['id']])).rows[0];
       if (!item) return null;
       const changed = String(item['control_chat_id']) !== String(control['id']);
       let randomId = String(item['random_id']);
       if (changed && item['control_chat_id'] != null) { let next = 0n; while(next === 0n) next = randomBytes(8).readBigInt64BE(); randomId = next.toString(); }
-      const text = changed || !item['text'] ? `Add this chat to AntSeed?\n\n${String(item['title']).replace(/[\r\n]/g,' ').slice(0,200)}\nType: ${item['kind']} · Chat ID: ${item['chat_id']}\n${item['username'] ? `@${String(item['username']).slice(0,64)}\n` : ''}\nReply to THIS message with approve to add a prospect card and start import/analysis.\nReply reject to leave it out. No reply = not imported.\nThis approves chat intake only; lane changes still need their own approval.\n\n[antseed-intake:${item['id']}]` : String(item['text']);
+      const text = changed || !item['text'] ? `Add this chat to AntSeed CRM?\n\n${String(item['title']).replace(/[\r\n]/g,' ').slice(0,200)}\nType: ${item['kind']} · Chat ID: ${item['chat_id']}\n${item['username'] ? `@${String(item['username']).slice(0,64)}\n` : ''}\nReply to THIS message with approve to add this CRM conversation and start import/analysis.\nReply reject to leave it out. No reply = not imported.\nThis creates no Work ticket. CRM stage changes and concrete Work actions need separate Telegram approval.\n\n[antseed-intake:${item['id']}]` : String(item['text']);
       await tx.query(`UPDATE chat_intake_requests SET delivery_state='sending',control_chat_id=$2,text=$3,random_id=$6,
         message_id=CASE WHEN $5 THEN NULL ELSE message_id END,claim_token=$4,lease_until=now()+interval '30 seconds',attempts=CASE WHEN $5 THEN 1 ELSE attempts+1 END WHERE id=$1`, [item['id'], control['id'], text, token, changed, randomId]);
       await tx.query("INSERT INTO app_settings(key,value) VALUES('telegram:intake:last-send',jsonb_build_object('at',now())) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value");

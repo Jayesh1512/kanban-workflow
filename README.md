@@ -7,7 +7,9 @@ Created in [T3 Code](https://t3.codes).
 A personal relationship board backed by Telegram MTProto, Vikunja, PostgreSQL,
 OpenAI extraction and Vercel Jev classification. Nous Hermes accesses the same
 backend through MCP. Lane recommendations remain pending until an operator
-approves them.
+approves them in Telegram. Approved Telegram chats enter the CRM first; concrete
+Work actions create tickets only after a separate Telegram approval. See
+[CRM and Work approval flow](docs/CRM_OPERATIONS.md).
 
 Start the complete stack from this directory:
 
@@ -27,6 +29,9 @@ for port/configuration overrides, board access and volume persistence.
 
 The MCP endpoint is `http://localhost:3000/mcp`. See
 [Hermes configuration and tool behavior](src/hermes/README.md).
+
+The active application focuses on Telegram, CRM and approved Work actions.
+Meeting ingestion, meeting pages and meeting MCP tools are deferred.
 
 For local development:
 

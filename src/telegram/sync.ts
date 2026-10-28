@@ -27,6 +27,7 @@ export class TelegramSync {
   private nextDiscovery = Date.now() + 60_000;
   private retryAt = 0;
   private globalFailures = 0;
+  private activity = 'idle';
   private component: ServiceStatus = { state: 'unconfigured', code: 'login_required', detail: 'Connect Telegram to start import/replay', checkedAt: new Date().toISOString() };
   constructor(private readonly db: PgDatabase, private readonly store: TelegramStore, private readonly telegram: MtcuteAdapter, private readonly control: DurableControlBus, private readonly batchSize = 100, private readonly ready?:()=>Promise<void>) { this.automaticIntake=new AutomaticIntake(db,store,telegram); }
   register(): void { this.unsubscribe ??= this.telegram.subscribe((event) => this.accept(event)); }
@@ -75,29 +76,38 @@ export class TelegramSync {
   async tick(): Promise<void> {
     if (this.stopped || Date.now() < this.retryAt || (await this.telegram.loginState()).state !== 'ready') return;
     try {
-      await this.work(); this.globalFailures = 0; this.retryAt = 0; await this.refreshStatus();
+      await this.work(); this.globalFailures = 0; this.retryAt = 0; this.activity = 'idle'; await this.refreshStatus();
     } catch (error) {
       const seconds = tl.RpcError.is(error) && 'seconds' in error ? Number(error.seconds) : 0;
       const floodDelay = Number.isSafeInteger(seconds) && seconds > 0 ? seconds * 1000 : 0;
       const delay = Math.max(Math.min(300_000, 10_000 * 2 ** Math.min(this.globalFailures++, 5)), floodDelay);
       this.retryAt = Date.now() + delay;
-      this.component = { state: 'degraded', code: 'telegram_sync_retry', detail: `Global Telegram/network/storage failure; synchronization retained for retry after ${new Date(this.retryAt).toISOString()}`, checkedAt: new Date().toISOString() };
+      const generic = error instanceof Error ? error.message.replace(/(?:postgres(?:ql)?|https?):\/\/\S+/gi, '[redacted endpoint]').slice(0, 180) : 'unknown_error';
+      const reason = tl.RpcError.is(error) ? error.text : error instanceof DomainError ? `${error.code}: ${error.message}` : error instanceof Error ? `${error.name}: ${generic}` : 'unknown_error';
+      this.component = { state: 'degraded', code: 'telegram_sync_retry', detail: `Global Telegram/network/storage failure during ${this.activity} (${reason}); synchronization retained for retry after ${new Date(this.retryAt).toISOString()}`, checkedAt: new Date().toISOString() };
       throw error;
     }
   }
   private async work(): Promise<void> {
+    this.activity = 'database readiness';
     await this.ready?.();
+    this.activity = 'control delivery';
     await this.control.tick(); if (this.stopped) return;
     if (Date.now() >= this.nextDiscovery) {
+      this.activity = 'dialog discovery';
       this.nextDiscovery = Date.now() + 60_000;
       for await (const dialog of this.telegram.discoverDialogs()) { if (this.stopped) return; await this.store.upsertDialog(dialog); }
     }
+    this.activity = 'control replay';
     await this.controlReplay(); if (this.stopped) return;
+    this.activity = 'chat intake';
     await this.automaticIntake.tick(); if (this.stopped) return;
+    this.activity = 'history selection';
     const history = (await this.db.query(`SELECT c.id,c.policy_version,r.batch_size FROM chats c JOIN history_cursors h ON h.chat_id=c.id JOIN telegram_history_requests r ON r.chat_id=c.id
       WHERE c.inclusion='included' AND NOT c.is_control AND r.remaining_batches>0 AND h.status IN ('pending','running','error') AND (h.lease_until IS NULL OR h.lease_until<now())
       AND NOT EXISTS(SELECT 1 FROM app_settings a WHERE a.key='telegram:sync-retry:history:'||c.id::text AND (a.value->>'retryAt')::timestamptz>now()) ORDER BY h.updated_at,c.id LIMIT 1`)).rows[0];
     if (history) {
+      this.activity = 'history import';
       const chatId = String(history['id']), cursor = await this.store.claimHistory(chatId, this.workerId, 30_000);
       if (cursor) {
         const success = await this.isolated(chatId, 'history', async () => { await this.store.commitHistoryBatch(chatId, Number(history['policy_version']), cursor.generation, await this.telegram.getHistory(chatId, cursor, Number(history['batch_size']))); });
@@ -105,10 +115,12 @@ export class TelegramSync {
       }
     }
     if (this.stopped) return;
+    this.activity = 'replay selection';
     const replay = (await this.db.query(`SELECT c.id,c.policy_version FROM chats c JOIN live_checkpoints l ON l.chat_id=c.id
       WHERE c.inclusion='included' AND NOT c.is_control AND (l.replay_required OR l.reconciled_at IS NULL OR l.reconciled_at<now()-interval '60 seconds')
       AND NOT EXISTS(SELECT 1 FROM app_settings a WHERE a.key='telegram:sync-retry:replay:'||c.id::text AND (a.value->>'retryAt')::timestamptz>now()) ORDER BY l.reconciled_at NULLS FIRST,c.id LIMIT 1`)).rows[0];
     if (replay) {
+      this.activity = 'live replay';
       const chatId = String(replay['id']), checkpoint = await this.store.getLiveCheckpoint(chatId);
       const success = await this.isolated(chatId, 'replay', async () => {
         // New coverage begins at a bounded head window; older history has its own budget.
@@ -117,11 +129,14 @@ export class TelegramSync {
           : await this.telegram.replayPage(chatId, checkpoint.highWaterMessageId, this.batchSize);
         await this.store.commitReplay({ chatId, expectedPolicyVersion: Number(replay['policy_version']), expectedGeneration: checkpoint.generation, messages, highWaterMessageId: Math.max(checkpoint.highWaterMessageId ?? 0, ...messages.map((m) => m.id)) || null });
       });
-      if (success && await this.due(chatId, 'recent')) await this.isolated(chatId, 'recent', () => this.reconcileRecent(chatId));
+      if (success && await this.due(chatId, 'recent')) { this.activity = 'recent-message reconciliation'; await this.isolated(chatId, 'recent', () => this.reconcileRecent(chatId)); }
     }
   }
   private async reconcileRecent(chatId: string): Promise<void> {
-    const ids = (await this.db.query('SELECT id FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY id DESC LIMIT $2', [chatId, this.batchSize])).rows.map((r) => Number(r['id']));
+    // Recent edit/delete reconciliation is periodic. Bound each turn so a busy
+    // chat cannot monopolize the external database pool with sequential
+    // ingestion transactions; older history retains its independent cursor.
+    const ids = (await this.db.query('SELECT id FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY id DESC LIMIT $2', [chatId, Math.min(this.batchSize, 5)])).rows.map((r) => Number(r['id']));
     if (!ids.length) return;
     const remote = await this.telegram.recent(chatId, ids);
     if (remote.length !== ids.length) throw new Error('Unexpected Telegram reconciliation cardinality');

@@ -16,6 +16,7 @@ it('persists outbound prospect/contact -> awaiting reply -> sourced inbound -> p
     await db.query("UPDATE analysis_jobs SET status='cancelled'");
     const source = outbound(), m = source.messages[0]!;
     await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(7,'user','Mira','included')");
+    await db.query("INSERT INTO chat_intake_requests(chat_id,policy_version,decision,control_chat_id,message_id,delivery_state,decided_message_id,decided_at) VALUES(7,0,'approved',-1001,9201,'sent',9202,now())");
     await db.query('INSERT INTO messages(chat_id,id,sender_id,sent_at,text,sender_snapshot,peer_snapshot,forward_metadata) VALUES(7,1,99,$1,$2,$3,$4,$5)', [m.sentAt,m.text,JSON.stringify(m.sender),JSON.stringify(m.peer),JSON.stringify(m.forward)]);
     await seedJob(db,'00000000-0000-4000-8000-000000000091','7',1);
     const proposals = new ProposalRepository(db,{} as ControlBus,clock), queue = new SqlAnalysisQueue(db,clock,'Asia/Kolkata',{onDecision:(tx,input)=>proposals.recordAnalysisDecisionTx(tx,input)});

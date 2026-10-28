@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { crmFirstEnabled, workParentIsCurrent } from '../shared/crm-first.js';
 import type { AnalysisInput, ExtractionCheckpoint, JevDecision, ProviderProvenance } from '../shared/domain.js';
 import type { AnalysisJob, AnalysisQueue, Clock, Database, ProviderResult, SqlExecutor } from '../shared/ports.js';
 import { validateExtraction, EXTRACTION_VERSION } from '../intelligence/validation.js';
@@ -117,7 +118,8 @@ export class SqlAnalysisQueue implements AnalysisQueue {
     const evidence = (await tx.query(`SELECT e.* FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id WHERE e.chat_id=$1 AND e.message_id=ANY($2::int[])
       AND e.message_version=m.version AND e.invalidated_at IS NULL AND m.deleted_at IS NULL ORDER BY e.id`, [c.id, messages.map((m) => m.id)])).rows.map(evidenceRow);
     const companies = await companyRows(tx, (await tx.query('SELECT * FROM companies ORDER BY id LIMIT 100')).rows);
-    const ticket = (await tx.query('SELECT * FROM tickets WHERE chat_id=$1 FOR UPDATE', [c.id])).rows[0];
+    const crmFirst = await crmFirstEnabled(tx);
+    const ticket = (await tx.query("SELECT * FROM tickets WHERE chat_id=$1 AND (NOT $2::boolean OR tracking_state='active') ORDER BY (tracking_state='active') DESC,created_at DESC,id LIMIT 1 FOR UPDATE", [c.id, crmFirst])).rows[0];
     const account = (await tx.query('SELECT self_user_id::text FROM telegram_account WHERE singleton')).rows[0];
     assert(account, 'not_configured', 'Telegram dataset account is not bound');
     // Singleton dataset account binding is immutable under the platform contract.
@@ -216,9 +218,14 @@ export class SqlAnalysisQueue implements AnalysisQueue {
             && m.senderId === input.accountSelfId && m.sender.kind === 'user' && !m.deletedAt && !m.forward.isForwarded && m.text.trim())));
       const canProspect = !canConfirm && input.chat.companyId === null && ['unresolved', 'ambiguous'].includes(input.chat.mappingStatus)
         && decision.relevance !== 'non_company' && (sourcedEnquiry || input.ticket?.kind === 'contact_prospect');
-      if (canConfirm || canProspect) {
-        const ticket = canConfirm ? await ensureTicketTx(tx, input.chat.id) : await ensureContactProspectTx(tx, input.chat.id);
-        const selectedCompany = ticket.companyId ? await getCompanyTx(tx, ticket.companyId) : null;
+      const crmFirst = await crmFirstEnabled(tx);
+      if (canConfirm || canProspect || (crmFirst && decision.relevance !== 'non_company' && input.chat.mappingStatus !== 'non_company')) {
+        // Approved conversations build CRM context even when they have no Work.
+        // Analysis can enrich existing action tickets but cannot create one.
+        const ticket = crmFirst ? input.ticket?.trackingState === 'active' && await workParentIsCurrent(tx, input.ticket.id) ? input.ticket : null
+          : canConfirm ? await ensureTicketTx(tx, input.chat.id) : await ensureContactProspectTx(tx, input.chat.id);
+        if (crmFirst && canConfirm) await tx.query("UPDATE tickets SET company_id=$2,kind='company',updated_at=now() WHERE chat_id=$1", [input.chat.id, companyId]);
+        const selectedCompany = companyId ? await getCompanyTx(tx, companyId) : null;
         const extracted = selectedCompany ? extraction.companies.find((c) => c.canonicalName.toLowerCase() === selectedCompany.canonicalName.toLowerCase()) : null;
         if (extracted && selectedCompany) await writeCompanyTx(tx, { ...selectedCompany, idempotencyKey: jobId, aliases: [...new Set([...selectedCompany.aliases, ...extracted.aliases])], domains: [...new Set([...selectedCompany.domains, ...extracted.domains])], buyerIds: [...new Set([...selectedCompany.buyerIds, ...extracted.buyerIds])], providerIds: [...new Set([...selectedCompany.providerIds, ...extracted.providerIds])], workstream: decision.workstream ?? selectedCompany.workstream, evidenceIds: [...new Set([...selectedCompany.evidenceIds, ...extracted.evidenceIds])] }, selectedCompany.id, selectedCompany.version);
         for (const contact of extraction.contacts) {
@@ -231,14 +238,17 @@ export class SqlAnalysisQueue implements AnalysisQueue {
           const value = await writeContactTx(tx, { ...contact, idempotencyKey: jobId, telegramUserIds: [...new Set([...(existing?.telegramUserIds ?? []), ...contact.telegramUserIds])],
             names: [...new Set([...(existing?.names ?? []), ...contact.names])], usernames: [...new Set([...(existing?.usernames ?? []), ...contact.usernames])], phones: [...new Set([...(existing?.phones ?? []), ...contact.phones])], emails: [...new Set([...(existing?.emails ?? []), ...contact.emails])],
             affiliation: existing?.affiliation === 'internal' ? 'internal' : contact.affiliation, evidenceIds: [...new Set([...(existing?.evidenceIds ?? []), ...contact.evidenceIds])], roles: mergedRoles }, existing?.id, existing?.version);
-          await tx.query('INSERT INTO ticket_contacts(ticket_id,contact_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [ticket.id, value.id]);
+          if (ticket) await tx.query('INSERT INTO ticket_contacts(ticket_id,contact_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [ticket.id, value.id]);
         }
-        await tx.query('UPDATE facts SET ticket_id=$2 WHERE job_id=$1', [jobId, ticket.id]);
-        await links(tx, 'ticket_evidence', 'ticket_id', ticket.id, evidenceIds, false);
-        const latest = extraction.substantive ? input.messages.filter((m) => evidenceIds.some((id) => input.evidence.some((e) => e.id === id && e.messageId === m.id))).map((m) => m.sentAt).sort().at(-1) ?? null : null;
-        await tx.query(`UPDATE tickets SET summary=$2,workstream=COALESCE($3,workstream),latest_substantive_at=GREATEST(latest_substantive_at,$4::timestamptz),updated_at=now() WHERE id=$1`, [ticket.id, extraction.summary, decision.workstream, latest]);
-        await refreshInferredActions(tx, ticket.id);
-        if (this.hooks.onDecision) await this.hooks.onDecision(tx, { jobId, ticketId: ticket.id, expectedStageVersion: input.ticket?.stageVersion ?? 0, decision });
+        if (ticket) {
+          await tx.query('UPDATE facts SET ticket_id=$2 WHERE job_id=$1', [jobId, ticket.id]);
+          await links(tx, 'ticket_evidence', 'ticket_id', ticket.id, evidenceIds, false);
+          const latest = extraction.substantive ? input.messages.filter((m) => evidenceIds.some((id) => input.evidence.some((e) => e.id === id && e.messageId === m.id))).map((m) => m.sentAt).sort().at(-1) ?? null : null;
+          await tx.query(`UPDATE tickets SET summary=$2,workstream=COALESCE($3,workstream),latest_substantive_at=GREATEST(latest_substantive_at,$4::timestamptz),updated_at=now() WHERE id=$1`, [ticket.id, extraction.summary, decision.workstream, latest]);
+          await refreshInferredActions(tx, ticket.id);
+          if (this.hooks.onDecision && (!crmFirst || await workParentIsCurrent(tx, ticket.id)))
+            await this.hooks.onDecision(tx, { jobId, ticketId: ticket.id, expectedStageVersion: input.ticket?.stageVersion ?? 0, decision });
+        }
       } else if (!manual) {
         await tx.query('DELETE FROM mapping_candidate_evidence WHERE candidate_id IN(SELECT id FROM mapping_candidates WHERE chat_id=$1)', [input.chat.id]);
         await tx.query('DELETE FROM mapping_candidates WHERE chat_id=$1', [input.chat.id]);

@@ -1,4 +1,5 @@
 import { automaticPolicy } from '../shared/automatic-policy.js';
+import { crmFirstEnabled } from '../shared/crm-first.js';
 import { queueIntake } from './intake.js';
 import { createHash } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
@@ -99,6 +100,32 @@ export class TelegramStore implements IngestionStore, ChatService {
       }
       await tx.query("UPDATE chat_intake_requests SET decision='cancelled',decided_at=now() WHERE chat_id=$1 AND decision='pending'", [chat.id]);
       return this.changeInclusion(tx, chat, 'excluded');
+    });
+  }
+  /** Explicit local operator decision with durable provenance. This is used
+   * for user-reviewed historical recovery and never invents Telegram replies. */
+  async decideIntakeManually(chatId: string, decision: 'approved' | 'rejected', reason: string): Promise<Chat> {
+    if (await crmFirstEnabled(this.db)) throw new DomainError('conflict', 'Approve or reject CRM intake by replying to its Telegram control message');
+    const audit = reason.trim();
+    if (!audit || audit.length > 500) throw new DomainError('validation', 'Operator approval reason must be 1..500 characters');
+    return this.db.transaction(async (tx) => {
+      const chat = await this.lockedChat(tx, chatId);
+      const request = (await tx.query(`SELECT * FROM chat_intake_requests
+        WHERE chat_id=$1 AND decision='pending' ORDER BY created_at DESC,id DESC LIMIT 1 FOR UPDATE`, [chatId])).rows[0];
+      if (!request) throw new DomainError('conflict', 'No pending intake request exists for this chat');
+      if (chat.isControl || chat.inclusion !== 'undecided' || chat.policyVersion !== Number(request['policy_version']))
+        throw new DomainError('conflict', 'Chat intake policy changed; reload before deciding');
+      const approved = decision === 'approved';
+      const changed = await this.changeInclusion(tx, chat, approved ? 'included' : 'excluded');
+      if (approved && chat.mappingStatus !== 'non_company') {
+        await tx.query(`INSERT INTO tickets(chat_id,company_id,kind)
+          VALUES($1,$2,CASE WHEN $2::uuid IS NULL THEN 'contact_prospect' ELSE 'company' END)
+          ON CONFLICT(chat_id) DO NOTHING`, [chat.id, chat.companyId]);
+      }
+      await tx.query(`UPDATE chat_intake_requests SET decision=$2,decision_origin='operator',operator_reason=$3,
+        decided_at=now(),decided_message_id=NULL,claim_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1`,
+      [request['id'], decision, audit]);
+      return changed;
     });
   }
   /** Internal atomic admission transition; never exposed as an API/MCP operation. */
@@ -227,11 +254,12 @@ export class TelegramStore implements IngestionStore, ChatService {
         if(chat.inclusion==='undecided'&&event.type==='message')await tx.query(`UPDATE telegram_conversation_starts
           SET latest_message_at=GREATEST(latest_message_at,$2::timestamptz),next_check_at=CASE WHEN reason='empty_history' THEN now() ELSE next_check_at END,
           state=CASE WHEN reason='empty_history' THEN 'pending' ELSE state END WHERE chat_id=$1`,[chat.id,event.message.sentAt]);
-        // Only a fresh incoming live message triggers automatic intake. Metadata
-        // discovery, catch-up edits, old updates and historical chats never do.
+        // Any fresh live conversation message triggers approval-first intake,
+        // including our first outbound enquiry. Metadata discovery, catch-up
+        // edits, old updates and historical chats never do.
         if (chat.inclusion === 'undecided' && event.type === 'message' && !await automaticPolicy(tx) && (await tx.query(`SELECT 1 FROM telegram_account a,app_settings s
           WHERE s.key='telegram:intake:activated' AND $1::timestamptz >= (s.value->>'at')::timestamptz
-          AND ($2::bigint IS NULL OR $2::bigint<>a.self_user_id)`, [event.message.sentAt, event.message.senderId])).rowCount) await queueIntake(tx, chat.id);
+          AND a.self_user_id IS NOT NULL`, [event.message.sentAt])).rowCount) await queueIntake(tx, chat.id);
         return;
       }
       if ((await this.upsertMessage(tx, chat, event.message)).changed) await this.enqueue(tx, chat);

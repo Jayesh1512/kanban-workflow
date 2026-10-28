@@ -240,6 +240,20 @@ export class VikunjaAdapter implements VikunjaPort {
       if ((await this.getTask(input.taskId))?.bucketId !== input.targetBucketId) throw new DomainError('upstream_unavailable', 'Vikunja move could not be verified', true);
     });
   }
+  async retireTask(input: { ticketId: string; taskId: string }): Promise<void> {
+    return this.db.withSessionLock(`antseed:ticket:${input.ticketId}`, async (sql) => {
+      const linked = await sql.query('SELECT 1 FROM tickets WHERE id=$1 AND vikunja_task_id=$2', [input.ticketId, input.taskId]);
+      if (!linked.rowCount) throw new DomainError('conflict', 'Ticket projection changed before retirement');
+      const task = await this.request('GET', `/tasks/${id(input.taskId)}`, undefined, true);
+      if (task) {
+        const value = object(task);
+        const marker = `[antseed-ticket:${input.ticketId}]`;
+        if (!text(value['description']).includes(marker)) throw new DomainError('conflict', 'Retirement refused: managed ticket marker is missing');
+        await this.request('DELETE', `/tasks/${id(input.taskId)}`);
+      }
+      if (await this.request('GET', `/tasks/${id(input.taskId)}`, undefined, true)) throw new DomainError('conflict', 'Retired Kanban card still exists');
+    });
+  }
   async check(): Promise<void> {
     const board = await this.binding();
     await this.request('GET', `/projects/${board.projectId}/views/${board.viewId}`);

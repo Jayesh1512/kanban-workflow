@@ -22,6 +22,7 @@ beforeEach(async()=>{
   await db.query("UPDATE analysis_jobs SET status='cancelled'");
   const m=outbound().messages[0]!;m.sender.names=['Jayesh'];m.peer.names=['Harsh'];m.peer.usernames=['harsh'];m.text='Hi Harsh, Jayesh here from AntSeed. Would you like to try our API services?';
   await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(7,'user','Harsh','included')");
+  await db.query("INSERT INTO chat_intake_requests(chat_id,policy_version,decision,control_chat_id,message_id,delivery_state,decided_message_id,decided_at) VALUES(7,0,'approved',-1001,9101,'sent',9102,now())");
   await db.query('INSERT INTO messages(chat_id,id,sender_id,sent_at,text,sender_snapshot,peer_snapshot,forward_metadata) VALUES(7,1,99,$1,$2,$3,$4,$5)',[m.sentAt,m.text,m.sender,m.peer,m.forward]);
   proposals=new ProposalRepository(db,{} as ControlBus,clock);records=new RecordsRepository(db,clock);
   queue=new SqlAnalysisQueue(db,clock,'Asia/Kolkata',{onDecision:(tx,input)=>proposals.recordAnalysisDecisionTx(tx,input)});
@@ -72,7 +73,7 @@ it('preserves exclusion/reinclusion and operator mapping corrections for a prosp
   await store.setInclusion({chatId:'7',inclusion:'included',expectedPolicyVersion:1,idempotencyKey:'include'});
   expect((await records.getTicket(h.ticket.id)).trackingState).toBe('suspended');
   await db.query("INSERT INTO chats(id,kind,title,inclusion,is_control) VALUES(-1009,'supergroup','Synthetic approvals','excluded',true)");
-  await db.query("UPDATE chat_intake_requests SET control_chat_id=-1009,message_id=50,delivery_state='sent' WHERE chat_id=7");
+  await db.query("UPDATE chat_intake_requests SET control_chat_id=-1009,message_id=50,delivery_state='sent' WHERE chat_id=7 AND decision='pending'");
   await new ChatIntake(db as PgDatabase,store,{} as TelegramPort).handle({chatId:'-1009',messageId:51,senderId:'99',replyToMessageId:50,text:'approve',sentAt:new Date().toISOString()});
   expect((await records.getTicket(h.ticket.id)).trackingState).toBe('active');
   const company=await records.createCompany({idempotencyKey:'manual-company',canonicalName:'Manually confirmed company',aliases:[],domains:[],buyerIds:[],providerIds:[],workstream:null,summary:'',evidenceIds:[]});

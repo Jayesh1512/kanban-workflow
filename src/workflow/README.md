@@ -1,5 +1,7 @@
 # M3.2 integration handoff
 
+Current behavior is described in [the CRM-first workflow](../../docs/CRM_OPERATIONS.md). Telegram intake creates CRM context without Work. New Work tickets require a concrete CRM action and a separate Telegram approval; manual data edits and both boards’ movements also require Telegram approval. Historical cards are preserved, and one chat can now support multiple approved action tickets. The milestone notes below describe the original implementation.
+
 `createWorkflowModule(PlatformServices)` registers the durable control subscriber before platform start and runs one bounded, non-overlapping scheduler after the complete platform migration ledger exists. Each tick recovers older recommendation intents, queues up to 20 control messages, projects up to 5 tickets, applies/reconciles one approved proposal and processes one analysis job. Independent phases continue after a recoverable failure. Stop aborts work, unsubscribes, clears the timer and awaits the in-flight task/replies. The module never closes platform-owned ports. PM owns composition; no domain HTTP/MCP transport is registered in this milestone.
 
 `createWorkflowServices(platform)` exposes records/analysis/providers plus `proposalRecords`, `proposals`, `mutations`, `projector` and bounded `processOnce`. Analysis completion creates its pending proposal/control intent in the same SQL transaction. Older M3.1 recommendations are conservatively recovered once only while their original context remains current. Local tickets and newly projected tasks start in `To be started`.

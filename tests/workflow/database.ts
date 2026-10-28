@@ -27,6 +27,12 @@ export async function fixtureDatabase(additionalMigrations: URL[] = []) {
   }, async close() { await tail; await engine.close(); } };
   await db.query('INSERT INTO telegram_account(self_user_id) VALUES(99)');
   await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-1001,'supergroup','Cedar Labs','included')");
+  // Most workflow fixtures exercise an already admitted business source. The
+  // production admission proof is a correlated control reply; keep that proof
+  // explicit here without configuring an operational control chat for tests
+  // that intentionally cover control_chat_missing.
+  await db.query(`INSERT INTO chat_intake_requests(chat_id,policy_version,decision,control_chat_id,message_id,delivery_state,decided_message_id,decided_at)
+    VALUES(-1001,0,'approved',-1001,9001,'sent',9002,now())`);
   const message = inputFixture().messages[0]!;
   await db.query('INSERT INTO messages(chat_id,id,sender_id,sent_at,text,sender_snapshot,peer_snapshot,forward_metadata) VALUES(-1001,1,7,$1,$2,$3,$4,$5)', [message.sentAt, sourceText, JSON.stringify(message.sender), JSON.stringify(message.peer), JSON.stringify(message.forward)]);
   await seedJob(db, jobId);

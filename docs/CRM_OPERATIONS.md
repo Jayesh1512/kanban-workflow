@@ -1,22 +1,32 @@
 # Integrated Outreach CRM
 
-The `/outreach` page and **AntSeed Outreach** Vikunja project are the commercial pipeline. The existing work project retains its six lanes and its chat tickets. A confirmed company can have several conversation sources and one commercial relationship. Learning an unpublished or singly mapped prospect's first company preserves its relationship ID; equal names alone do not merge companies.
+The `/outreach` page and **AntSeed Outreach** Vikunja project are the CRM and the starting point for business conversations. The flow is **Telegram chat → intake approval in Telegram → CRM relationship → concrete Work proposal → separate Telegram approval → Work ticket**. A CRM relationship does not need a Work ticket to import messages, extract contacts/facts or assess its commercial stage.
 
-Every retained active work ticket is reconciled into a CRM source independently of operational projection and provider work. Unlinked tickets are prioritized; a failed source is recorded and retried without blocking the rest of the sweep. Multiple chats for a confirmed company share one commercial relationship.
+Approved chats are reconciled directly into CRM sources. Chats for the same confirmed company share one relationship; unknown-company prospects remain separate. Source evidence, facts and contact roles are read by chat provenance, independently of operational tickets. Learning a prospect's first company can preserve its relationship ID; equal names alone do not merge companies.
 
 The five sales stages are Lead / Prospect, Qualification, Negotiation, Deal Won, Archived. Operational testing/completion does not establish a commercial win. Price, credits and sponsorship discussions indicate negotiation until an accepted outcome is evidenced. Silence does not archive a relationship.
 
-## Review and approve
+## Intake, review and Telegram approval
 
-1. Open `/outreach`, search a company/person and expand its card.
-2. Review approved and pending source contributions separately. Contacts, actual author/forward provenance, current evidence, AntSeed/external actions and date-only deadlines remain attributable to their source.
-3. Choose a sales stage and enter a reason, or request one paid AI assessment. A recommendation remains pending. Low-confidence, malformed, stale or unavailable inference never becomes an accepted stage.
-4. Approve/reject on the page or reply to the matching sales message in the configured Telegram control group. `correct: Qualification`, for example, creates a separate pending replacement that still needs approval.
-5. Approval atomically enrolls the selected pending sources, records its immutable decision and queues a native publication. Approved state, observed native state and publication status are distinct. Approving another source at the same sales stage refreshes details without increasing the stage version or requiring a lane move.
+1. A fresh Telegram conversation queues an intake request in the configured control group. Select historical chats manually using **Request approval**. Discovery alone imports no business messages.
+2. Reply **approve to that exact Telegram request** to admit the conversation to CRM and begin import/analysis. Reject or no reply keeps it out. Intake creates no Work ticket.
+3. Open `/outreach` and inspect current sources. Propose a sales stage or request an AI assessment. The proposal stays pending; the initial metadata-only native review card does not establish an accepted commercial stage.
+4. Approve/reject by replying to the matching CRM message in Telegram. `correct: Qualification` creates a separate pending stage proposal that also needs approval. Approval enrolls pending sources, records its decision and queues native publication.
+5. CRM follow-up, identity, Work action/deadline and source-fact edits also create pending data proposals. Their values remain unchanged until the matching Telegram message is approved. Data approvals do not accept a new CRM stage or enroll additional sources.
 
-The control worker correlates intake, work and commercial receipt IDs to one owner. It retains early valid replies while an attempted delivery's receipt is unknown. It never broadcasts an approval to both boards. Missing control configuration retains proposals; it does not invent a control group.
+The web page and MCP propose changes; they cannot approve them. Legacy HTTP decision endpoints reject decisions in CRM-first mode. The local manual-intake helper also rejects admission in this mode. Automatic initial-placement exceptions are disabled by the CRM-first migration. Routine publication refreshes may reuse already accepted stages and sources; they cannot create Work, enroll new sources or authorize stage changes.
 
-The persisted `telegram:automatic-since` policy may authorize one initial sales placement for qualifying historical Telegram sources. Every contributing source must qualify; email reports cannot inherit that permission. Future groups at/after the configured group boundary require their first sales approval, and subsequent inferred commercial changes require approval. Old operational placement is not itself a sales approval.
+The control worker correlates intake, Work movement and CRM/data/Work-creation receipt IDs to exactly one owner. Missing control setup retains proposals. Duplicate replies are idempotent; excluded, edited or remapped sources invalidate outdated approvals. Native dragging is not approval: it is recorded as a conflict, while the accepted stage remains unchanged.
+
+## Create Work from CRM
+
+Open an accepted CRM relationship and expand **Propose a Work ticket**. Choose one approved Telegram conversation, enter a concrete action and its reason, then select **Request Work ticket approval**. Reply **approve** to the separate Telegram request to create that action in **To be started**. No reply/reject creates no ticket. Moving CRM to Qualification, Negotiation or Won does not create Work by itself.
+
+Each approved action creates its own Work ticket, so one CRM relationship or chat can have several tasks. The ticket stores its CRM parent and creation proposal; replaying the same approved proposal cannot create a second ticket. The relationship detail lists its linked Work tickets. Work lane recommendations use their own Telegram approvals and leave the CRM stage unchanged.
+
+The migration preserves existing Work cards, stages, remote IDs and CRM relationships, and backfills parent links where they already exist. It does not delete historical cards or convert existing accepted stages.
+
+`POST /api/outreach/relationships/:relationshipId/work` and MCP `propose_crm_work` take `chatId`, `action`, `reason`, `expectedEvidenceRevision` and `idempotencyKey`. They return a pending proposal rather than a ticket. The selected source must currently belong to the accepted CRM relationship. `POST /api/tickets` / `ensure_ticket` cannot bypass this workflow.
 
 ## Email reports
 
@@ -32,9 +42,9 @@ Identical imports are idempotent. A changed report supersedes the prior committe
 
 ## Follow-ups and identity
 
-The card's follow-up disclosure records an AntSeed action with an optional calendar date; it does not invent a midnight timestamp. The API also supports external/unknown actors, completion/cancellation, exact instants and optimistic actions versions. Accepted detail changes have a durable refresh intent, so a restart between the action update and publication does not lose the refresh. The accepted sales stage remains unchanged.
+The card's follow-up disclosure proposes an AntSeed action with an optional calendar date for Telegram approval; it does not invent a midnight timestamp. The API also supports external/unknown actors, completion/cancellation, exact instants and optimistic actions versions. Accepted detail changes have a durable refresh intent, so a restart between the action update and publication does not lose the refresh. The accepted sales stage remains unchanged.
 
-Display-name corrections use `PUT /api/outreach/relationships/:relationshipId/identity`, expected identity version and a reason. They retain an audit record. This operation does not merge distinct companies or rewrite Telegram mappings. Correct a company association through the existing sourced mapping operation or an explicit report `companyId`.
+Display-name corrections use `PUT /api/outreach/relationships/:relationshipId/identity`, expected identity version and a reason. They create a pending Telegram approval and retain an audit record on acceptance. This operation does not merge distinct companies or rewrite Telegram mappings. Correct a company association through the existing sourced mapping operation or an explicit report `companyId`.
 
 ## Hermes
 
@@ -42,10 +52,11 @@ Use the existing backend `/mcp` endpoint. These additions share the same service
 
 - `list_outreach_relationships`, `get_outreach_relationship`
 - `propose_sales_stage`, `list_sales_proposals`, `get_sales_proposal`
+- `propose_crm_work` (concrete action proposal; never creates Work before Telegram approval)
 - `update_sales_actions`, `correct_sales_identity`
 - `assess_sales_relationship` (bounded paid classification), `get_sales_status`
 
-There is no MCP approval, apply, direct-move, Telegram-send, login or raw-file-import escape. For example: “Show Qualification relationships and their pending AntSeed commitments,” or “Propose Qualification for this relationship using its current evidence revision; do not approve it.”
+There is no MCP or HTTP approval escape in CRM-first mode. There is no MCP apply, direct-move, Telegram-send, login or raw-file-import tool. For example: “Show Qualification relationships and their pending AntSeed commitments,” or “Propose Qualification for this relationship using its current evidence revision; do not approve it.”
 
 Sales inference uses the existing configured OpenAI Decisions `gpt-6-luna` client and credentials. The [official Decisions guide](https://developers.openai.com/api/docs/guides/decisions) documents its typed choice contract. This is a separate commercial rubric; the operational six-lane classifier is preserved. Automatic assessments are bounded and source-hash deduplicated. Failed/uncertain results are retained; an explicit retry can recover the same current revision. Missing conversation evidence is not submitted for paid inference.
 

@@ -1,5 +1,6 @@
 /** Transport bindings share the service methods in ports.ts; no direct SQL or upstream calls. */
 export const API_OPERATIONS = [
+  { method: 'POST', path: '/api/outreach/relationships/:relationshipId/work', tool: 'propose_crm_work', service: 'outreach.proposeWork' },
   { method: 'GET', path: '/api/outreach/relationships', tool: 'list_outreach_relationships', service: 'outreach.list' },
   { method: 'GET', path: '/api/outreach/relationships/:id', tool: 'get_outreach_relationship', service: 'outreach.get' },
   { method: 'POST', path: '/api/outreach/proposals', tool: 'propose_sales_stage', service: 'outreach.propose' },

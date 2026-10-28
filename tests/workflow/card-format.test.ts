@@ -16,20 +16,22 @@ function context(): CardContext {
 
 it('leads with company and our sourced action, with structured contacts, tasks, dates and references', () => {
   const card = formatCard(context());
-  expect(card.title).toBe('Cedar Labs — Send notes');
+  expect(card.title).toBe('Cedar Labs: API partnership discussion. · Next: Send notes · ETA: 2026-10-18');
   for (const heading of ['At a glance', 'Contacts', 'Tasks for AntSeed', 'Waiting on the other party', 'Deadlines &amp; dates', 'Blockers', 'Sources &amp; references']) expect(card.description).toContain(`<h2>${heading}</h2>`);
+  const ordered = ['At a glance', 'Next action for AntSeed', 'Relationship summary', 'Contacts', 'Tasks for AntSeed', 'Waiting on the other party', 'Deadlines &amp; dates', 'Blockers', 'Sources &amp; references'].map(heading => card.description.indexOf(`<h2>${heading}</h2>`));
+  expect(ordered).toEqual([...ordered].sort((a,b)=>a-b));
   for (const detail of ['Mira', 'CTO', '@mira', '+11111111111', 'mira@cedar.example', '2026-10-18', 'date only', 'buyer-1']) expect(card.description).toContain(detail);
   expect(card.description).not.toContain('18 Oct 2026, 00:00');
 });
 it('uses Follow up for the first outbound unknown-company prospect without inventing a deadline', () => {
-  const input = context(); input.company = null; input.chat.title = 'Harsh'; input.ticket.kind = 'contact_prospect'; input.ticket.companyId = null; input.facts = [];
+  const input = context(); input.company = null; input.chat.title = 'Harsh'; input.ticket.kind = 'contact_prospect'; input.ticket.companyId = null; input.ticket.summary = ''; input.facts = []; input.evidence = [];
   const card = formatCard(input);
-  expect(card.title).toBe('Harsh — Follow up'); expect(card.description).toContain('Not identified yet'); expect(card.description).toContain('No follow-up deadline is assumed');
+  expect(card.title).toBe('Harsh: New contact prospect · Next: Follow up · ETA: Not set'); expect(card.description).toContain('Not identified yet'); expect(card.description).toContain('No follow-up deadline is assumed');
 });
 it('upgrades the identity on the same card and uses the manually set action first', () => {
   const input = context(); input.ticket.actionsSource = 'manual'; input.ticket.nextAction = 'Send the revised agreement';
-  expect(formatCard(input).title).toBe('Cedar Labs — Send the revised agreement');
-  input.company!.canonicalName = 'Cedar Network'; expect(formatCard(input).title).toBe('Cedar Network — Send the revised agreement');
+  expect(formatCard(input).title).toBe('Cedar Labs: API partnership discussion. · Next: Send the revised agreement · ETA: Not set');
+  input.company!.canonicalName = 'Cedar Network'; expect(formatCard(input).title).toBe('Cedar Network: API partnership discussion. · Next: Send the revised agreement · ETA: Not set');
 });
 it.each([
   ['Amos asks the reporting user to share logs with @kotevcode. Log submission is not confirmed.', 'Share logs with @kotevcode'],
@@ -38,19 +40,19 @@ it.each([
   ['AntSeed will not send credentials until the partner will confirm the agreement.', 'Not send credentials until the partner will confirm the agreement'],
 ])('turns reported task wording into a brief action while retaining restrictions: %s', (source, expected) => {
   const input = context(); input.facts[0]!.text = source;
-  expect(formatCard(input).title).toBe(`Cedar Labs — ${expected}`);
+  expect(formatCard(input).title).toBe(`Cedar Labs: API partnership discussion. · Next: ${expected} · ETA: 2026-10-18`);
 });
 it('keeps an external promise out of our title and separates unknown ownership and resolved tasks', () => {
   const input = context(), fact = input.facts[0]!; fact.actor = { party: 'external', contactId: 'mira', displayName: 'Mira' }; fact.text = 'Mira will send logs';
   input.facts.push({ ...fact, id: randomUUID(), actor: { party: 'unknown', contactId: null, displayName: null }, text: 'Confirm the owner' });
   input.facts.push({ ...fact, id: randomUUID(), actor: { party: 'antseed', contactId: null, displayName: 'AntSeed' }, state: 'completed', text: 'Send old pricing' });
-  const card = formatCard(input); expect(card.title).toBe('Cedar Labs — Follow up');
+  const card = formatCard(input); expect(card.title).toBe('Cedar Labs: API partnership discussion. · Next: Follow up · ETA: Not set');
   expect(card.description.split('<h2>Tasks for AntSeed</h2>')[1]!.split('<h2>Waiting on')[0]).not.toContain('Mira will send logs');
   expect(card.description).toContain('Owner unconfirmed'); expect(card.description.split('<h2>Completed &amp; closed items</h2>')[1]).toContain('Send old pricing');
 });
 it.each(['Completed', 'Archived', 'Blocked'] as const)('uses an appropriate %s fallback instead of an outreach follow-up', lane => {
   const input = context(); input.facts = []; input.ticket.lane = lane;
-  expect(formatCard(input).title).toBe(`Cedar Labs — ${lane === 'Blocked' ? 'Resolve blocker' : lane}`);
+  expect(formatCard(input).title).toBe(`Cedar Labs: API partnership discussion. · Next: ${lane === 'Blocked' ? 'Resolve blocker' : lane} · ETA: Not set`);
 });
 it('retains negation, ambiguous dates, exact instants, and actual timezones', () => {
   const input = context(); input.facts[0]!.text = 'Do not send credentials until the agreement is signed';
@@ -92,6 +94,18 @@ it('reformats an existing remote card, pages past 200 facts and preserves card I
     expect(h.moves()).toBe(0);
   } finally { await h.db.close(); }
 }, 20_000);
+it('places a newly projected historical ticket in its saved lane without treating the default bucket as a human move', async () => {
+  const h = await workflowHarness();
+  try {
+    await h.db.query("UPDATE tickets SET lane='Completed',stage_version=1 WHERE id=$1", [h.ticket.id]);
+    const projected = await h.projector.project(h.ticket.id);
+    expect(projected).toMatchObject({ lane: 'Completed', stageVersion: 1 });
+    const remote = [...h.tasks.values()][0]!;
+    expect(String(remote.bucketId)).toBe('6');
+    expect(h.moves()).toBe(1);
+    expect(await h.records.getTicket(h.ticket.id)).toMatchObject({ lane: 'Completed', stageVersion: 1 });
+  } finally { await h.db.close(); }
+});
 it('rotates an already projected but deleted remote card out of the refresh queue head without recreating it', async () => {
   const h = await workflowHarness();
   try {
@@ -101,6 +115,17 @@ it('rotates an already projected but deleted remote card out of the refresh queu
     const saved = (await h.db.query('SELECT value,updated_at>$2::timestamptz AS advanced FROM app_settings WHERE key=$1', [`workflow:projection:${h.ticket.id}`, before])).rows[0]!;
     expect(saved.value).toMatchObject({ state: 'remote_unknown', code: 'conflict' }); expect(saved.advanced).toBe(true);
     expect(h.tasks.size).toBe(0); expect(h.moves()).toBe(0);
+  } finally { await h.db.close(); }
+});
+it('throttles unchanged background card observations without changing direct projection behavior', async () => {
+  const h = await workflowHarness();
+  try {
+    await h.projector.project(h.ticket.id);
+    const read = vi.spyOn(h.vikunja, 'getTask');
+    expect(await h.projector.projectBatch(1, undefined, 300_000)).toBe(0);
+    expect(read).not.toHaveBeenCalled();
+    await h.projector.project(h.ticket.id);
+    expect(read).toHaveBeenCalledTimes(1);
   } finally { await h.db.close(); }
 });
 it('never lets a failed old projection overwrite a newer ready result', async () => {
@@ -113,5 +138,19 @@ it('never lets a failed old projection overwrite a newer ready result', async ()
     });
     await h.projector.projectBatch(1);
     expect((await h.db.query('SELECT value FROM app_settings WHERE key=$1', [`workflow:projection:${h.ticket.id}`])).rows[0]!.value).toEqual({ state: 'ready', hash: 'newer-owner' });
+  } finally { await h.db.close(); }
+});
+it('retires the existing remote card when its chat lacks control-group approval', async () => {
+  const h = await workflowHarness();
+  try {
+    await h.projector.project(h.ticket.id);
+    const task = (await h.records.getTicket(h.ticket.id)).vikunjaTaskId!;
+    await h.db.query('DELETE FROM chat_intake_requests WHERE chat_id=-1001');
+    await h.db.query("UPDATE chats SET inclusion='excluded',policy_version=policy_version+1 WHERE id=-1001");
+    await h.db.query("UPDATE tickets SET tracking_state='suspended' WHERE id=$1", [h.ticket.id]);
+    expect(await h.projector.retireUnapprovedBatch(5)).toBe(1);
+    expect(await h.vikunja.getTask(task)).toBeNull();
+    expect((await h.records.getTicket(h.ticket.id)).vikunjaTaskId).toBeNull();
+    expect((await h.db.query('SELECT 1 FROM app_settings WHERE key=$1', [`workflow:projection:${h.ticket.id}`])).rowCount).toBe(0);
   } finally { await h.db.close(); }
 });

@@ -21,6 +21,10 @@ async function setup() {
   const ticket = (await h.db.query('INSERT INTO tickets(chat_id,company_id) VALUES(-1001,$1) RETURNING id', [company])).rows[0]!.id as string;
   return { ...h, ticket };
 }
+async function approve(db: Awaited<ReturnType<typeof outreachFixture>>['db'], chatId: string, sequence: number) {
+  await db.query(`INSERT INTO chat_intake_requests(chat_id,policy_version,decision,control_chat_id,message_id,delivery_state,decided_message_id,decided_at)
+    VALUES($1,0,'approved',-1001,$2,'sent',$3,now())`, [chatId, sequence, sequence + 1]);
+}
 
 describe('persistent commercial read model (actual local PostgreSQL engine, synthetic data)', () => {
   it('adds exactly five sales stages without changing six operational lanes; invalid stages reject', async () => {
@@ -35,6 +39,7 @@ describe('persistent commercial read model (actual local PostgreSQL engine, synt
     const h = await setup();
     await h.db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status,company_id) VALUES(-1002,'supergroup','Cedar second room','included','confirmed',$1)", [company]);
     await h.db.query('INSERT INTO tickets(chat_id,company_id) VALUES(-1002,$1)', [company]);
+    await approve(h.db,'-1002',9301);
     await h.repo.reconcile(); const first = (await h.repo.list({})).items;
     expect(first).toHaveLength(1); expect(first[0]).toMatchObject({ sourceCount: 2, pendingSourceCount: 2, acceptedStage: null, displayStage: null, stageBasis: 'unknown' });
     const restarted = new OutreachRepository(h.db, { now: () => new Date('2026-10-25T12:00:00Z') });
@@ -79,6 +84,7 @@ describe('persistent commercial read model (actual local PostgreSQL engine, synt
     const h = await setup();
     await h.db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(1009,'user','Mira Fixture','included')");
     await h.db.query("INSERT INTO tickets(chat_id,company_id,kind) VALUES(1009,NULL,'contact_prospect')");
+    await approve(h.db,'1009',9311);
     await h.repo.reconcile(); const prospect = (await h.repo.list({})).items.find((r) => r.kind === 'contact_prospect')!;
     const newCompany = '00000000-0000-4000-8000-000000000105';
     await h.db.query("INSERT INTO companies(id,canonical_name) VALUES($1,'New Company Fixture')", [newCompany]);
@@ -93,9 +99,9 @@ describe('persistent commercial read model (actual local PostgreSQL engine, synt
     await h.db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status) VALUES(1009,'user','Cedar Fixture','included','non_company')");
     await h.db.query("INSERT INTO tickets(chat_id,company_id,kind) VALUES(1009,NULL,'contact_prospect')");
     await h.repo.reconcile(); const all = (await h.repo.list({})).items;
-    expect(all).toHaveLength(2); expect(all.every((r) => r.displayStage === null)).toBe(true);
-    const internal = all.find((r) => r.kind === 'contact_prospect')!;
-    expect((await h.repo.get(internal.id)).suspendedSources).toHaveLength(1);
+    expect(all).toHaveLength(1); expect(all.every((r) => r.displayStage === null)).toBe(true);
+    const internal = (await h.db.query("SELECT id FROM outreach_relationships WHERE kind='contact_prospect'")).rows[0]!;
+    expect((await h.repo.get(String(internal.id))).suspendedSources).toHaveLength(1);
   });
   it('exclusion hides business data immediately, before reconciliation; reinclude requires pending membership', async () => {
     const h = await setup(); await h.repo.reconcile(); const id = (await h.repo.list({})).items[0]!.id;
@@ -104,6 +110,37 @@ describe('persistent commercial read model (actual local PostgreSQL engine, synt
     const hidden = await h.repo.get(id); expect(hidden.activeSources).toEqual([]); expect(hidden.pendingSources).toEqual([]);
     await h.repo.reconcile(); await h.db.query("UPDATE chats SET inclusion='included' WHERE id=-1001"); await h.repo.reconcile();
     expect((await h.repo.get(id)).pendingSources).toHaveLength(1);
+  });
+  it('restores an accepted historical CRM stage after the exact Telegram source is approved again', async () => {
+    const h = await setup(); await h.repo.reconcile();
+    const id = (await h.repo.list({})).items[0]!.id;
+    await h.db.query("UPDATE outreach_relationships SET accepted_stage='qualification',stage_version=1 WHERE id=$1", [id]);
+    await h.db.query("UPDATE outreach_relationship_sources SET enrollment_state='suspended' WHERE relationship_id=$1", [id]);
+    await h.repo.reconcileChat('-1001');
+    const restored = await h.repo.get(id);
+    expect(restored.relationship).toMatchObject({ acceptedStage: 'qualification', stageVersion: 1 });
+    expect(restored.activeSources).toHaveLength(1);
+    expect(restored.pendingSources).toEqual([]);
+  });
+  it('keeps rejected CRM sources off the board through sync and re-admission while preserving work records', async () => {
+    const h = await setup(); await h.repo.reconcile();
+    const id = (await h.repo.list({})).items[0]!.id;
+    const tickets = (await h.db.query('SELECT * FROM tickets ORDER BY id')).rows;
+    const messages = (await h.db.query('SELECT * FROM messages ORDER BY chat_id,id')).rows;
+    await h.db.query("UPDATE outreach_relationship_sources SET enrollment_state='rejected',version=version+1 WHERE relationship_id=$1", [id]);
+    expect((await h.repo.list({})).items).toEqual([]);
+    await h.repo.reconcileChat('-1001');
+    await h.db.query("UPDATE chats SET inclusion='excluded' WHERE id=-1001");
+    await h.repo.reconcileChat('-1001');
+    await h.db.query("UPDATE chats SET inclusion='included' WHERE id=-1001");
+    const restarted = new OutreachRepository(h.db, { now: () => new Date('2026-10-25T12:00:00Z') });
+    await restarted.reconcileChat('-1001');
+    expect((await restarted.list({})).items).toEqual([]);
+    const detail = await restarted.get(id);
+    expect(detail.activeSources).toEqual([]); expect(detail.pendingSources).toEqual([]);
+    expect(detail.suspendedSources).toMatchObject([{ enrollmentState: 'rejected' }]);
+    expect((await h.db.query('SELECT * FROM tickets ORDER BY id')).rows).toEqual(tickets);
+    expect((await h.db.query('SELECT * FROM messages ORDER BY chat_id,id')).rows).toEqual(messages);
   });
   it('never maps operational Completed to won; fences a saved provisional stage immediately on source edit', async () => {
     const h = await setup(); await h.db.query("UPDATE tickets SET lane='Completed' WHERE id=$1", [h.ticket]); await h.repo.reconcile();
@@ -119,6 +156,7 @@ describe('persistent commercial read model (actual local PostgreSQL engine, synt
     const h = await setup();
     await h.db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status,company_id) VALUES(-1002,'supergroup','Cedar second room','included','confirmed',$1)", [company]);
     await h.db.query('INSERT INTO tickets(chat_id,company_id) VALUES(-1002,$1)', [company]);
+    await approve(h.db,'-1002',9321);
     await h.repo.reconcile(); const id = (await h.repo.list({})).items[0]!.id;
     await h.db.query("UPDATE outreach_relationships SET provisional_stage='negotiation',provisional_reason='Both sources assessed',provisional_evidence_revision=evidence_revision WHERE id=$1", [id]);
     expect((await h.repo.get(id)).relationship.displayStage).toBe('negotiation');

@@ -85,7 +85,10 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       await phase(() => services.proposalRecords.recoverDecisionIntents());
       await phase(() => services.proposalRecords.placeInitialAutomatically(5));
       await phase(() => services.proposalRecords.flushPendingControl(20));
-      await phase(() => services.projector.projectBatch(5, abort.signal));
+      await phase(() => services.projector.retireUnapprovedBatch(5, abort.signal));
+      // Remote board observation remains prompt without continuously rereading
+      // every card through the external Supabase-backed Vikunja deployment.
+      await phase(() => services.projector.projectBatch(5, abort.signal, 300_000));
       await phase(() => services.proposals.applyNext(abort.signal));
       const providers = await Promise.all([services.extraction.status(), services.jev.status()]);
       const waiting = (await platform.db.query("SELECT 1 FROM proposals WHERE decision='pending' AND last_error='control_chat_missing' LIMIT 1")).rows.length > 0;

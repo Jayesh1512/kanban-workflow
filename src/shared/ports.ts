@@ -112,7 +112,8 @@ export interface VikunjaPort {
   ensureTask(input: { ticketId: UUID; title: string; description: string; workstream: Workstream }): Promise<RemoteTask>; // stable backend marker; starts To be started
   getTask(taskId: RemoteId): Promise<RemoteTask | null>; // include bucket for managed view
   updateTaskDetails(input: { taskId: RemoteId; title: string; description: string; workstream: Workstream }): Promise<RemoteTask>;
-  moveTask(input: { taskId: RemoteId; projectId: RemoteId; viewId: RemoteId; targetBucketId: RemoteId }): Promise<void>; // ONLY workflow apply worker calls
+  moveTask(input: { taskId: RemoteId; projectId: RemoteId; viewId: RemoteId; targetBucketId: RemoteId }): Promise<void>; // workflow apply or first projection restoring the durable saved lane
+  retireTask?(input: { ticketId: UUID; taskId: RemoteId }): Promise<void>; // projector-only removal after source approval is withdrawn/missing
 }
 export interface ChatService {
   list(input: PageInput): Promise<Page<Chat>>;
@@ -155,7 +156,7 @@ export interface RecordsService {
   updateContact(id: UUID, expectedVersion: number, input: ContactWrite): Promise<ContactDetail>;
   listTickets(input: PageInput & { companyId?: UUID; lane?: Lane }): Promise<Page<Ticket>>;
   getTicket(id: UUID): Promise<Ticket>;
-  ensureTicket(chatId: TelegramChatId): Promise<Ticket>; // included + confirmed only, unique chat, initial lane only
+  ensureTicket(chatId: TelegramChatId): Promise<Ticket>; // legacy only; CRM-first mode requires a Telegram-approved concrete action
   getContext(input: { ticketId: UUID; limit: number }): Promise<{ ticket: Ticket; chat: Chat; company: Company | null; contacts: ContactDetail[]; evidence: Evidence[]; messages: Message[]; facts: BusinessFact[]; outreach?: import('./domain.js').OutreachContext }>;
   getEvidence(ids: UUID[]): Promise<Evidence[]>;
   updateActions(input: UpdateActionsInput): Promise<Ticket>;

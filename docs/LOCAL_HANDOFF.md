@@ -1,5 +1,30 @@
 # Local operating handoff
 
+## Current CRM-first deployment — 28 October 2026
+
+The active project is `antseed-personal-account2`, with backend19280 and Vikunja19281.
+The persisted Compose configuration selects backend image
+`antseed-personal-account2-backend:crm-first-20261028` through
+`.local/crm-first-rollout-20261028/release.json`. Ordinary `docker compose up -d`
+keeps this release selected. Meetings runtime, routes and MCP tools are disabled;
+its already-applied migration files remain unchanged for checksum compatibility.
+
+`202610280001_crm_first.sql` is applied, bringing the live ledger to 17 migrations.
+All 29 Work tickets and 35 CRM relationships were preserved, including existing
+Work lanes, stage versions and remote IDs; all Work tickets have CRM parent links.
+Telegram intake creates CRM context first. Concrete Work actions and subsequent
+data/stage changes require their separate Telegram approvals. See
+[the current workflow](CRM_OPERATIONS.md).
+
+Private database/session/runtime/files backups and a successful isolated restore
+rehearsal are retained in `.local/crm-first-rollout-20261028/`. Before restarting
+writers, preservation checks matched all 118 business tables, excluding only the
+intentional new columns/settings. Live database, Telegram, synchronization,
+control and board checks pass. The pre-existing background `workflow_retry`
+condition still makes overall `/health/ready` return503; process health is200.
+
+The earlier deployment notes below are historical.
+
 This checkout has an ignored `.env` containing nonsecret project/port settings.
 It selects the persistent `antseed-personal` Compose project, backend19280 and
 Vikunja19281. Provider keys stay in the read-only external AI file; no key values

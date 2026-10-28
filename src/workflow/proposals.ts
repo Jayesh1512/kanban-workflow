@@ -1,4 +1,5 @@
 import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
+import { crmFirstEnabled, workParentIsCurrent } from '../shared/crm-first.js';
 import type { JevDecision, Lane, Proposal } from '../shared/domain.js';
 import { LANES } from '../shared/domain.js';
 import type { Clock, ControlBus, ControlMessage, Database, SqlExecutor } from '../shared/ports.js';
@@ -7,6 +8,7 @@ import { decideProposalSchema, proposeLaneSchema, uuidSchema } from '../shared/s
 import { DomainError } from '../shared/api.js';
 import { currentTicketMapping } from '../shared/ticket-mapping.js';
 import { assert, assertEvidence, command, iso, links, nullableIso, page, type Row } from './sql.js';
+import { approvedChatSourceSql } from '../shared/source-approval.js';
 
 export async function proposalRow(tx: SqlExecutor, row: Row): Promise<Proposal> {
   return { id: String(row.id), ticketId: String(row.ticket_id), sourceLane: row.source_lane as Lane, sourceStageVersion: Number(row.source_stage_version),
@@ -28,6 +30,8 @@ export async function lockProposal(tx: SqlExecutor, id: string): Promise<{ propo
 export async function staleReason(tx: SqlExecutor, proposal: Proposal, ticket: Row, chat: Row): Promise<string | null> {
   if (!proposal.evidenceIds.length) return 'evidence_missing';
   if (chat.inclusion !== 'included' || chat.is_control || ticket.tracking_state !== 'active') return 'chat_not_tracked';
+  if (!(await tx.query(`SELECT ${approvedChatSourceSql('c')} AS approved FROM chats c WHERE c.id=$1`, [chat.id])).rows[0]?.approved) return 'chat_not_approved';
+  if (!await workParentIsCurrent(tx, String(ticket.id))) return 'crm_source_changed';
   if (!currentTicketMapping({ mappingStatus: chat.mapping_status as 'confirmed' | 'unresolved' | 'ambiguous' | 'non_company', companyId: chat.company_id as string | null }, { kind: ticket.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: ticket.company_id as string | null }) || Number(chat.mapping_version) !== proposal.sourceMappingVersion) return 'mapping_changed';
   if (Number(chat.policy_version) !== proposal.sourcePolicyVersion) return 'policy_changed';
   if (Number(ticket.stage_version) !== proposal.sourceStageVersion || ticket.lane !== proposal.sourceLane) return 'stage_changed';
@@ -37,8 +41,8 @@ export async function staleReason(tx: SqlExecutor, proposal: Proposal, ticket: R
 export async function markStale(tx: SqlExecutor, proposalId: string, reason: string): Promise<void> {
   await tx.query("UPDATE proposals SET apply_state='stale',last_error=$2,updated_at=now() WHERE id=$1 AND apply_state<>'applied'", [proposalId, reason]);
 }
-export function controlProposalText(proposal: Proposal): string {
-  return `Stage proposal ${proposal.id}\n${proposal.sourceLane} → ${proposal.targetLane}\n${proposal.reason.slice(0, 6000)}\nNext action: ${proposal.nextAction ?? 'Unspecified'}\nEvidence: ${proposal.evidenceIds.join(', ')}\nReply approve, reject, or correct <lane> | <reason>.`;
+export function controlProposalText(proposal: Proposal, identity = 'Unnamed prospect'): string {
+  return `Work Kanban review: ${identity.replace(/[\r\n]/g, ' ').slice(0, 200)}\n${proposal.sourceLane} → ${proposal.targetLane}\n\n${proposal.reason.slice(0, 6000)}\n\nNext action: ${proposal.nextAction ?? 'Unspecified'}\nEvidence: ${proposal.evidenceIds.join(', ')}\n\nReply to THIS message: approve, reject, or correct <lane> | <reason>. This affects the Work Kanban only, not Sales CRM.\n\n[antseed-work-proposal:${proposal.id}]`;
 }
 
 /** SQL-only service; remote application is attached by the apply service in M3.2. */
@@ -68,13 +72,16 @@ export class ProposalRepository {
     }
     const control = (await tx.query('SELECT id FROM chats WHERE is_control AND inclusion=\'excluded\'')).rows[0];
     if (!control) { await tx.query("UPDATE proposals SET last_error='control_chat_missing' WHERE id=$1 AND decision='pending'", [proposal.id]); return; }
-    await this.control.enqueueProposal(tx, { proposalId: proposal.id, chatId: String(control.id), text: controlProposalText(proposal) });
+    const source=(await tx.query(`SELECT COALESCE(NULLIF(canonical_name,''),NULLIF(c.title,''),'Unnamed prospect') AS identity
+      FROM tickets t JOIN chats c ON c.id=t.chat_id LEFT JOIN companies co ON co.id=t.company_id WHERE t.id=$1`,[proposal.ticketId])).rows[0];
+    await this.control.enqueueProposal(tx, { proposalId: proposal.id, chatId: String(control.id), text: controlProposalText(proposal, String(source?.['identity']??'Unnamed prospect')) });
     await tx.query("UPDATE proposals SET last_error=NULL WHERE id=$1 AND last_error IN ('control_chat_missing','initial_placement_pending')", [proposal.id]);
   }
   async proposeTx(tx: SqlExecutor, input: ProposeLaneInput, correctionOf: string | null = null): Promise<Proposal> {
     const chat = (await tx.query('SELECT c.* FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c', [input.ticketId])).rows[0]; assert(chat, 'not_found', 'Ticket not found');
     const ticket = (await tx.query('SELECT * FROM tickets WHERE id=$1 FOR UPDATE', [input.ticketId])).rows[0]!;
-    assert(chat.inclusion === 'included' && !chat.is_control && ticket.tracking_state === 'active', 'excluded_chat', 'Ticket is not tracked business content');
+    const approved = (await tx.query(`SELECT ${approvedChatSourceSql('c')} AS approved FROM chats c WHERE c.id=$1`, [chat.id])).rows[0]?.approved === true;
+    assert(approved && chat.inclusion === 'included' && !chat.is_control && ticket.tracking_state === 'active', 'excluded_chat', 'Ticket source is not approved through the Telegram control group');
     assert(currentTicketMapping({ mappingStatus: chat.mapping_status as 'confirmed' | 'unresolved' | 'ambiguous' | 'non_company', companyId: chat.company_id as string | null }, { kind: ticket.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: ticket.company_id as string | null }), 'ambiguous_mapping', 'Ticket relationship mapping changed');
     assert(Number(ticket.stage_version) === input.expectedStageVersion, 'stale_proposal', 'Source stage version changed');
     assert(ticket.lane !== input.targetLane, 'validation', 'Target lane equals current lane'); await assertEvidence(tx, input.evidenceIds, String(chat.id));
@@ -110,9 +117,11 @@ export class ProposalRepository {
     await tx.query('INSERT INTO app_settings(key,value) VALUES($1,$2::jsonb)', [key, JSON.stringify({ proposalId: proposal.id })]);
   }
   async recoverDecisionIntents(limit = 10): Promise<void> {
+    const crmFirst = await crmFirstEnabled(this.db);
     const rows = (await this.db.query<{ id: string; ticket_id: string }>(`SELECT j.id,t.id AS ticket_id FROM analysis_jobs j JOIN tickets t ON t.chat_id=j.chat_id
       WHERE j.status='completed' AND j.decision->'lane'->>'outcome'='propose' AND NOT EXISTS(SELECT 1 FROM app_settings s WHERE s.key='workflow:decision-proposal:'||j.id::text)
-      ORDER BY j.created_at,j.id LIMIT $1`, [limit])).rows;
+      AND (NOT $2::boolean OR j.created_at>=t.created_at)
+      ORDER BY j.created_at,j.id LIMIT $1`, [limit, crmFirst])).rows;
     for (const row of rows) await this.db.transaction(async (tx) => {
       const job = (await tx.query('SELECT j.*,t.stage_version,c.policy_version AS current_policy,c.mapping_version AS current_mapping FROM analysis_jobs j JOIN tickets t ON t.chat_id=j.chat_id JOIN chats c ON c.id=j.chat_id WHERE j.id=$1 FOR UPDATE OF c,j', [row.id])).rows[0]!;
       const key = `workflow:decision-proposal:${row.id}`;
@@ -146,6 +155,7 @@ export class ProposalRepository {
     return { proposal: await getProposalTx(tx, proposal.id), replacement, stale: false };
   }
   async decide(raw: DecideProposalInput): Promise<{ proposal: Proposal; replacement: Proposal | null }> {
+    assert(!await crmFirstEnabled(this.db), 'conflict', 'Approve, reject or correct Work movement by replying to its Telegram control message');
     const input = decideProposalSchema.parse(raw);
     const result = await command(this.db, `proposal:decision:${input.proposalId}`, input.idempotencyKey, input, (tx) => this.decideTx(tx, input, { source: 'http' }));
     assert(!result.stale, 'stale_proposal', 'Proposal sources changed; create a new proposal'); return { proposal: result.proposal, replacement: result.replacement };

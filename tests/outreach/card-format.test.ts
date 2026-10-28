@@ -34,10 +34,12 @@ const detail: OutreachDetail = {
 describe('CRM business card format', () => {
   it('renders a complete evidence-backed opportunity record with definitions and controls', () => {
     const card = salesCard({ snapshot: detail, stage: 'qualification', action: 'Send pilot pricing', marker: '[antseed-relationship:relationship-1]', generation: '[antseed-projection:relationship-1:g0]' });
-    expect(card.title).toBe('Cedar — Send pilot pricing');
+    expect(card.title).toBe('Cedar: Cedar requested pilot pricing and contract terms. · Next: Send pilot pricing · ETA: 2026-10-28');
     for (const heading of ['Opportunity summary', 'Pipeline stage', 'Next step', 'Qualification (BANT)', 'Commercial terms', 'Stakeholders and contacts', 'Customer need and proposed solution', 'Risks, blockers and open questions', 'Approved conversation evidence', 'Record controls']) {
       expect(card.description).toContain(`<h2>${heading}</h2>`);
     }
+    const ordered = ['Opportunity summary', 'Pipeline stage', 'Next step', 'Qualification (BANT)', 'Commercial terms', 'Stakeholders and contacts', 'Customer need and proposed solution', 'Risks, blockers and open questions', 'Approved conversation evidence', 'Record controls'].map(heading => card.description.indexOf(`<h2>${heading}</h2>`));
+    expect(ordered).toEqual([...ordered].sort((a,b)=>a-b));
     expect(card.description).toContain('Budget — money approved or available');
     expect(card.description).toContain('Authority — person or committee able to approve');
     expect(card.description).toContain('Mira (CTO, Decision maker)');
@@ -63,7 +65,7 @@ describe('CRM business card format', () => {
 
   it('keeps review cards useful without publishing unapproved claims', () => {
     const card = reviewCard('Cedar <Review>', 'relationship-1', '[antseed-projection:relationship-1:g0]', 2);
-    expect(card.title).toBe('Cedar <Review> — Review initial sales stage');
+    expect(card.title).toBe('Cedar <Review>: Initial sales stage awaiting review · Next: Review initial sales stage · ETA: Not set');
     expect(card.description).toContain('Accepted sales stage:</strong> Not approved');
     expect(card.description).toContain('no commercial stage or source enrollment has been approved');
     expect(card.description).toContain('[antseed-crm-template:v2]');
@@ -72,7 +74,7 @@ describe('CRM business card format', () => {
 
   it('uses the same business format after stale source claims are redacted', () => {
     const card = redactionCard('Cedar', 'qualification', '[antseed-relationship:r]', '[antseed-projection:r:g0]');
-    expect(card.title).toBe('Cedar — Review changed sources');
+    expect(card.title).toBe('Cedar: Approved source context changed · Next: Review changed sources · ETA: Not set');
     expect(card.description).toContain('<h2>Commercial terms</h2>');
     expect(card.description).toContain('Accepted sales stage:</strong> Qualification');
     expect(card.description).toContain('The accepted sales stage has not changed');

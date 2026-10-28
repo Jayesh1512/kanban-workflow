@@ -33,7 +33,10 @@ describe('Outreach canonical HTTP / official SDK parity', () => {
     const detail = await app.inject('/api/outreach/relationships/' + id);
     expect(decode(await client.callTool({ name: 'get_outreach_relationship', arguments: { id } }))).toEqual(detail.json());
     expect(detail.json()).toMatchObject({ activeSources: [], pendingSources: [{ enrollmentState: 'pending' }] });
-    expect((await app.inject('/outreach')).headers['cache-control']).toBe('no-store');
+    const page = await app.inject('/outreach');
+    expect(page.headers['cache-control']).toBe('no-store');
+    expect(page.body).toContain('aria-label="Pipeline KPIs"');
+    for (const label of ['Companies in talks', 'Approved conversations', 'Active opportunities', 'Follow-ups due', 'Pending approvals', 'Deals won']) expect(page.body).toContain(label);
     for (const path of ['/api/outreach/relationships?stage=Completed', '/api/outreach/relationships?extra=true', '/api/outreach/relationships?limit=201', '/api/outreach/relationships/not-a-uuid']) expect((await app.inject(path)).statusCode).toBe(400);
     ready = false;
     expect((await app.inject('/api/outreach/relationships')).statusCode).toBe(503);
@@ -52,6 +55,6 @@ describe('commercial command HTTP / Hermes contract',()=>{
   expect((await client.callTool({name:'decide_sales_proposal',arguments:{proposalId:result.id,action:'approve'}})).isError).toBe(true);
   const decision=await app.inject({method:'POST',url:'/api/outreach/proposals/'+result.id+'/decision',payload:{idempotencyKey:'http-sales-decision',action:'approve',reason:'Operator reviewed source'}});expect(decision.statusCode).toBe(200);expect((await service.get(r.id)).relationship).toMatchObject({acceptedStage:'qualification',stageVersion:1});
   expect(decode(await client.callTool({name:'get_sales_status',arguments:{}}))).toMatchObject({pending_publications:1});
-  const raw={namespace:'http-report',checkedAt:'2026-10-26T00:00:00Z',coverage:'Synthetic report only',threads:[{key:'t1',companyName:'Synthetic Mail',title:'Email report',summary:'Sent an enquiry',sourceAt:null,contacts:[],provisionalStage:'lead',nextAction:'Follow up',claims:['First enquiry sent']}]};const preview=await app.inject({method:'POST',url:'/api/outreach/imports/preview',payload:raw});expect(preview.statusCode).toBe(200);const id=preview.json().id;expect((await app.inject({method:'POST',url:`/api/outreach/imports/${id}/commit`,payload:{}})).statusCode).toBe(200);expect((await service.list({query:'Synthetic Mail'})).items[0]).toMatchObject({displayStage:'lead',acceptedStage:null});
+  const raw={namespace:'http-report',checkedAt:'2026-10-26T00:00:00Z',coverage:'Synthetic report only',threads:[{key:'t1',companyName:'Synthetic Mail',title:'Email report',summary:'Sent an enquiry',sourceAt:null,contacts:[],provisionalStage:'lead',nextAction:'Follow up',claims:['First enquiry sent']}]};const preview=await app.inject({method:'POST',url:'/api/outreach/imports/preview',payload:raw});expect(preview.statusCode).toBe(200);const id=preview.json().id;expect((await app.inject({method:'POST',url:`/api/outreach/imports/${id}/commit`,payload:{}})).statusCode).toBe(200);expect((await service.list({query:'Synthetic Mail'})).items).toEqual([]);expect((await db.query("SELECT count(*)::int AS count FROM outreach_report_context")).rows).toEqual([{count:1}]);
  });
 });

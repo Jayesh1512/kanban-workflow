@@ -25,7 +25,8 @@ export class PgDatabase implements Database {
   private readonly sessions = new AsyncLocalStorage<SessionScope>();
   constructor(connectionString: string) {
     const endpoint = new URL(connectionString);
-    if (/(^|\.)supabase\.(com|co)$/.test(endpoint.hostname) && endpoint.port === '6543') {
+    const supabase = /(^|\.)supabase\.(com|co)$/.test(endpoint.hostname);
+    if (supabase && endpoint.port === '6543') {
       throw new Error('Use a Supabase direct or session-pooler connection on port 5432; transaction pooling cannot preserve application locks');
     }
     const schema = endpoint.searchParams.get('schema');
@@ -37,7 +38,11 @@ export class PgDatabase implements Database {
       return value;
     };
     const max = option('pool_max', 8, 32), connectionTimeoutMillis = option('connect_timeout_ms', 3_000, 60_000);
-    this.pool = new pg.Pool({ connectionString: endpoint.toString(), max, connectionTimeoutMillis, idleTimeoutMillis: 10_000, query_timeout: 15_000, application_name: 'antseed-kanban',
+    // Supabase session-pooler queries cross a WAN and can briefly queue behind
+    // the bounded application pool. Keep local failures fast while allowing a
+    // single remote read enough time to complete instead of degrading replay.
+    const queryTimeoutMillis = option('query_timeout_ms', supabase ? 45_000 : 15_000, 120_000);
+    this.pool = new pg.Pool({ connectionString: endpoint.toString(), max, connectionTimeoutMillis, idleTimeoutMillis: 10_000, query_timeout: queryTimeoutMillis, application_name: 'antseed-kanban',
       ...(schema ? { onConnect: async (client: pg.ClientBase) => {
         // Explicit SQL avoids relying on pooler support for startup options.
         // Never fall back to public and migrate the wrong schema.

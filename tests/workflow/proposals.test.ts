@@ -15,7 +15,7 @@ describe('durable proposal decisions and control correlation', () => {
     const input={jobId:randomUUID(),ticketId:h.ticket.id,expectedStageVersion:0,decision};
     await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,input));await h.db.transaction(tx=>h.proposals.recordAnalysisDecisionTx(tx,input));
     const rows=(await h.db.query('SELECT p.decision,p.apply_state,p.origin,o.state,o.text FROM proposals p JOIN control_outbox o ON o.proposal_id=p.id')).rows;
-    expect(rows).toHaveLength(1);expect(rows[0]).toMatchObject({decision:'pending',apply_state:'not_requested',origin:'openai',state:'pending'});expect(rows[0]!.text).toContain(`${from} → ${target}`);expect(rows[0]!.text).toContain('Reply approve');
+    expect(rows).toHaveLength(1);expect(rows[0]).toMatchObject({decision:'pending',apply_state:'not_requested',origin:'openai',state:'pending'});expect(rows[0]!.text).toContain('Work Kanban review: Cedar Labs');expect(rows[0]!.text).toContain(`${from} → ${target}`);expect(rows[0]!.text).toContain('Reply to THIS message: approve');expect(rows[0]!.text).toContain('not Sales CRM');
     expect((await h.records.getTicket(h.ticket.id)).lane).toBe(from);expect(await h.service.applyNext()).toBeNull();expect(h.moves()).toBe(0);expect((await h.db.query('SELECT id FROM mutations')).rows).toHaveLength(0);
   });
   it('retains missing-control proposals, later enqueues one stable marked intent', async () => {

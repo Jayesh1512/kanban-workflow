@@ -106,6 +106,8 @@ export interface ContactCompanyRole {
 export interface ContactDetail extends Contact { roles: ContactCompanyRole[] }
 export interface Ticket {
   id: UUID;
+  crmRelationshipId?: UUID | null;
+  creationProposalId?: UUID | null;
   chatId: TelegramChatId;
   kind: 'company' | 'contact_prospect';
   companyId: UUID | null;

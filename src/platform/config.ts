@@ -57,7 +57,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     timezone, aiEnvPath,
     telegram: {
       ...telegramApplication(values), sessionPath: str('TELEGRAM_SESSION_PATH', '/data/telegram/client.session'),
-      historyBatchSize: int('TELEGRAM_HISTORY_BATCH_SIZE', 100, 100), historyMaxBatches: int('TELEGRAM_HISTORY_MAX_BATCHES', 10, 10_000),
+      historyBatchSize: int('TELEGRAM_HISTORY_BATCH_SIZE', 20, 100), historyMaxBatches: int('TELEGRAM_HISTORY_MAX_BATCHES', 10, 10_000),
       discoveryBatchSize: int('TELEGRAM_DISCOVERY_BATCH_SIZE', 500, 500),
     },
     vikunja: {

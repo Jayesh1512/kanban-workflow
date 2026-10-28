@@ -75,6 +75,7 @@ export async function companyRows(tx: SqlExecutor, rows: Row[]): Promise<Company
 }
 export async function companyRow(tx: SqlExecutor, r: Row): Promise<Company> { return (await companyRows(tx, [r]))[0]!; }
 export async function ticketRow(tx: SqlExecutor, r: Row): Promise<Ticket> { return { id: String(r.id), chatId: String(r.chat_id), kind: r.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: r.company_id == null ? null : String(r.company_id), vikunjaTaskId: r.vikunja_task_id == null ? null : String(r.vikunja_task_id),
+  ...(r.crm_relationship_id !== undefined ? { crmRelationshipId: r.crm_relationship_id == null ? null : String(r.crm_relationship_id), creationProposalId: r.creation_proposal_id == null ? null : String(r.creation_proposal_id) } : {}),
   lane: r.lane as Ticket['lane'], stageVersion: Number(r.stage_version), previousActiveLane: r.previous_active_lane as Ticket['previousActiveLane'], workstream: r.workstream as Ticket['workstream'],
   summary: String(r.summary), nextAction: r.next_action as string | null, followUpAt: nullableIso(r.follow_up_at), etaAt: nullableIso(r.eta_at), latestSubstantiveAt: nullableIso(r.latest_substantive_at),
   blockers: r.blockers as string[], contactIds: (await tx.query<{ contact_id: string }>('SELECT contact_id FROM ticket_contacts WHERE ticket_id=$1 ORDER BY contact_id', [r.id])).rows.map((r) => r.contact_id),
