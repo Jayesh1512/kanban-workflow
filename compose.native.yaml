@@ -1,0 +1,17 @@
+# Append after existing deployment overrides. Keeps legacy volumes for rollback.
+services:
+  init:
+    build:
+      context: .
+      dockerfile: deploy/native-board/Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-antseed}-workspace-init:local
+    entrypoint: ["/bin/sh", "/deploy/init.sh"]
+  vikunja:
+    profiles: [legacy-vikunja]
+  backend:
+    environment:
+      BOARD_BACKEND: native
+      ACCESS_ENV_PATH: /run/antseed/access.env
+    depends_on: !override
+      init:
+        condition: service_completed_successfully

@@ -20,6 +20,8 @@ export interface OutreachRelationship {
     companyId: string | null;
     displayName: string;
     title: string;
+    /** `Next: … · ETA: …`; the stage is already shown by the column. */
+    nextStep: string;
     summary: string;
     workstream: Workstream | null;
     acceptedStage: SalesStage | null;

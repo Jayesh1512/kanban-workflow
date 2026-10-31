@@ -23,7 +23,7 @@ const source: OutreachSourceContext = {
 };
 const detail: OutreachDetail = {
   relationship: {
-    id: 'relationship-1', kind: 'company', companyId: 'company-1', displayName: 'Cedar', title: 'Cedar', summary: '', workstream: 'Buyer',
+    id: 'relationship-1', kind: 'company', companyId: 'company-1', displayName: 'Cedar', title: 'Cedar', nextStep: 'Next: Send pilot pricing · ETA: Not set', summary: '', workstream: 'Buyer',
     acceptedStage: 'qualification', displayStage: 'qualification', stageBasis: 'accepted', stageReason: 'Active fit evaluation', stageVersion: 1,
     evidenceRevision: 2, disposition: 'pipeline', sourceCount: 1, pendingSourceCount: 0, latestSourceAt: '2026-10-25T12:00:00.000Z', reconciledAt: '2026-10-25T12:01:00.000Z', sourceState: 'current',
   },

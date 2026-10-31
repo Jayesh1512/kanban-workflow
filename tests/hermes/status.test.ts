@@ -7,7 +7,7 @@ import { createWorkflowModule } from '../../src/workflow/module.js';
 // Real A route registered first, then B hook. Synthetic DB failures; no sockets/providers.
 describe('existing platform status route extension', () => {
   it.each([['42P01', 'database_pending', 'connecting'], ['08006', 'database_unavailable', 'unavailable']] as const)('preserves onboarding before/without database: %s', async (code, expectedCode, state) => {
-    const config = await loadRuntimeConfig({ AI_ENV_PATH: '/antseed-test-no-ai', DATABASE_URL: 'postgresql://test:test@127.0.0.1:1/test' });
+    const config = await loadRuntimeConfig({ BOARD_BACKEND: 'vikunja', AI_ENV_PATH: '/antseed-test-no-ai', DATABASE_URL: 'postgresql://test:test@127.0.0.1:1/test' });
     const platform = await createPlatformModule(config); const db = vi.spyOn(platform.services.db, 'query').mockRejectedValue(Object.assign(new Error('PRIVATE DATABASE DETAIL'), { code }));
     const workflow = await createWorkflowModule(platform.services); const app = Fastify();
     try {

@@ -1,3 +1,4 @@
+import type { TelegramStore } from '../telegram/store.js';
 import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { registerTransports } from '../hermes/module.js';
@@ -19,16 +20,19 @@ import { TicketProjector } from './projection.js';
 import { resetJevBreaker, seedKnownJevRestriction, withDurableJevBreaker } from './breaker.js';
 import { OutreachWorkflow } from '../outreach/service.js';
 import { OutreachPublisher } from '../outreach/publisher.js';
-import { outreachPage } from '../outreach/page.js';
+import { outreachPage, nativeOutreachPage } from '../outreach/page.js';
+import { NativeProposalWorkflow } from '../board/native-workflow.js';
+import { registerBoard } from '../board/routes.js';
 
 export function createWorkflowServices(platform: PlatformServices) {
-  const outreach = new OutreachWorkflow(platform.db, platform.clock, platform.config.jev,{vikunjaPublicUrl:platform.config.vikunja.publicUrl??platform.config.vikunja.baseUrl});
+  const native = platform.config.boardBackend === 'native';
+  const outreach = new OutreachWorkflow(platform.db, platform.clock, platform.config.jev,{nativeBoard:native,vikunjaPublicUrl:platform.config.vikunja.publicUrl??platform.config.vikunja.baseUrl});
   const outreachPublisher = new OutreachPublisher(platform.db, platform.config.vikunja, outreach);
   const records = new RecordsRepository(platform.db, platform.clock, platform.config.timezone);
   const proposalRecords = new ProposalRepository(platform.db, platform.control, platform.clock);
   const mutations = new SqlMutationStore(platform.db, platform.clock);
   const projector = new TicketProjector(platform.db, platform.vikunja, records, platform.clock);
-  const proposals = new ProposalWorkflow(proposalRecords, mutations, platform.vikunja, projector);
+  const proposals = native ? new NativeProposalWorkflow(proposalRecords) : new ProposalWorkflow(proposalRecords, mutations, platform.vikunja, projector);
   const analysis = new SqlAnalysisQueue(platform.db, platform.clock, platform.config.timezone, {
     onDecision: (tx, input) => proposalRecords.recordAnalysisDecisionTx(tx, input), onReplay: resetJevBreaker,
   });
@@ -85,10 +89,10 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       await phase(() => services.proposalRecords.recoverDecisionIntents());
       await phase(() => services.proposalRecords.placeInitialAutomatically(5));
       await phase(() => services.proposalRecords.flushPendingControl(20));
-      await phase(() => services.projector.retireUnapprovedBatch(5, abort.signal));
+      if (platform.config.boardBackend !== 'native') await phase(() => services.projector.retireUnapprovedBatch(5, abort.signal));
       // Remote board observation remains prompt without continuously rereading
       // every card through the external Supabase-backed Vikunja deployment.
-      await phase(() => services.projector.projectBatch(5, abort.signal, 300_000));
+      if (platform.config.boardBackend !== 'native') await phase(() => services.projector.projectBatch(5, abort.signal, 300_000));
       await phase(() => services.proposals.applyNext(abort.signal));
       const providers = await Promise.all([services.extraction.status(), services.jev.status()]);
       const waiting = (await platform.db.query("SELECT 1 FROM proposals WHERE decision='pending' AND last_error='control_chat_missing' LIMIT 1")).rows.length > 0;
@@ -119,7 +123,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         await phase(() => services.outreach.reconcile(5));
       }
       await phase(() => services.outreach.refreshDetails());
-      await phase(() => services.outreachPublisher.tick(abort.signal));
+      if (platform.config.boardBackend !== 'native') await phase(() => services.outreachPublisher.tick(abort.signal));
       if (sweep && (await platform.db.query("SELECT mode FROM outreach_board_binding WHERE singleton")).rows[0]?.mode === 'publish') {
         await phase(() => services.outreach.assessNext(abort.signal));
       }
@@ -173,7 +177,8 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       // Fastify onClose runs after active HTTP drains. Begin workflow stop in
       // preClose so SDK sockets cannot block the cleanup that closes them.
       app.addHook('preClose', stop);
-      app.get('/outreach', async (_request, reply) => reply.header('Cache-Control', 'no-store').type('text/html').send(outreachPage));
+      app.get('/outreach', async (_request, reply) => reply.header('Cache-Control', 'no-store').type('text/html').send(platform.config.boardBackend === 'native' ? nativeOutreachPage : outreachPage));
+      if (platform.config.boardBackend === 'native') registerBoard(app,platform.db,services.outreach,requireDatabaseReady,platform.config.timezone,{work:services.proposalRecords,intake:platform.chats as TelegramStore});
       transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach }, requireDatabaseReady);
       registerStatus(app, async () => {
         const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
@@ -188,6 +193,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       });
       const operational = async (message:import('../shared/ports.js').ControlMessage) => {
         if (stopped) throw new Error('Workflow stopping; retain inbox reply');
+        if (platform.config.boardBackend === 'native' && !(await platform.db.query("SELECT 1 FROM workspace_members WHERE telegram_user_id=$1 AND enabled AND role IN ('admin','crm_manager')",[message.senderId])).rowCount) return;
         const reply = requireDatabaseReady().then(() => services.proposals.handleControlReply(message)); replies.add(reply);
         try { await reply; } finally { replies.delete(reply); }
       };

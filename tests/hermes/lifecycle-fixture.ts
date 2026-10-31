@@ -32,7 +32,7 @@ export async function lifecycleHarness(options: { hold?: boolean; failUnsubscrib
     async withSessionLock() { throw new Error('Lifecycle fixture cannot establish session/advisory lock behavior'); },
     async close() { closed = true; emit('db_closed'); },
   };
-  const config = await loadRuntimeConfig({ AI_ENV_PATH: '/antseed-no-ai-lifecycle-fixture' });
+  const config = await loadRuntimeConfig({ BOARD_BACKEND: 'vikunja', AI_ENV_PATH: '/antseed-no-ai-lifecycle-fixture' });
   const realPlatform = await createPlatformModule(config);
   const control: ControlBus = { subscribe() { subscribed = true; return () => { subscribed = false; emit('unsubscribed'); if (options.failUnsubscribe) throw new Error('Synthetic unsubscribe failure'); }; }, async enqueueProposal() { throw new Error('Unrelated transport'); } };
   const workflow = await createWorkflowModule({ ...realPlatform.services, db, control });

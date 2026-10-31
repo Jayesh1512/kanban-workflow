@@ -1,0 +1,90 @@
+{
+  "environment": "Synthetic preview at http://localhost:19490 driven by headless Chrome for Testing (Playwright core, outside the repo)",
+  "results": [
+    {
+      "name": "admin can reject a chat intake request",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "no page errors (admin)",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "member@example.com: /approvals page is forbidden (403)",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "member@example.com: no Approvals link in the nav",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "member@example.com: every approvals API is 403",
+      "result": "pass",
+      "detail": "403,403,403,403"
+    },
+    {
+      "name": "member@example.com: public CRM returns accepted records only",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "member@example.com: dashboard hides pending approvals count",
+      "result": "pass",
+      "detail": "18 Active tasks 2 Overdue 5 Companies in talks 3 Active opportunities 0 Follow-ups due 1 Deals won"
+    },
+    {
+      "name": "no page errors (member@example.com)",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "viewer@example.com: /approvals page is forbidden (403)",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "viewer@example.com: no Approvals link in the nav",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "viewer@example.com: every approvals API is 403",
+      "result": "pass",
+      "detail": "403,403,403,403"
+    },
+    {
+      "name": "viewer@example.com: public CRM returns accepted records only",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "viewer@example.com: dashboard hides pending approvals count",
+      "result": "pass",
+      "detail": "18 Active tasks 2 Overdue 5 Companies in talks 3 Active opportunities 0 Follow-ups due 1 Deals won"
+    },
+    {
+      "name": "no page errors (viewer@example.com)",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "mobile approvals: no horizontal overflow",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "mobile dashboard: no horizontal overflow",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "name": "keyboard: tab buttons switch queues with Tab+Enter and keep focus",
+      "result": "pass",
+      "detail": ""
+    }
+  ]
+}

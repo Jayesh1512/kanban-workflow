@@ -1,3 +1,4 @@
+import { audit as workspaceAudit, canMoveCrm, type Member } from '../access/service.js';
 import { automaticPolicy, groupInitialApprovalSql } from '../shared/automatic-policy.js';
 import { crmFirstEnabled, workParentIsCurrent } from '../shared/crm-first.js';
 import type { JevDecision, Lane, Proposal } from '../shared/domain.js';
@@ -85,6 +86,10 @@ export class ProposalRepository {
     assert(currentTicketMapping({ mappingStatus: chat.mapping_status as 'confirmed' | 'unresolved' | 'ambiguous' | 'non_company', companyId: chat.company_id as string | null }, { kind: ticket.kind === 'contact_prospect' ? 'contact_prospect' : 'company', companyId: ticket.company_id as string | null }), 'ambiguous_mapping', 'Ticket relationship mapping changed');
     assert(Number(ticket.stage_version) === input.expectedStageVersion, 'stale_proposal', 'Source stage version changed');
     assert(ticket.lane !== input.targetLane, 'validation', 'Target lane equals current lane'); await assertEvidence(tx, input.evidenceIds, String(chat.id));
+    if (!correctionOf) { // an identical pending move is the same decision; do not queue it twice
+      const same = (await tx.query("SELECT id FROM proposals WHERE ticket_id=$1 AND decision='pending' AND apply_state<>'stale' AND target_lane=$2 AND source_stage_version=$3 ORDER BY created_at LIMIT 1", [input.ticketId, input.targetLane, input.expectedStageVersion])).rows[0];
+      if (same) return getProposalTx(tx, String(same['id']));
+    }
     const row = (await tx.query(`INSERT INTO proposals(ticket_id,source_lane,source_stage_version,source_mapping_version,source_policy_version,target_lane,reason,next_action,origin,correction_of)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`, [input.ticketId, ticket.lane, input.expectedStageVersion, chat.mapping_version, chat.policy_version, input.targetLane, input.reason, input.nextAction, input.origin, correctionOf])).rows[0]!;
     await links(tx, 'proposal_evidence', 'proposal_id', String(row.id), input.evidenceIds);
@@ -159,6 +164,19 @@ export class ProposalRepository {
     const input = decideProposalSchema.parse(raw);
     const result = await command(this.db, `proposal:decision:${input.proposalId}`, input.idempotencyKey, input, (tx) => this.decideTx(tx, input, { source: 'http' }));
     assert(!result.stale, 'stale_proposal', 'Proposal sources changed; create a new proposal'); return { proposal: result.proposal, replacement: result.replacement };
+  }
+  async decideByHuman(raw: DecideProposalInput, actor: Member) {
+    assert(canMoveCrm(actor), 'forbidden', 'CRM management permission is required');
+    const input=decideProposalSchema.parse(raw);
+    const result=await command(this.db, `proposal:web-decision:${input.proposalId}`, input.idempotencyKey, {input,memberId:actor.id}, async tx=>{
+      const member=(await tx.query('SELECT role,enabled FROM workspace_members WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
+      assert(member?.enabled && ['admin','crm_manager'].includes(String(member.role)), 'forbidden', 'CRM management permission is required');
+      const result=await this.decideTx(tx,input,{source:'http'});
+      await workspaceAudit(tx,actor,'work.approval',input.proposalId,{decision:'pending'},{decision:result.proposal.decision,stale:result.stale,reason:input.decision==='correct' ? input.reason : input.note??null});
+      return result;
+    });
+    assert(!result.stale, 'stale_proposal', 'Proposal sources changed; request a new proposal');
+    return {proposal:result.proposal,replacement:result.replacement};
   }
   /** User-authorized initial placement only, through the ordinary approval/apply
    * journal. Later movement remains a Telegram/operator decision. */

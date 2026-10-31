@@ -21,9 +21,11 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   const aiEnvPath = env['AI_ENV_PATH'] ?? '/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env';
   const ai = await readEnv(aiEnvPath);
   const database = env['DATABASE_ENV_PATH'] ? await readEnv(env['DATABASE_ENV_PATH']) : null;
+  const access = env['ACCESS_ENV_PATH'] ? await readEnv(env['ACCESS_ENV_PATH']) : null;
+  if (env['ACCESS_ENV_PATH'] && access === null) throw new Error('Could not read access configuration file');
   if (env['DATABASE_ENV_PATH'] && database === null) throw new Error('Could not read database configuration file');
   if (env['DATABASE_ENV_PATH'] && !nonblank(database?.['DATABASE_URL'])) throw new Error('Database configuration file must contain DATABASE_URL');
-  const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...database, ...env };
+  const values: NodeJS.ProcessEnv = { ...runtime, ...ai, ...database, ...access, ...env };
   // Optional blank Compose fields must preserve mounted configuration.
   for (const key of ['TELEGRAM_APPLICATION_PROFILE', 'TELEGRAM_API_ID', 'TELEGRAM_API_HASH', 'MOVEMENT_PROVIDER', 'JEV_ENDPOINT', 'JEV_MODEL', 'OPENAI_TIMEOUT_MS', 'OPENAI_MAX_OUTPUT_TOKENS']) values[key] = nonblank(env[key]) ?? nonblank(ai?.[key]) ?? nonblank(runtime?.[key]) ?? undefined;
   const str = (key: string, fallback: string) => nonblank(values[key]) ?? fallback;
@@ -52,6 +54,14 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); }
   catch { throw new Error('Invalid TIMEZONE'); }
   const config: RuntimeConfig = {
+    boardBackend: str('BOARD_BACKEND', 'native') as 'native' | 'vikunja',
+    access: {
+      supabaseUrl: nonblank(values['SUPABASE_URL']),
+      publishableKey: nonblank(values['SUPABASE_PUBLISHABLE_KEY']) ?? nonblank(values['SUPABASE_ANON_KEY']),
+      adminEmail: nonblank(values['WORKSPACE_ADMIN_EMAIL'])?.toLowerCase() ?? null,
+      appUrl: url('APP_URL', `http://localhost:${str('PORT', '3000')}`, ['http:', 'https:']).replace(/\/$/, ''),
+      crmApproval: str('CRM_APPROVAL', 'direct') as 'direct' | 'telegram',
+    },
     http: { host: str('HOST', '127.0.0.1'), port: int('PORT', 3000, 65535) },
     databaseUrl: url('DATABASE_URL', 'postgresql://antseed:antseed@127.0.0.1:5432/antseed', ['postgres:', 'postgresql:']),
     timezone, aiEnvPath,
@@ -72,6 +82,13 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     extraction: { provider: 'openai', model: str('OPENAI_MODEL', 'gpt-6.1-sol'), apiKey: nonblank(values['OPENAI_API_KEY']), timeoutMs: int('OPENAI_TIMEOUT_MS', 30_000), maxAttempts: int('OPENAI_MAX_ATTEMPTS', 2, 10), maxOutputTokens: int('OPENAI_MAX_OUTPUT_TOKENS', 4096, 100_000) },
     jev: { provider, endpoint, model, apiKey: provider === 'openai' ? nonblank(values['OPENAI_API_KEY']) : nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },
   };
+  if (!['native', 'vikunja'].includes(config.boardBackend!)) throw new Error('Invalid BOARD_BACKEND');
+  if (!['direct', 'telegram'].includes(config.access!.crmApproval)) throw new Error('Invalid CRM_APPROVAL');
+  if (config.access!.supabaseUrl) {
+    const authUrl = new URL(config.access!.supabaseUrl);
+    if (authUrl.protocol !== 'https:' || authUrl.username || authUrl.password || authUrl.pathname !== '/' || authUrl.search || authUrl.hash)
+      throw new Error('SUPABASE_URL must be an HTTPS project origin');
+  }
   metadata.set(config, { aiEnvReadable: ai !== null });
   return config;
 }

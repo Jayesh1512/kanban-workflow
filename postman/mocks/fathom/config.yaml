@@ -1,0 +1,11 @@
+version: 1
+name: Fathom meeting contract
+slug: fathom
+protocol: http
+port: 19482
+interceptRequests: true
+origin: api.fathom.ai
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

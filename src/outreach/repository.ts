@@ -9,6 +9,7 @@ import type { DateFact } from '../shared/domain.js';
 import { approvedChatSourceSql } from '../shared/source-approval.js';
 import { crmFirstEnabled } from '../shared/crm-first.js';
 import { resolveTitleCompany } from '../workflow/title-company.js';
+import { prospectDisplayName } from '../shared/company-title.js';
 
 const joins = `FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
  LEFT JOIN outreach_telegram_inputs i ON i.chat_id=s.chat_id`;
@@ -114,15 +115,16 @@ export class OutreachRepository implements OutreachService {
     });
   }
 
-  async list(raw: OutreachListInput) {
+  async list(raw: OutreachListInput, placement: 'all' | 'accepted' | 'unplaced' = 'all') {
     const input = outreachListSchema.parse(raw);
     return this.db.transaction(async (tx) => {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
       const rows = (await tx.query(`SELECT r.* FROM outreach_relationships r WHERE r.retained
+        AND ($5::text='all' OR ($5='accepted' AND r.accepted_stage IS NOT NULL) OR ($5='unplaced' AND r.accepted_stage IS NULL))
         AND ($1::uuid IS NULL OR r.id>$1) AND ($2::text IS NULL OR strpos(lower(r.display_name),lower($2))>0)
         AND EXISTS(SELECT 1 ${joins} WHERE rs.relationship_id=r.id AND rs.enrollment_state IN ('active','pending') AND ${eligible} AND ${identityMatches})
         AND ($3::text IS NULL OR coalesce(r.accepted_stage,r.provisional_stage)=$3)
-        ORDER BY r.id LIMIT $4`, [input.cursor ?? null, input.query || null, input.stage ?? null, input.limit + 1])).rows;
+        ORDER BY r.id LIMIT $4`, [input.cursor ?? null, input.query || null, input.stage ?? null, input.limit + 1, placement])).rows;
       const page = rows.slice(0, input.limit);
       const ids = page.map((row) => row.id);
       // Hydrate a page in two bounded round trips. Per-card queries multiply WAN
@@ -136,9 +138,10 @@ export class OutreachRepository implements OutreachService {
       const actions = actionsTable && ids.length ? (await tx.query(`SELECT DISTINCT ON (relationship_id) relationship_id,text,precision,local_date::text AS local_date,instant FROM outreach_actions
         WHERE relationship_id=ANY($1::uuid[]) AND actor='antseed' AND state='open'
         ORDER BY relationship_id,local_date NULLS LAST,instant NULLS LAST,id`, [ids])).rows : [];
+      const companies = await this.companies(tx);
       const items = page.map((row) => this.relationshipFromRows(row,
         linked.filter((source) => String(source.relationship_id) === String(row.id)),
-        actions.find((action) => String(action.relationship_id) === String(row.id))));
+        actions.find((action) => String(action.relationship_id) === String(row.id)), companies));
       return { items: items.filter((r) => (!input.stage || r.displayStage === input.stage) && (!input.disposition || r.disposition === input.disposition)),
         nextCursor: rows.length > input.limit ? String(page.at(-1)!.id) : null };
     });
@@ -150,10 +153,15 @@ export class OutreachRepository implements OutreachService {
       ${joins} WHERE rs.relationship_id=$1`, [r.id, r.company_id])).rows;
     const actionsTable = (await tx.query("SELECT to_regclass(quote_ident(current_schema())||'.outreach_actions') AS name")).rows[0]?.name;
     const action = actionsTable ? (await tx.query("SELECT text,precision,local_date::text AS local_date,instant FROM outreach_actions WHERE relationship_id=$1 AND actor='antseed' AND state='open' ORDER BY local_date NULLS LAST,instant NULLS LAST,id LIMIT 1", [r.id])).rows[0] : null;
-    return this.relationshipFromRows(r, linked, action);
+    return this.relationshipFromRows(r, linked, action, await this.companies(tx));
   }
 
-  private relationshipFromRows(r: Row, linked: Row[], action: Row | null | undefined): OutreachRelationship {
+  private async companies(tx: SqlExecutor) {
+    return (await tx.query('SELECT canonical_name,aliases FROM companies')).rows.map(c => ({ canonicalName: String(c.canonical_name), aliases: (c.aliases as string[] | null) ?? [] }));
+  }
+
+  private relationshipFromRows(r: Row, linked: Row[], action: Row | null | undefined, companies: { canonicalName: string; aliases: string[] }[]): OutreachRelationship {
+    const name = r.kind === 'contact_prospect' && r.company_id == null && Number(r.identity_version) === 0 ? prospectDisplayName(String(r.display_name), companies) : String(r.display_name);
     // Assess the complete source set before hiding ineligible context. Excluding
     // even one contributor invalidates its saved assessment immediately.
     const current = linked.length > 0 && linked.every((s) => s.enrollment_state==='rejected' || (s.enrollment_state==='suspended' ? !s.eligible : s.eligible && s.source_revision === s.current_revision));
@@ -168,8 +176,9 @@ export class OutreachRepository implements OutreachService {
     const stageLabel = SALES_STAGES.find(item => item.id === stage)?.label;
     const description = stageLabel ? `${stageLabel} ${r.kind === 'company' ? 'opportunity' : 'contact prospect'}` : 'Initial sales placement awaiting review';
     const latest = (name: string) => sources.map((s) => nullableIso(s[name])).filter((v): v is string => !!v).sort().at(-1) ?? null;
+    const nextAction = knownAction || (accepted ? 'Next action not recorded' : 'Review initial placement');
     return { id: String(r.id), kind: r.kind as OutreachRelationship['kind'], companyId: r.company_id as string | null,
-      displayName: String(r.display_name), title: ticketTitle({ identity: String(r.display_name), description, nextAction: knownAction || (accepted ? 'Next action not recorded' : 'Review initial placement'), eta }),
+      displayName: name, title: ticketTitle({ identity: name, description, nextAction, eta }), nextStep: `Next: ${nextAction} · ETA: ${eta}`,
       // Shared company summaries can contain excluded/pending-source claims.
       // M1 has no provenance-bound accepted aggregate summary writer yet.
       summary: '', workstream: r.workstream as OutreachRelationship['workstream'], acceptedStage: accepted,

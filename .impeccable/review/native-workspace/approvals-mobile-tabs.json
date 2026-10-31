@@ -1,0 +1,74 @@
+[
+  {
+    "name": "375px manager: all 3 queue tabs legible in a scrolling row, no page overflow",
+    "result": "pass",
+    "detail": {
+      "count": 3,
+      "containerScrolls": true,
+      "pageOverflow": false,
+      "buttons": [
+        {
+          "label": "Initial placement3",
+          "textClipped": false,
+          "width": 153,
+          "wraps": false
+        },
+        {
+          "label": "CRM changes2",
+          "textClipped": false,
+          "width": 134,
+          "wraps": false
+        },
+        {
+          "label": "Work2",
+          "textClipped": false,
+          "width": 76,
+          "wraps": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "375px manager: last tab scrolls into view when focused",
+    "result": "pass"
+  },
+  {
+    "name": "375px admin: all 4 queue tabs legible in a scrolling row, no page overflow",
+    "result": "pass",
+    "detail": {
+      "count": 4,
+      "containerScrolls": true,
+      "pageOverflow": false,
+      "buttons": [
+        {
+          "label": "Initial placement3",
+          "textClipped": false,
+          "width": 153,
+          "wraps": false
+        },
+        {
+          "label": "CRM changes2",
+          "textClipped": false,
+          "width": 134,
+          "wraps": false
+        },
+        {
+          "label": "Work2",
+          "textClipped": false,
+          "width": 76,
+          "wraps": false
+        },
+        {
+          "label": "Chat intake3",
+          "textClipped": false,
+          "width": 118,
+          "wraps": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "375px admin: last tab scrolls into view when focused",
+    "result": "pass"
+  }
+]

@@ -4,14 +4,17 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { MCP_OPERATIONS, DomainError } from '../shared/api.js';
+import { MCP_OPERATIONS, DomainError, ERROR_HTTP_STATUS } from '../shared/api.js';
 import { apiError, type Binding } from './bindings.js';
 
 /** Official SDK stateless transport: each request has its own server/transport pair. */
 export function registerMcp(app: FastifyInstance, bindings: Record<string, Binding>, ready: () => Promise<void>, track: <T>(work: () => Promise<T>) => Promise<T>, catalog: readonly (typeof MCP_OPERATIONS)[number][] = MCP_OPERATIONS) {
   const active = new Map<Server, () => Promise<void>>(); let stopped = false;
   app.route({ method: ['POST', 'GET', 'DELETE'], url: '/mcp',
-    errorHandler(error, _request, reply) { const code = error.code === 'FST_ERR_CTP_INVALID_JSON_BODY' ? -32700 : -32600; return reply.code(400).send({ jsonrpc: '2.0', id: null, error: { code, message: code === -32700 ? 'Parse error' : 'Invalid request' } }); },
+    errorHandler(error, _request, reply) {
+      if (error instanceof DomainError && ['unauthenticated','forbidden'].includes(error.code))
+        return reply.code(ERROR_HTTP_STATUS[error.code]).send({jsonrpc:'2.0',id:null,error:{code:-32001,message:error.message}});
+      const code = error.code === 'FST_ERR_CTP_INVALID_JSON_BODY' ? -32700 : -32600; return reply.code(400).send({ jsonrpc: '2.0', id: null, error: { code, message: code === -32700 ? 'Parse error' : 'Invalid request' } }); },
     async handler(request, reply) {
       reply.header('Cache-Control', 'no-store');
       reply.raw.setHeader('Cache-Control', 'no-store');

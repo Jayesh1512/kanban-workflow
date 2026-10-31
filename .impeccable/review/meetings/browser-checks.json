@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "checks": [
+    "customer filter",
+    "transcript/summary text search",
+    "two simultaneous meetings in local date window",
+    "exclusive end boundary",
+    "task state empty view",
+    "complete transcript disclosure",
+    "complete pinned JSON download",
+    "manual customer correction and restoration",
+    "desktop/user/mobile no horizontal overflow",
+    "no JavaScript errors"
+  ],
+  "overlapping": [
+    "Implementation check-in",
+    "Pilot readiness & next steps"
+  ],
+  "captures": [
+    {
+      "name": "desktop",
+      "viewport": 1440,
+      "document": 1440,
+      "height": 1172
+    },
+    {
+      "name": "user-1280",
+      "viewport": 1280,
+      "document": 1280,
+      "height": 1062
+    },
+    {
+      "name": "mobile",
+      "viewport": 390,
+      "document": 390,
+      "height": 2383
+    }
+  ],
+  "errors": []
+}

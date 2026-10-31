@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import { audit as workspaceAudit, type Member } from '../access/service.js';
+import { command } from '../workflow/sql.js';
 import { automaticPolicy } from '../shared/automatic-policy.js';
 import { crmFirstEnabled } from '../shared/crm-first.js';
 import { queueIntake } from './intake.js';
@@ -125,6 +128,27 @@ export class TelegramStore implements IngestionStore, ChatService {
       await tx.query(`UPDATE chat_intake_requests SET decision=$2,decision_origin='operator',operator_reason=$3,
         decided_at=now(),decided_message_id=NULL,claim_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1`,
       [request['id'], decision, audit]);
+      return changed;
+    });
+  }
+  async decideIntakeByHuman(requestId: string, raw: unknown, actor: Member): Promise<Chat> {
+    z.uuid().parse(requestId);
+    const input=z.strictObject({action:z.enum(['approve','reject']),reason:z.string().trim().min(1).max(500),idempotencyKey:z.string().min(1).max(200)}).parse(raw);
+    if(actor.role!=='admin') throw new DomainError('forbidden','Administrator access is required');
+    return command(this.db,`intake:web-decision:${requestId}`,input.idempotencyKey,{input,memberId:actor.id},async tx=>{
+      const member=(await tx.query('SELECT role,enabled FROM workspace_members WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
+      if(!member?.enabled || member.role!=='admin') throw new DomainError('forbidden','Administrator access is required');
+      const ref=(await tx.query('SELECT chat_id FROM chat_intake_requests WHERE id=$1',[requestId])).rows[0];
+      if(!ref) throw new DomainError('not_found','Intake request not found');
+      const chat=await this.lockedChat(tx,String(ref.chat_id));
+      const request=(await tx.query('SELECT * FROM chat_intake_requests WHERE id=$1 FOR UPDATE',[requestId])).rows[0]!;
+      if(request.decision!=='pending' || chat.isControl || chat.inclusion!=='undecided' || chat.policyVersion!==Number(request.policy_version))
+        throw new DomainError('conflict','Intake request already decided or policy changed. Refresh before deciding.');
+      const changed=await this.changeInclusion(tx,chat,input.action==='approve'?'included':'excluded');
+      await tx.query(`UPDATE chat_intake_requests SET decision=$2,decision_origin='operator',operator_reason=$3,
+        decided_at=now(),decided_message_id=NULL,claim_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1`,
+        [requestId,input.action==='approve'?'approved':'rejected',input.reason]);
+      await workspaceAudit(tx,actor,'intake.approval',requestId,{chatId:chat.id,inclusion:chat.inclusion},{chatId:chat.id,inclusion:changed.inclusion,reason:input.reason});
       return changed;
     });
   }

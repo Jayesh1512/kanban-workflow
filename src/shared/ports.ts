@@ -21,6 +21,8 @@ export interface Database extends SqlExecutor {
   close(): Promise<void>;
 }
 export interface RuntimeConfig {
+  boardBackend?: 'native' | 'vikunja';
+  access?: { supabaseUrl: string | null; publishableKey: string | null; adminEmail: string | null; appUrl: string; crmApproval: 'direct' | 'telegram' };
   http: { host: string; port: number };
   databaseUrl: string;
   timezone: string;

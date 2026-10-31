@@ -1,0 +1,13 @@
+{
+  "results": [
+    "Manager can move CRM immediately and see refreshed details",
+    "Escape closes panel and restores focus after board refresh",
+    "Manager can open Work context and move lanes directly",
+    "Detail loading errors support retry",
+    "Mobile viewer can inspect CRM and Work with no mutation controls or overflow",
+    "Personal task owners can move their tasks directly",
+    "No uncaught browser errors"
+  ],
+  "errors": [],
+  "checkedAt": "2026-10-29T19:42:05.280Z"
+}

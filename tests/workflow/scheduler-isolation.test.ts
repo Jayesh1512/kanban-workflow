@@ -23,7 +23,7 @@ async function harness(drift = false) {
     const checksum = createHash('sha256').update(await readFile(new URL(version,directory))).digest('hex');
     await db.query('INSERT INTO schema_migrations VALUES($1,$2)',[version,drift?'0'.repeat(64):checksum]);
   }
-  const config = await loadRuntimeConfig({ AI_ENV_PATH: '/synthetic-no-env', MOVEMENT_PROVIDER: 'openai', OPENAI_API_KEY: 'synthetic-not-used', OPENAI_TIMEOUT_MS: '1000' });
+  const config = await loadRuntimeConfig({ BOARD_BACKEND: 'vikunja', AI_ENV_PATH: '/synthetic-no-env', MOVEMENT_PROVIDER: 'openai', OPENAI_API_KEY: 'synthetic-not-used', OPENAI_TIMEOUT_MS: '1000' });
   function unused<T extends object>(): T { return new Proxy({} as T, { get() { throw Error('No upstream calls in scheduler boundary test'); } }); }
   module = await createWorkflowModule({ db, config, clock: { now:()=>new Date() }, vikunja: unused(), telegram: unused(), chats: unused(), ingestion: unused(), control: { subscribe:()=>()=>{}, enqueueProposal:async()=>{throw Error('No control sends');} } });
   app = Fastify(); await module.register(app); await module.start(); return { db, module };
