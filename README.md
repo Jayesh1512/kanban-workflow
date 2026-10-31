@@ -4,11 +4,13 @@
 
 Created in [T3 Code](https://t3.codes).
 
-A personal relationship board backed by Telegram MTProto, Vikunja, PostgreSQL,
+A relationship and task workspace backed by Telegram MTProto, PostgreSQL,
 OpenAI extraction and Vercel Jev classification. Nous Hermes accesses the same
-backend through MCP. Lane recommendations remain pending until an operator
+backend through authenticated MCP. Authorized human CRM moves save directly;
+AI lane recommendations remain pending until an authorized operator
 approves them in Telegram. Approved Telegram chats enter the CRM first; concrete
 Work actions create tickets only after a separate Telegram approval. See
+[native workspace and permissions](docs/NATIVE_WORKSPACE.md) and the
 [CRM and Work approval flow](docs/CRM_OPERATIONS.md).
 
 Start the complete stack from this directory:
@@ -17,10 +19,12 @@ Start the complete stack from this directory:
 docker compose up
 ```
 
-Open [setup and status](http://localhost:3000/) and
-[Vikunja](http://localhost:3456/). Compose mounts the configured AI environment
+For the native workspace, configure Supabase sign-in and append
+`compose.native.yaml` to the retained Compose configuration as described in the
+[native deployment guide](docs/NATIVE_WORKSPACE.md). Open the
+[workspace](http://localhost:3000/). Compose mounts the configured AI environment
 file read-only and generates persistent service credentials automatically.
-Complete Telegram phone/code/2FA onboarding on the setup page; the application
+Admins complete Telegram phone/code/2FA onboarding under Connections; the application
 uses its own persisted session. This workstation's configured personal instance
 uses [localhost:19280](http://localhost:19280/); see the
 [local handoff and Hermes command](docs/LOCAL_HANDOFF.md).

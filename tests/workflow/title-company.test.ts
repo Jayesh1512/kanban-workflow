@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { companyCardTitle, companyFromGroupTitle } from '../../src/shared/company-title.js';
+import { companyCardTitle, companyFromGroupTitle, partnerFromChatTitle, prospectDisplayName } from '../../src/shared/company-title.js';
 import { resolveTitleCompany, TITLE_COMPANY_SOURCE } from '../../src/workflow/title-company.js';
 import { fixtureDatabase } from './database.js';
 import { SqlAnalysisQueue, inputHash } from '../../src/workflow/analysis.js';
@@ -12,6 +12,14 @@ it.each([
  ['group','Antseed <> Phala <> Aeon',null],['group','Phala <> Aeon',null],['group','AntSeed <> Antseed',null],['group','AntSeed <> ',null],
  ['group','AntSeed <> Phala & Aeon',null],['group','AntSeed <> Community',null],
 ])('derives only an unambiguous structured group company: %s %s', (kind,title,want)=>{expect(companyFromGroupTitle(kind,title)).toBe(want);});
+const known=[{canonicalName:'Trade clash',aliases:[]},{canonicalName:'Virtuals',aliases:[]},{canonicalName:'0G',aliases:['0g']}];
+it.each([
+ ['Javi Antseed <> Loops (India community)','Loops (India community)'],['Antseed - Moi','Moi'],['Agentic Hub(Devcon) - Antseed','Agentic Hub(Devcon)'],
+ ['Antseed x RocX and Ammora','RocX and Ammora'],['Alex Antseed','Alex'],['Antseed','Antseed'],['Positron AI','Positron AI'],['WOMBO / w.ai','WOMBO / w.ai'],
+])('shows only the partner side of a chat title: %s',(title,want)=>{expect(partnerFromChatTitle(title)).toBe(want);});
+it.each([
+ ['David Grateful Trade Clash Gaming','Trade clash'],['Miratisu Virtuals Protocol','Virtuals'],['Antseed - Trade Clash','Trade clash'],['Virtuals x Trade Clash','Virtuals x Trade Clash'],['Javi Antseed <> Loops','Loops'],
+])('names a prospect by the one known company it mentions: %s',(title,want)=>{expect(prospectDisplayName(title,known)).toBe(want);});
 let db:Awaited<ReturnType<typeof fixtureDatabase>>;
 beforeEach(async()=>{db=await fixtureDatabase();await db.query("UPDATE chats SET title='AntSeed <> Phala' WHERE id=-1001");await db.query("INSERT INTO tickets(chat_id,company_id,kind,lane,stage_version,vikunja_task_id) VALUES(-1001,NULL,'contact_prospect','Integrations',3,88)");});
 afterEach(async()=>{await db.close();});

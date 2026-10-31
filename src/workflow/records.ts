@@ -112,12 +112,24 @@ export async function replaceDates(tx: SqlExecutor, parentId: string, jobId: str
   }
 }
 
+/** "Ravi requested/proposed/shared…" reports what Ravi did or is waiting on; "Ravi said he would…" is his own open task. */
+export function requestedByOwner(text: string, owner: string): boolean {
+  const subject = text.match(/^\s*(@?[\w.]+)\s+(?:has\s+)?\w+/i)?.[1]?.toLowerCase();
+  const obligation = /\b(?:will|would|need(?:s|ed)? to|should|must|plans? to|promised|agreed to|going to|intends? to|has to|have to)\b/i;
+  return !!subject && !!owner && owner.includes(subject.replace(/^@/, '')) && !obligation.test(text.trim().split(/\s+/).slice(0, 6).join(' '));
+}
+
 export async function refreshInferredActions(tx: SqlExecutor, ticketId: string): Promise<void> {
   const facts = (await tx.query(`SELECT f.* FROM facts f WHERE f.ticket_id=$1 AND f.parent_fact_id IS NULL AND f.state='open'
     AND (f.source='manual' OR EXISTS(SELECT 1 FROM fact_evidence fe JOIN evidence e ON e.id=fe.evidence_id JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
       JOIN chats c ON c.id=e.chat_id WHERE fe.fact_id=f.id AND e.invalidated_at IS NULL AND m.version=e.message_version AND m.deleted_at IS NULL AND c.inclusion='included' AND NOT c.is_control))
     ORDER BY f.created_at DESC,f.id`, [ticketId])).rows;
-  const next = facts.find((f) => f.actor_party === 'antseed' && (f.kind === 'action' || f.kind === 'commitment'))?.text ?? null;
+  // Only the ticket owner's own actions become the next action; a task named for another teammate is theirs.
+  const hasMembers = (await tx.query("SELECT to_regclass('workspace_members') AS t")).rows[0]?.t != null;
+  const owner = !hasMembers ? '' : String((await tx.query(`SELECT split_part(coalesce(nullif(m.display_name,''),split_part(m.email,'@',1)),' ',1) AS first FROM tickets t
+    LEFT JOIN workspace_members m ON m.id=t.owner_id WHERE t.id=$1`, [ticketId])).rows[0]?.first ?? '').toLowerCase();
+  const isOwners = (f: Record<string, unknown>) => !requestedByOwner(String(f.text), owner) && (!owner || !f.actor_display_name || /^antseed$/i.test(String(f.actor_display_name)) || String(f.actor_display_name).toLowerCase().includes(owner));
+  const next = facts.find((f) => f.actor_party === 'antseed' && (f.kind === 'action' || f.kind === 'commitment') && isOwners(f))?.text ?? null;
   await tx.query(`UPDATE tickets SET next_action=CASE WHEN actions_source='inferred' THEN $2 ELSE next_action END,
     actions_version=actions_version+CASE WHEN actions_source='inferred' AND next_action IS DISTINCT FROM $2::text THEN 1 ELSE 0 END,
     blockers=$3,updated_at=now() WHERE id=$1`, [ticketId, next, facts.filter((f) => f.kind === 'blocker').map((f) => f.text)]);

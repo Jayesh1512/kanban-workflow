@@ -16,7 +16,7 @@ export async function queueIntake(tx: SqlExecutor, chatId: string, manual = fals
 
 /** Same durable control worker, separate request kind from lane proposals. */
 export class ChatIntake {
-  constructor(private readonly db: PgDatabase, private readonly store: TelegramStore, private readonly telegram: TelegramPort) {}
+  constructor(private readonly db: PgDatabase, private readonly store: TelegramStore, private readonly telegram: TelegramPort, private readonly nativeBoard = false) {}
   async handle(message: ControlMessage): Promise<boolean> {
     if (!message.replyToMessageId || !/^(approve|reject)\s*[.!]?$/i.test(message.text.trim())) return false;
     if (!(await this.db.query('SELECT 1 FROM chats WHERE id=$1 AND is_control', [message.chatId])).rowCount) return false;
@@ -30,6 +30,7 @@ export class ChatIntake {
       return false;
     }
     await this.db.transaction(async (tx) => {
+      if (this.nativeBoard && !(await tx.query("SELECT 1 FROM workspace_members WHERE telegram_user_id=$1 AND enabled AND role='admin' FOR SHARE",[message.senderId])).rowCount) return;
       const chat = await this.store.lockedChat(tx, String(ref['chat_id']));
       const row = (await tx.query('SELECT * FROM chat_intake_requests WHERE id=$1 FOR UPDATE', [ref['id']])).rows[0]!;
       if (row['decision'] !== 'pending') return;

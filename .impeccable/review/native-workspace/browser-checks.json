@@ -1,0 +1,134 @@
+{
+  "environment": "Synthetic only: tests/board/ui-preview.ts on http://localhost:19490 (in-process PostgreSQL engine, local stand-in for Supabase Auth with ES256 JWTs, invented companies/tasks). No real database, Supabase, Telegram, AI provider or email.",
+  "viewports": [
+    "1280x800",
+    "390x844 (iphone-12-pro)"
+  ],
+  "checks": [
+    {
+      "name": "password sign-in error shown without clearing the form",
+      "result": "pass"
+    },
+    {
+      "name": "invited sign-up: <12 char password rejected client-side, valid sign-up shows confirm-email message, no session set",
+      "result": "pass"
+    },
+    {
+      "name": "manager direct CRM move: card changes column, history shows 'Saved immediately', notice states no Telegram message, focus returns to the moved card",
+      "result": "pass"
+    },
+    {
+      "name": "AI assessment adds a pending suggestion labelled 'Awaiting Telegram review \u00b7 not applied'; accepted stage unchanged",
+      "result": "pass"
+    },
+    {
+      "name": "superseded AI suggestion labelled 'Superseded by a newer decision'; human moves are not labelled AI",
+      "result": "pass"
+    },
+    {
+      "name": "viewer on CRM: no move/assess/import controls, read-only copy, stage history visible",
+      "result": "pass"
+    },
+    {
+      "name": "member: create task, edit lane (card moves), two-step delete; stale-version message path implemented, not browser-exercised",
+      "result": "pass"
+    },
+    {
+      "name": "team scope: others' tasks render no form and name the owner; legacy CRM Work (read-only) loads",
+      "result": "pass"
+    },
+    {
+      "name": "dashboard Team tasks view is read-only even for the user's own tasks",
+      "result": "pass"
+    },
+    {
+      "name": "viewer My tasks: no New task, team scope only",
+      "result": "pass"
+    },
+    {
+      "name": "admin Access: Telegram ID validation, save with Telegram ID, invite with role, last-admin demotion rejected with server message",
+      "result": "pass"
+    },
+    {
+      "name": "keyboard: skip link first in tab order with 3px focus outline; Enter moves focus to content",
+      "result": "pass"
+    },
+    {
+      "name": "no horizontal page overflow at 390px (CRM, dashboard, My tasks, Access)",
+      "result": "pass"
+    },
+    {
+      "name": "dark scheme CRM card open",
+      "result": "pass"
+    },
+    {
+      "name": "impeccable detect",
+      "result": "advisory only: 18px h2, #000 (since removed), pre-existing 31px/11px KPI sizes on the incumbent page"
+    },
+    {
+      "name": "vitest run tests/board --maxWorkers=2 (10 permission/ workspace tests + page shell tests)",
+      "result": "22 passed"
+    },
+    {
+      "name": "openId one-shot: after Create and after Save, typing a multi-character search keeps focus in the search box",
+      "result": "pass"
+    },
+    {
+      "name": "manually closed card stays closed after Refresh",
+      "result": "pass"
+    },
+    {
+      "name": "history labels use human_move/decision_source (Moved to / Move request / AI suggestion; Saved immediately only for human_move)",
+      "result": "pass (page test + browser for the direct human move)"
+    },
+    {
+      "name": "Approvals (headless Chrome for Testing, synthetic preview): manager sees 3 tabs, admin 4; Chat intake admin-only; intake API 403 for manager",
+      "result": "pass"
+    },
+    {
+      "name": "Approvals: AI placement suggestion shown as 'Pending approval \u00b7 not applied'; approve puts the card on the accepted board",
+      "result": "pass"
+    },
+    {
+      "name": "Approvals: placement and CRM-change cards load source context before the decision buttons",
+      "result": "pass"
+    },
+    {
+      "name": "Approvals: manual placement saves immediately onto the accepted CRM; stale/conflicting decision shows an explicit message and refreshes the list",
+      "result": "pass"
+    },
+    {
+      "name": "Approvals: Work lane approval reads 'Queued', not moved; admin intake reject works",
+      "result": "pass"
+    },
+    {
+      "name": "CRM and dashboard show no placement/context-review sections and no unplaced relationship for any role",
+      "result": "pass"
+    },
+    {
+      "name": "Member and viewer: /approvals 403, no nav link, every approvals API 403, public CRM accepted-only, dashboard hides pending-approvals count",
+      "result": "pass"
+    },
+    {
+      "name": "375px manager (3 tabs) and admin (4 tabs): all labels legible in a scrolling row, no page overflow, last tab scrolls into view on keyboard focus (B1)",
+      "result": "pass"
+    },
+    {
+      "name": "Keyboard: tab buttons switch queues with Tab+Enter and keep focus on the selected tab",
+      "result": "pass"
+    },
+    {
+      "name": "crm-work scope now reads /api/board/work?limit=100",
+      "result": "changed at root's request; typecheck + page tests pass; not browser-exercised (preview has no such route)"
+    }
+  ],
+  "not_checked": [
+    "Real Supabase sign-in, signup email delivery and email confirmation",
+    "Telegram approval round trip",
+    "Production data volumes (100+ relationships) and pagination 'Load more' in a browser",
+    "Screen reader pass",
+    "Stale-version (409) recovery paths and offline errors were reviewed in code, not triggered in the browser",
+    "Work-ticket creation proposals (command_kind 'work') render path: no seed in the preview",
+    "Backend observation: placing one relationship made another relationship's pending AI proposal return 409 'Sales evidence or membership changed' in the preview. The UI handles it (message + refresh) but root may want to confirm that is intended."
+  ]
+}

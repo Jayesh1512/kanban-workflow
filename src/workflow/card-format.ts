@@ -36,7 +36,7 @@ export function cardDate(date: DateFact): string {
 }
 
 /** A compact excerpt of an existing task, never a new inferred commitment. */
-function actionTitle(value: string, dates: DateFact[] = []): string {
+export function actionTitle(value: string, dates: DateFact[] = []): string {
   const clean = singleLine(value);
   if (/\b(?:unclear|ambiguous|not sure|not clear)\b/i.test(clean)) return 'Clarify next step';
   const verbs = 'send|share|review|follow up|schedule|confirm|resolve|fix|test|integrate|check|provide|prepare|introduce|connect|reply|respond|arrange|update|complete|verify|discuss|set up|reach out|deliver|append|submit|draft|pay|sign|contact|wait';

@@ -12,6 +12,7 @@ import { ControlSetupManager, DurableControlBus } from '../telegram/control.js';
 import { TelegramStore } from '../telegram/store.js';
 import { TelegramSync } from '../telegram/sync.js';
 import { onboardingPage } from './page.js';
+import { AccessControl } from '../access/service.js';
 
 const loginInput = z.discriminatedUnion('step', [
   z.strictObject({ step: z.literal('phone'), phone: z.string().min(5).max(32) }),
@@ -30,11 +31,12 @@ const safeCount = (raw: unknown): number => {
 };
 
 export async function createPlatformModule(config: RuntimeConfig): Promise<PlatformModule> {
+  const native = config.boardBackend === 'native';
   // Constructors allocate no open connection, session, timer or remote action.
   const db = new PgDatabase(config.databaseUrl), store = new TelegramStore(db, config.telegram), telegram = new MtcuteAdapter(config.telegram, store), vikunja = new VikunjaAdapter(config.vikunja, db);
   const migrationsReady = await createMigrationGate(db);
   telegram.setControlSetup(new ControlSetupManager(db, store, () => telegram.requireLive()));
-  const control = new DurableControlBus(db, telegram, store, requireDatabaseReady), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize, requireDatabaseReady);
+  const control = new DurableControlBus(db, telegram, store, requireDatabaseReady, config.boardBackend === 'native'), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize, requireDatabaseReady);
   let telegramStarted = false, telegramTask: Promise<void> | null = null;
   let dbState = state('connecting', 'database_pending', 'Waiting for database and migrations');
   let boardState: ServiceStatus | null = null;
@@ -68,6 +70,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
     if (stopped) return;
     try { await requireDatabaseReady(); } catch { return; }
     if (!telegramStarted) { telegramStarted = true; telegramTask = telegram.start().catch(() => {}).finally(() => { if (!stopped) sync.start(); }); }
+    if (native) { boardState = state('ready',null,'Built-in board uses PostgreSQL directly'); return; }
     try {
       if (!boardDone) { await vikunja.ensureBoard(); boardDone = true; } else await vikunja.check();
       boardState = await vikunja.status();
@@ -102,12 +105,18 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       } catch { dbState = state('unavailable', 'database_unavailable', 'Database status query failed; retrying connection'); }
     }
     const configured = (present: boolean, name: string) => state(present ? 'degraded' : 'unconfigured', present ? 'not_checked' : 'missing_credentials', present ? `${name} configured; access has not been verified by the workflow module` : `Configure ${name} runtime credentials`);
-    return { components: { database: dbState, vikunja: boardState ?? await vikunja.status(), telegram: await telegram.status(), telegramSync: sync.status(), automaticIntake: migrationsDone && dbState.state === 'ready' ? await sync.automaticIntake.status().catch(() => state('unavailable','automatic_intake_status_unavailable','Automatic intake status unavailable')) : state('connecting','database_pending','Automatic intake awaits migrations'), control: migrationsDone && dbState.state === 'ready' ? await control.status().catch(() => state('unavailable', 'control_status_unavailable', 'Control status query failed')) : state('connecting', 'database_pending', 'Control status awaits migrations'), extraction: configured(Boolean(config.extraction.apiKey), 'OpenAI'), jev: configured(Boolean(config.jev.apiKey), config.jev.provider === 'openai' ? 'OpenAI Decisions gpt-6-luna' : 'Vercel AI Gateway Jev') }, telegramLogin: await telegram.loginState(), accountBound, imports, replayPending, analysisPending, proposalsPending,
+    return { components: { database: dbState, [native ? 'board' : 'vikunja']: boardState ?? (native ? state('connecting','database_pending','Board awaits database initialization') : await vikunja.status()), telegram: await telegram.status(), telegramSync: sync.status(), automaticIntake: migrationsDone && dbState.state === 'ready' ? await sync.automaticIntake.status().catch(() => state('unavailable','automatic_intake_status_unavailable','Automatic intake status unavailable')) : state('connecting','database_pending','Automatic intake awaits migrations'), control: migrationsDone && dbState.state === 'ready' ? await control.status().catch(() => state('unavailable', 'control_status_unavailable', 'Control status query failed')) : state('connecting', 'database_pending', 'Control status awaits migrations'), extraction: configured(Boolean(config.extraction.apiKey), 'OpenAI'), jev: configured(Boolean(config.jev.apiKey), config.jev.provider === 'openai' ? 'OpenAI Decisions gpt-6-luna' : 'Vercel AI Gateway Jev') }, telegramLogin: await telegram.loginState(), accountBound, imports, replayPending, analysisPending, proposalsPending,
       configuration: { ...configMetadata(config), telegramConfigured: Boolean(config.telegram.apiId && config.telegram.apiHash), extractionConfigured: Boolean(config.extraction.apiKey), jevConfigured: Boolean(config.jev.apiKey) } };
   }
   return {
     name: 'platform', services: { db, config, clock: { now: () => new Date() }, telegram, vikunja, chats: store, ingestion: store, control },
     async register(app) {
+      if (native) {
+        if (!config.access) throw new Error('Native workspace access configuration is required');
+        const access = new AccessControl(db,config.access);
+        await access.register(app);
+        app.decorate('workspaceAccess',access);
+      }
       sync.register(); // subscriptions installed before any module starts
       const ready = requireDatabaseReady;
       const chatParams = z.strictObject({ chatId: chatIdSchema });
@@ -117,7 +126,10 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       app.post('/api/chats/:chatId/import', async (req) => { await ready(); return store.requestImport(z.strictObject({ chatId: chatIdSchema, idempotencyKey: idempotencyKeySchema, maxBatches: z.number().int().min(1).max(10000), batchSize: z.number().int().min(1).max(100) }).parse({ ...(req.body as object), ...chatParams.parse(req.params) })); });
       app.get('/api/chats/:chatId/mapping', async (req) => { await ready(); return store.mappingCandidates(chatParams.parse(req.params).chatId); });
       app.put('/api/chats/:chatId/mapping', async (req) => { await ready(); return store.correctMapping(correctMappingSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params), source: 'http' })); });
-      app.get('/', async (_req, reply) => reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(onboardingPage));
+      app.get('/', async (_req, reply) => native ? reply.redirect('/dashboard') : reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(onboardingPage));
+      if (native) app.get('/connections',async (_req,reply)=>reply.type('text/html; charset=utf-8').send(onboardingPage
+        .replace('the Vikunja board','the built-in board')
+        .replace('<a href="/outreach">Outreach pipeline</a>','<a href="/dashboard">Workspace overview</a> · <a href="/outreach">CRM</a> · <a href="/team">Access</a>')));
       app.get('/api/status', async (_req, reply) => reply.header('Cache-Control', 'no-store').send(await operationsStatus()));
       app.get('/api/telegram/login', async () => telegram.loginState());
       app.post('/api/telegram/login', async (req) => { const input = loginInput.parse(req.body); await ready(); return telegram.submitLogin(input); });
@@ -129,7 +141,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
     async status() {
       if (migrationsDone) { try { await requireDatabaseReady(); } catch { return dbState; } }
       if (dbState.state !== 'ready') return dbState;
-      const board = boardState ?? await vikunja.status();
+      const board = boardState ?? (native ? state('connecting','database_pending','Board awaits database initialization') : await vikunja.status());
       if (board.state !== 'ready') return state('degraded', board.code, board.detail);
       const tg = await telegram.status();
       if (tg.state !== 'ready') return state('degraded', tg.code, tg.detail);

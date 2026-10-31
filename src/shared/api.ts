@@ -54,12 +54,13 @@ export const PLATFORM_OPERATIONS = [
   { method: 'POST', path: '/api/telegram/control-setup/:operationKey/reconcile', service: 'telegram.reconcileControlSetup' },
 ] as const;
 export type McpToolName = Exclude<(typeof API_OPERATIONS)[number]['tool'], null>;
-export type ErrorCode = 'validation' | 'not_found' | 'conflict' | 'stale_proposal' | 'excluded_chat' | 'ambiguous_mapping' | 'upstream_unavailable' | 'not_configured' | 'internal';
+export type ErrorCode = 'unauthenticated' | 'forbidden' | 'validation' | 'not_found' | 'conflict' | 'stale_proposal' | 'excluded_chat' | 'ambiguous_mapping' | 'upstream_unavailable' | 'not_configured' | 'internal';
 export interface ApiError { error: { code: ErrorCode; message: string; retryable: boolean; requestId: string } }
 export class DomainError extends Error {
   constructor(public readonly code: ErrorCode, message: string, public readonly retryable = false) { super(message); this.name = 'DomainError'; }
 }
 export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
+  unauthenticated: 401, forbidden: 403,
   validation: 400, not_found: 404, conflict: 409, stale_proposal: 409, excluded_chat: 409,
   ambiguous_mapping: 409, upstream_unavailable: 503, not_configured: 503, internal: 500,
 };

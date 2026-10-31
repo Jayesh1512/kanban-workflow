@@ -96,7 +96,7 @@ export class DurableControlBus implements ControlBus {
   private readonly subscribers = new Set<(message: ControlMessage) => Promise<void>>();
   private readonly owners = new Map<string,{handle:(m:ControlMessage)=>Promise<void>;validate?:((id:string)=>Promise<boolean>)|undefined}>();
   private readonly intake: ChatIntake | null;
-  constructor(private readonly db: PgDatabase, private readonly telegram: TelegramPort, store?: TelegramStore, private readonly ready?: () => Promise<void>) { this.intake = store ? new ChatIntake(db, store, telegram) : null; }
+  constructor(private readonly db: PgDatabase, private readonly telegram: TelegramPort, store?: TelegramStore, private readonly ready?: () => Promise<void>, nativeBoard = false) { this.intake = store ? new ChatIntake(db, store, telegram, nativeBoard) : null; }
   async status(): Promise<ServiceStatus> {
     const row = (await this.db.query("SELECT EXISTS(SELECT 1 FROM chats WHERE is_control) AS configured,(SELECT count(*) FROM control_setup_operations WHERE state='remote_unknown') AS unknown,(SELECT count(*) FROM control_inbox WHERE state<>'done') AS inbox,(SELECT count(*) FROM control_outbox WHERE state='failed' AND attempts>=10) AS failed")).rows[0]!;
     const intake = this.intake ? (await this.db.query("SELECT count(*) FILTER(WHERE decision='pending') AS pending,count(*) FILTER(WHERE decision='pending' AND delivery_state<>'sent') AS queued,count(*) FILTER(WHERE decision='pending' AND delivery_state='failed' AND attempts>=10) AS failed FROM chat_intake_requests")).rows[0] : null;

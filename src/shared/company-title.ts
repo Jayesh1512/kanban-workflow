@@ -19,3 +19,26 @@ export function companyCardTitle(company: { canonicalName: string; aliases: stri
   return partner && [company.canonicalName,...company.aliases].some(name=>name.toLowerCase()===partner.toLowerCase())
     ? company.canonicalName : `${company.canonicalName} — ${chat.title}`;
 }
+
+const norm = (value: string) => ` ${value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+const ours = /\bant\s?seed\b/i;
+
+/** Drops our own side of a chat title ("Javi Antseed <> Loops (India community)" → "Loops (India community)"). */
+export function partnerFromChatTitle(raw: string): string {
+  const title = raw.trim().replace(/\s+/g, ' ');
+  if (!ours.test(title)) return title;
+  const parts = title.split(/\s*(?:<\s*>|<->|↔)\s*|\s+[-–—|x×/]\s+|\s*[-–—]\s+|\s+[-–—]\s*/i).map(p => p.trim()).filter(Boolean);
+  const kept = parts.filter(p => !ours.test(p));
+  const name = (kept.length ? kept : parts.map(p => p.replace(new RegExp(ours, 'gi'), ''))).join(' · ').replace(/\s+/g, ' ').trim();
+  return name || title;
+}
+
+/**
+ * Display name for a prospect with no confirmed company: the one known company it names,
+ * else the chat title without our own side. Never used once a human has corrected the identity.
+ */
+export function prospectDisplayName(raw: string, companies: { canonicalName: string; aliases: string[] }[]): string {
+  const name = partnerFromChatTitle(raw), haystack = norm(name);
+  const hits = companies.filter(c => [c.canonicalName, ...c.aliases].some(n => norm(n).trim().length >= 3 && haystack.includes(norm(n))));
+  return hits.length === 1 ? hits[0]!.canonicalName : name;
+}

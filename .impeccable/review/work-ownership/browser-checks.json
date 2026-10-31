@@ -1,0 +1,19 @@
+[
+  {
+    "viewport": "desktop",
+    "work": 10,
+    "personal": 1,
+    "correctDetailKinds": true,
+    "noErrors": true
+  },
+  {
+    "viewport": "mobile",
+    "work": 10,
+    "personal": 1,
+    "correctDetailKinds": true,
+    "noErrors": true
+  },
+  {
+    "viewerStillReadOnly": true
+  }
+]

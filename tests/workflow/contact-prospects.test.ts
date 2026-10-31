@@ -18,7 +18,7 @@ let db: Database, queue: SqlAnalysisQueue, records: RecordsRepository, proposals
 const clock = { now:()=>new Date('2026-10-17T03:00:00Z') };
 const decisionProvenance = {...provenance(),model:'gpt-6-luna',schemaVersion:OPENAI_DECISIONS_VERSION};
 beforeEach(async()=>{
-  db=await fixtureDatabase();
+  db=await fixtureDatabase([new URL('../../db/migrations/202610270004_operator_intake_approvals.sql',import.meta.url)]);
   await db.query("UPDATE analysis_jobs SET status='cancelled'");
   const m=outbound().messages[0]!;m.sender.names=['Jayesh'];m.peer.names=['Harsh'];m.peer.usernames=['harsh'];m.text='Hi Harsh, Jayesh here from AntSeed. Would you like to try our API services?';
   await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(7,'user','Harsh','included')");
