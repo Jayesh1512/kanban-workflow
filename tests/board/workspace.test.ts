@@ -199,6 +199,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     const javier=(await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Javier Privado Id\"}','{ajgonzal}','unknown') RETURNING id")).rows[0]!;
     await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(557,$1)",[javier.id]);
     await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Nate S\"}','{Natron0}','unknown')");
+    await h.db.query("INSERT INTO contacts(names,emails,affiliation) VALUES('{\"Kim Lee\"}','{kim@AntSeed.com}','unknown')");
     await h.db.query("INSERT INTO app_settings(key,value) VALUES('directory:team','{\"telegramUserIds\":[\"557\"],\"usernames\":[\"@natron0\"]}')");
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,4,557,'2026-10-27T10:00:00Z','Hi')");
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,3,556,'2026-10-26T10:00:00Z','From our side')");
@@ -213,7 +214,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
       expect(jane).toMatchObject({names:['Jane Doe'],usernames:['janedoe'],emails:['jane@acme.example'],phones:['+15550100'],roles:['CTO']});
       expect(new Date(jane.last_contacted).toISOString()).toBe('2026-10-25T10:00:00.000Z');
       const team=(await h.app.inject({url:'/api/board/directory/team',headers:h.headers(who)})).json().items;
-      expect(team.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Javier Privado Id','Nate S','Our Teammate','Sam | Antseed']);
+      expect(team.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Javier Privado Id','Kim Lee','Nate S','Our Teammate','Sam | Antseed']);
       expect(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed')).toMatchObject({usernames:['samseed']});
       expect(new Date(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed').last_active).toISOString()).toBe('2026-10-26T10:00:00.000Z');
       for(const url of ['/directory','/antseed-team'])expect((await h.app.inject({url,headers:h.headers(who)})).statusCode).toBe(200);
