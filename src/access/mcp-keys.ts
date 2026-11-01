@@ -182,7 +182,7 @@ export function registerMcpAccess(app: FastifyInstance, access: AccessControl, m
     const what = input.surface === 'crm' ? 'full CRM MCP access (direct edits and stage moves)' : 'Admin MCP access (every workspace tool)';
     const who = `${actor.display_name || actor.email} (${actor.email}, ${actor.role})`;
     const expires = new Date(created.expires_at as string).toUTCString();
-    const email = access.config.adminEmail ? await mailer({ to: access.config.adminEmail, subject: `AntSeed MCP access request from ${actor.display_name || actor.email}`,
+    const email = access.config.adminEmail ? await mailer({ to: access.config.adminEmail, subject: `AntSeed Workbench MCP access request from ${actor.display_name || actor.email}`,
       text: `${who} requests ${what}.\n\nReason: ${input.reason}\n\nApprove: ${link('approve')}\nDeny: ${link('deny')}\n\nThe links expire ${expires} and need an admin sign-in.`,
       html: `<p>${escape(who)} requests <strong>${escape(what)}</strong>.</p><p>Reason: ${escape(input.reason)}</p><p><a href="${escape(link('approve'))}">Review and approve</a> · <a href="${escape(link('deny'))}">Deny</a></p><p>The links expire ${escape(expires)} and need an admin sign-in.</p>` }) : 'not_configured';
     await db.query('UPDATE mcp_access_requests SET email_state=$2 WHERE id=$1', [created.id, email]);
@@ -215,7 +215,7 @@ export function registerMcpAccess(app: FastifyInstance, access: AccessControl, m
 }
 
 /** Emailed link target: an admin confirms with a same-origin POST; the token is single use. */
-export const approvalPage = String.raw`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP access request · AntSeed</title>${brandFontLink}<style>${nativeTokens}${topbarStyles}
+export const approvalPage = String.raw`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP access request · AntSeed Workbench</title>${brandFontLink}<style>${nativeTokens}${topbarStyles}
 *{box-sizing:border-box}body{margin:0;font:14px/1.55 var(--font-ui);color:var(--ink);background:var(--paper)}body>main>:not(.topbar):not(.skip){max-width:760px}h1#content{margin-top:28px}main{max-width:760px;margin:auto;padding:20px 24px 40px}h1{font-size:26px;letter-spacing:-.025em;margin:20px 0 8px}
 article{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}dt{font-weight:600;color:var(--soft);font-size:12px}dd{margin:0 0 10px}button{font:inherit;font-weight:600;border:1px solid var(--line);border-radius:7px;min-height:42px;padding:9px 14px;cursor:pointer;background:var(--paper);color:var(--ink)}
 .primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}.danger{color:var(--danger);border-color:var(--dangerline)}.actions{display:flex;gap:8px;flex-wrap:wrap}#status{color:var(--soft)}#status[data-error=true]{color:var(--danger);font-weight:600}[hidden]{display:none!important}

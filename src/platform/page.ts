@@ -110,7 +110,7 @@ function mountMcp(member){mcpMember=member;
 
 /** Native workspace version: the shared top bar, MCP keys for everyone, Telegram/AI setup for admins only. */
 export const nativeConnectionsPage = onboardingPage
-  .replace('<title>AntSeed connections</title>', `<title>Connections · AntSeed</title>${brandFontLink}`)
+  .replace('<title>AntSeed connections</title>', `<title>Connections · AntSeed Workbench</title>${brandFontLink}`)
   .replace(/<style>[\s\S]*?<\/style>/, `<style>${nativeTokens}${topbarStyles}${connectionStyles}${mcpStyles}</style>`)
   .replace(/<main><h1>AntSeed connections<\/h1>[\s\S]*?<button id="refresh">/, `<main>${topbarMarkup}<div class="heading" id="content" tabindex="-1"><div><h1>Connections</h1><p class="muted">Connect AI agents to AntSeed. Admins also manage Telegram and AI setup at the bottom.</p></div></div>${mcpMarkup}<details id="admin-setup" class="fold setup" hidden><summary>Telegram and AI setup (admin)</summary><button id="refresh">`)
   .replace('<article><h2>Operational work</h2><pre id="work"></pre></article>', '')

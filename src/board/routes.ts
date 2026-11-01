@@ -38,13 +38,13 @@ export function registerBoard(app: FastifyInstance, db: Database, outreach: Outr
     const input=z.strictObject({scope:z.enum(['mine','team']).default('mine'),limit:z.coerce.number().int().min(1).max(200).default(100),cursor:z.uuid().optional()}).parse(request.query);
     if(input.scope==='mine'&&!access.myTasks(member))throw new DomainError('forbidden','My tasks is not available for this account');
     const rows=(await db.query(`WITH tasks AS (
-      SELECT ${taskSelect},'personal'::text AS kind,NULL::text AS company,NULL::text AS next_action,NULL::text AS headline,NULL::text AS actions_source,NULL::int AS actions_version FROM personal_tasks t JOIN workspace_members m ON m.id=t.owner_id
+      SELECT ${taskSelect},'personal'::text AS kind,NULL::text AS company,NULL::text AS next_action,NULL::text AS headline,NULL::text AS actions_source,NULL::int AS actions_version,NULL::text AS workstream FROM personal_tasks t JOIN workspace_members m ON m.id=t.owner_id
       UNION ALL
       SELECT t.id,t.owner_id,t.next_action AS title,
         t.summary AS description,t.lane,(LEAST(t.eta_at,t.follow_up_at) AT TIME ZONE $4)::date::text AS due_date,
         t.stage_version AS version,t.created_at,t.updated_at,
         coalesce(nullif(m.display_name,''),split_part(m.email,'@',1),'Unassigned') AS owner_name,'work'::text AS kind,
-        coalesce(co.canonical_name,c.title) AS company,t.next_action,t.headline,t.actions_source,t.actions_version
+        coalesce(co.canonical_name,c.title) AS company,t.next_action,t.headline,t.actions_source,t.actions_version,coalesce(co.workstream,t.workstream) AS workstream
       FROM tickets t JOIN chats c ON c.id=t.chat_id LEFT JOIN companies co ON co.id=t.company_id
       LEFT JOIN workspace_members m ON m.id=t.owner_id WHERE ${visibleWorkSql}
     ) SELECT * FROM tasks WHERE ($1::uuid IS NULL OR owner_id=$1) AND ($2::uuid IS NULL OR id>$2)

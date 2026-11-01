@@ -38,6 +38,11 @@ export interface OutreachRelationship {
     latestSourceAt: string | null;
     reconciledAt: string | null;
     sourceState: 'current' | 'changed';
+    /** Earliest open AntSeed follow-up as YYYY-MM-DD, when one is dated. */
+    followUpDate?: string | null;
+    createdAt?: string | null;
+    /** Pending AI (non-manual) proposals awaiting approval. */
+    pendingSuggestionCount?: number;
 }
 export interface OutreachContact {
     id: string;

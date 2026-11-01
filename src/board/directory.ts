@@ -59,7 +59,7 @@ export function registerDirectory(app: FastifyInstance, db: Database, ready: () 
 
 const pageHead = (title: string) => String.raw`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} · AntSeed</title>${brandFontLink}<style>
+<title>${title} · AntSeed Workbench</title>${brandFontLink}<style>
 ${nativeTokens}${topbarStyles}
 *{box-sizing:border-box}body{margin:0;color:var(--ink);background:var(--paper);font:14px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1900px;margin:auto;padding:20px 24px 40px}h1{font-size:26px;line-height:1.2;letter-spacing:-.025em;margin:0 0 8px}p{max-width:75ch;margin:8px 0}a{color:var(--accent);text-underline-offset:3px}.muted{color:var(--soft);font-size:12px}[hidden]{display:none!important}
 main button,input{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:7px;min-height:42px;padding:9px 12px}input{width:100%}label{display:grid;gap:5px;font-size:12px;font-weight:600;max-width:420px;margin:16px 0}

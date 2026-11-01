@@ -88,4 +88,44 @@ describe('native workspace pages (static shell checks)', () => {
     expect(workspacePage).toContain("if(!canReview()){location.replace('/dashboard')");
     expect(workspacePage).toContain("n!=='proposals'");
   });
+  it('approval cards show the change up front, one status badge and the AI reasoning behind Why?', () => {
+    for (const part of ["'Waiting for you'", "'AI suggests'", "'Why?'", "'New relationship'", "w.source_lane+' → '+w.target_lane", 'cleanStep(r.nextStep)', 'Review initial placement|Next action not recorded', 'ETA: (Not set']) expect(workspacePage).toContain(part);
+    for (const old of ['AI suggestion pending', 'Pending approval · not applied', 'proposal-note']) expect(workspacePage).not.toContain(old);
+  });
+  it('CRM Pipeline has one compact filter/sort row (native only), persisted in localStorage and the URL', () => {
+    for (const id of ['id="filters"', 'id="f-ws"', 'id="f-fu"', 'id="f-pending"', 'id="f-archived"', 'id="f-sort"', 'id="f-clear"', 'id="f-shown"']) expect(nativeOutreachPage).toContain(id);
+    expect(outreachPage).not.toContain('id="filters"');
+    for (const part of ["localStorage.setItem(viewKey", 'history.replaceState', 'Sort: Last activity', 'Show Archived']) expect(nativeOutreachPage).toContain(part);
+  });
+  it('CRM filters and in-stage sorts work on loaded rows', () => {
+    const source = scripts(nativeOutreachPage).join('\n');
+    const line = (start: string) => source.split('\n').find((l) => l.startsWith(start))!;
+    const run = new Function('view', `${line('const dayKey=')}${line('function passes(r)')}${line('const sorters=')}return {passes,sorters,dayKey};`) as
+      (view: object) => { passes: (r: object) => boolean; sorters: Record<string, (a: object, b: object) => number>; dayKey: (d: Date) => string };
+    const base = { ws: '', fu: '', pending: '', archived: '', sort: 'activity' };
+    const { passes, dayKey } = run(base);
+    const today = dayKey(new Date()), past = '2000-01-01', far = '2999-01-01';
+    expect(passes({ acceptedStage: 'archived' })).toBe(false);
+    expect(run({ ...base, archived: '1' }).passes({ acceptedStage: 'archived' })).toBe(true);
+    expect(run({ ...base, ws: 'Buyer' }).passes({ acceptedStage: 'lead', workstream: 'Provider' })).toBe(false);
+    expect(run({ ...base, ws: 'none' }).passes({ acceptedStage: 'lead', workstream: null })).toBe(true);
+    const overdue = run({ ...base, fu: 'overdue' }).passes, week = run({ ...base, fu: 'week' }).passes, none = run({ ...base, fu: 'none' }).passes;
+    expect([overdue({ followUpDate: past }), overdue({ followUpDate: today }), overdue({})]).toEqual([true, false, false]);
+    expect([week({ followUpDate: today }), week({ followUpDate: far }), week({ followUpDate: past })]).toEqual([true, false, false]);
+    expect([none({}), none({ followUpDate: today })]).toEqual([true, false]);
+    expect(run({ ...base, pending: '1' }).passes({ pendingSuggestionCount: 0 })).toBe(false);
+    const { sorters } = run(base), rows = [{ n: 'a', latestSourceAt: '2026-10-01T00:00:00Z', followUpDate: null, createdAt: '2026-10-05T00:00:00Z' }, { n: 'b', latestSourceAt: '2026-10-09T00:00:00Z', followUpDate: '2026-11-02', createdAt: '2026-10-01T00:00:00Z' }];
+    expect([...rows].sort(sorters.activity).map((r) => r.n)).toEqual(['b', 'a']);
+    expect([...rows].sort(sorters.followup).map((r) => r.n)).toEqual(['b', 'a']);
+    expect([...rows].sort(sorters.added).map((r) => r.n)).toEqual(['a', 'b']);
+  });
+  it('drops the duplicate Unique companies card and widens search to fields the rows carry', () => {
+    for (const html of [workspacePage, nativeOutreachPage]) expect(html).not.toContain('Unique companies');
+    expect(nativeOutreachPage).toContain('[r.displayName,r.title,r.nextStep,r.summary,r.workstream]');
+    expect(workspacePage).toContain('[row.title,row.company,row.summary,row.nextAction,row.description,row.displayName,row.owner_name]');
+  });
+  it('My Tasks has a filter/sort row for mine/team only, with owner only in team scope', () => {
+    for (const id of ['id="filters"', 'id="f-type"', 'id="f-due"', 'id="f-ws"', 'id="f-company"', 'id="f-owner"', 'id="f-sort"', 'id="f-clear"', 'id="f-shown"']) expect(workspacePage).toContain(id);
+    for (const part of ["mode==='work'&&(source==='mine'||source==='team')", "source==='team'?owners:[]", 'localStorage.setItem(viewKey', 'history.replaceState', 'Sort: Due date']) expect(workspacePage).toContain(part);
+  });
 });

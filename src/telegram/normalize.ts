@@ -1,6 +1,6 @@
 import type { Message, Peer, PeerSender } from '@mtcute/node';
 import type { PeerSnapshot } from '../shared/domain.js';
-import type { TelegramDialog, TelegramMessageInput } from '../shared/ports.js';
+import type { TelegramChatMigration, TelegramDialog, TelegramMessageInput } from '../shared/ports.js';
 import { DomainError } from '../shared/api.js';
 
 export function decimalId(value: number): string {
@@ -17,8 +17,20 @@ export function peerSnapshot(peer: PeerSender, observedAt: string): PeerSnapshot
   const names = peer.type === 'user' ? [peer.displayName, peer.firstName, peer.lastName] : [peer.title];
   return { id: decimalId(peer.id), kind: peer.type === 'user' ? 'user' : peer.chatType === 'group' ? 'chat' : 'channel', names: [...new Set(names.filter((v): v is string => Boolean(v)))], usernames: [...new Set([peer.username, ...(peer.usernames?.map((u) => u.username) ?? [])].filter((v): v is string => Boolean(v)))], visiblePhones: peer.type === 'user' && peer.phoneNumber ? [peer.phoneNumber] : [], visibleEmails: [], observedAt };
 }
+// Raw MTProto migration fields carry bare IDs (mtcute 0.32.4 passes them through
+// unmarked despite its "marked" docs); store marked IDs like every other chat.
+export const markedBasicGroupId = (id: number): string => decimalId(id > 0 ? -id : id);
+export const markedSupergroupId = (id: number): string => decimalId(id > 0 ? -1e12 - id : id);
 export function normalizeDialog(peer: Peer, archived: boolean): TelegramDialog {
-  return { id: decimalId(peer.id), kind: peer.type === 'user' ? 'user' : peer.chatType === 'group' ? 'group' : peer.chatType === 'channel' || peer.chatType === 'gigagroup' ? 'channel' : 'supergroup', title: peer.type === 'user' ? peer.displayName : peer.title, username: peer.username, archived };
+  const migratedToId = peer.type === 'chat' ? peer.migratedToId : null; // basic group already upgraded
+  return { id: decimalId(peer.id), kind: peer.type === 'user' ? 'user' : peer.chatType === 'group' ? 'group' : peer.chatType === 'channel' || peer.chatType === 'gigagroup' ? 'channel' : 'supergroup', title: peer.type === 'user' ? peer.displayName : peer.title, username: peer.username, archived,
+    ...(migratedToId ? { migratedToId: decimalId(migratedToId) } : {}) };
+}
+/** Upgrade service messages: the old group's last message and the supergroup's first. */
+export function messageMigration(message: Message): TelegramChatMigration {
+  const action = message.action;
+  return action?.type === 'chat_migrate_to' ? { migratedToId: markedSupergroupId(action.id) }
+    : action?.type === 'channel_migrate_from' ? { migratedFromId: markedBasicGroupId(action.id) } : {};
 }
 export function normalizeMessage(message: Message, observedAt = new Date().toISOString()): TelegramMessageInput {
   let sourceUrl: string | null = null;
@@ -33,5 +45,6 @@ export function normalizeMessage(message: Message, observedAt = new Date().toISO
     sourceUrl,
     forward: forward ? { isForwarded: true, sourceKind: 'forwarded', originPeer: original?.kind === 'anonymous' ? null : original, originName: original?.kind === 'anonymous' ? original.names[0] ?? null : null, originDate: forward.date.toISOString(), originMessageId: forward.fromMessageId }
       : { isForwarded: false, sourceKind: 'own', originPeer: null, originName: null, originDate: null, originMessageId: null },
+    ...messageMigration(message),
   };
 }
