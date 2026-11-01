@@ -1,7 +1,7 @@
 import { chromium } from 'playwright-core';
 import { writeFileSync, mkdirSync } from 'node:fs';
 const exe = process.env.HOME + '/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
-const out = '/Users/jys/.t3/projects/kanban/.impeccable/review/native-workspace/';
+const out = '/home/dev/.t3/projects/kanban/.impeccable/review/native-workspace/';
 const base = 'http://localhost:19490';
 const browser = await chromium.launch({ executablePath: exe });
 const results = [];

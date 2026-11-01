@@ -12,7 +12,7 @@ Backend privacy, permissions, idempotency and Telegram/web correlation are sound
 
 ### B1. Mobile queue tabs are unreadable: labels and counts overlap or clip
 - `src/board/page.ts:47` (`@media(max-width:700px)` → `.seg button{flex:1;min-width:0}`) combined with `:37` (`.seg.scroll button{white-space:nowrap}`).
-- Evidence at 375×800, manager session (screenshot `/Users/jys/.t3/userdata/browser-artifacts/browser-screenshot-localhost-mvtxqnxu-680f3dc9.png`): "Initial placement" text runs into "CRM changes", and the pending counts for the first two tabs are cut off ("C|RM", "(" fragments). Measured: button width 116px, scrollWidth 139px and 120px.
+- Evidence at 375×800, manager session (screenshot `/home/dev/.t3/userdata/browser-artifacts/browser-screenshot-localhost-mvtxqnxu-680f3dc9.png`): "Initial placement" text runs into "CRM changes", and the pending counts for the first two tabs are cut off ("C|RM", "(" fragments). Measured: button width 116px, scrollWidth 139px and 120px.
 - Admin has a fourth tab ("Chat intake"). Measured 88px per button, with 3 of 4 clipped (scrollWidth 139, 120, 104).
 - Why it is a blocker: the counts are the main signal of "what is waiting" on this new surface. On a phone they are unreadable, and the `.scroll` class's intended horizontal scroll never engages because `min-width:0` plus `flex:1` shrinks the buttons.
 - Fix: inside the 700px query, `.seg.scroll button{flex:0 0 auto;min-width:max-content}`. Then `.seg.scroll` scrolls horizontally, or the buttons wrap onto two rows.

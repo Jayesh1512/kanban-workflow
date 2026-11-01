@@ -77,7 +77,7 @@ services:
       - runtime_state:/run/antseed:ro
       - telegram_sessions:/data/telegram
       - type: bind
-        source: ${AI_ENV_PATH:-/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env}
+        source: ${AI_ENV_PATH:-/run/antseed/ai.env}
         target: /run/config/ai.env
         read_only: true
         bind:

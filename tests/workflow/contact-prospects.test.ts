@@ -20,7 +20,7 @@ const decisionProvenance = {...provenance(),model:'gpt-6-luna',schemaVersion:OPE
 beforeEach(async()=>{
   db=await fixtureDatabase([new URL('../../db/migrations/202610270004_operator_intake_approvals.sql',import.meta.url)]);
   await db.query("UPDATE analysis_jobs SET status='cancelled'");
-  const m=outbound().messages[0]!;m.sender.names=['Jayesh'];m.peer.names=['Harsh'];m.peer.usernames=['harsh'];m.text='Hi Harsh, Jayesh here from AntSeed. Would you like to try our API services?';
+  const m=outbound().messages[0]!;m.sender.names=['Sam'];m.peer.names=['Harsh'];m.peer.usernames=['harsh'];m.text='Hi Harsh, Sam here from AntSeed. Would you like to try our API services?';
   await db.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(7,'user','Harsh','included')");
   await db.query("INSERT INTO chat_intake_requests(chat_id,policy_version,decision,control_chat_id,message_id,delivery_state,decided_message_id,decided_at) VALUES(7,0,'approved',-1001,9101,'sent',9102,now())");
   await db.query('INSERT INTO messages(chat_id,id,sender_id,sent_at,text,sender_snapshot,peer_snapshot,forward_metadata) VALUES(7,1,99,$1,$2,$3,$4,$5)',[m.sentAt,m.text,m.sender,m.peer,m.forward]);

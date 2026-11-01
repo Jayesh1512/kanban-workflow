@@ -168,7 +168,7 @@ Stock Vikunja image is scratch, UID1000 and contains no shell. Bootstrap uses ac
 
 ## Extraction, Vercel Jev and replay
 
-Runtime config defaults to `AI_ENV_PATH=/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env`; support portable override and read via dotenv/file APIs, never shell-source. Process environment overrides file values. Do not copy/bake env into images/build contexts. The platform config loader supplies `RuntimeConfig` to B without logging it. Keys remain runtime memory only.
+Runtime config defaults to `AI_ENV_PATH=/run/antseed/ai.env`; support portable override and read via dotenv/file APIs, never shell-source. Process environment overrides file values. Do not copy/bake env into images/build contexts. The platform config loader supplies `RuntimeConfig` to B without logging it. Keys remain runtime memory only.
 
 Extraction uses configured OpenAI model (`gpt-6.1-sol`), real structured `/v1/responses` contract verified by B's research; Jev uses Vercel **only**, configured `https://ai-gateway.vercel.sh/typesafe/v1/systemone`, model `typesafe-ai/jev`. Gateway credential is `JEV_API_KEY?.trim() || AI_GATEWAY_API_KEY?.trim() || null`; blank override cannot shadow the configured Gateway key. `RuntimeConfig.jev.provider` is literally `vercel`. Never fallback to direct TypeSafe, OpenAI or a mock in production.
 

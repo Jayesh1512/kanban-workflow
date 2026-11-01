@@ -56,7 +56,7 @@ Entry: PM identifies release-candidate SHA. Exit: run the independent regression
 
 QA inspection on 2026-10-17, before implementation:
 
-- Checkout is `/Users/jys/.t3/worktrees/kanban/antseed-qa`, branch `antseed/qa`, starting SHA `bf76f1b`. No applicable `AGENTS.md` found in checkout or its ancestor directories. No Compose file, packages, executable tests, or architecture baseline existed here at inspection. PM coordination registry was read from `main:docs/DELIVERY_STATUS.md` without switching branches.
+- Checkout is `/home/dev/.t3/worktrees/kanban/antseed-qa`, branch `antseed/qa`, starting SHA `bf76f1b`. No applicable `AGENTS.md` found in checkout or its ancestor directories. No Compose file, packages, executable tests, or architecture baseline existed here at inspection. PM coordination registry was read from `main:docs/DELIVERY_STATUS.md` without switching branches.
 - Docker client 29.6.1; server 29.4.0; Compose 5.3.1; context `orbstack`; server `linux/aarch64`, 8 CPUs, 8 GiB reported memory. `docker info`, `docker ps`, and `docker compose ls --format json` succeed. Unrelated Compose/Kubernetes workloads exist and must be left alone.
 - Host Node v26.4.0, npm 11.17.0, pnpm 11.10.0; Python and uv present. Candidate loopback ports 18080, 18081, 18432 were bindable at inspection, not reserved. Recheck immediately before use; normally do not publish PostgreSQL.
 - Private AI env exists and is readable. A non-executing assignment inspection confirmed the brief's provider/model/endpoint settings; `OPENAI_API_KEY` and `AI_GATEWAY_API_KEY` are nonempty, `JEV_API_KEY` is empty. Values were not printed or copied. This is not proof that credentials work.

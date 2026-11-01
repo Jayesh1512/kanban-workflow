@@ -18,7 +18,7 @@ async function readEnv(path: string): Promise<Record<string, string> | null> {
 /** File parsing only; never shell-source, mutate process.env, or log credentials. */
 export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Promise<RuntimeConfig> {
   const runtime = env['RUNTIME_ENV_PATH'] ? await readEnv(env['RUNTIME_ENV_PATH']) : null;
-  const aiEnvPath = env['AI_ENV_PATH'] ?? '/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env';
+  const aiEnvPath = env['AI_ENV_PATH'] ?? '/run/antseed/ai.env';
   const ai = await readEnv(aiEnvPath);
   const database = env['DATABASE_ENV_PATH'] ? await readEnv(env['DATABASE_ENV_PATH']) : null;
   const access = env['ACCESS_ENV_PATH'] ? await readEnv(env['ACCESS_ENV_PATH']) : null;

@@ -40,7 +40,7 @@
   "assets": "local fonts and original synthesized 30-second mono 48kHz score",
   "privacy": "Synthetic authored interface only; no private UI, live account access, model calls or app mutations",
   "mp4Export": {
-    "path": "/Users/jys/.t3/projects/kanban/artifacts/teaser-30s/out/antseed-teaser-30s.mp4",
+    "path": "/home/dev/.t3/projects/kanban/artifacts/teaser-30s/out/antseed-teaser-30s.mp4",
     "durationSeconds": 30.016,
     "width": 1920,
     "height": 1080,

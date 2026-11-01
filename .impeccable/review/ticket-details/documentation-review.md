@@ -1,6 +1,6 @@
 # Ticket detail panel documentation review
 
-Disposition: scoped extension of the incumbent native workspace. The user chose a large shared detail panel and retained Jayesh's Viewer role. No new visual world, brand identity, product raster asset, or global token set was introduced.
+Disposition: scoped extension of the incumbent native workspace. The user chose a large shared detail panel and retained the existing teammate's Viewer role. No new visual world, brand identity, product raster asset, or global token set was introduced.
 
 ## Intentional scope
 

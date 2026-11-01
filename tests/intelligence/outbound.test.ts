@@ -50,7 +50,7 @@ describe('outbound-first source and deterministic stage rules', () => {
   });
   it('accepts the first-enquiry template self-introduction even when the profile display name differs', () => {
     const input = outbound(), m = input.messages[0]!;
-    m.sender.names = ['Jayesh']; m.text = 'Hi Mira, Ravi here from AntSeed. Would Cedar Labs like to evaluate our API?';
+    m.sender.names = ['Sam']; m.text = 'Hi Mira, Ravi here from AntSeed. Would Cedar Labs like to evaluate our API?';
     input.evidence[0]!.excerpt = m.text;
     input.extraction.contacts = [{ telegramUserIds: ['99'], names: ['Ravi'], usernames: [], phones: [], emails: [], roles: [], affiliation: 'internal', evidenceIds: [input.evidence[0]!.id] }];
     expect(validateExtraction(input.extraction, input).contacts[0]!.names).toEqual(['Ravi']);

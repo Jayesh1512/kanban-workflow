@@ -21,7 +21,7 @@ try {
   const configPath = execFileSync('hermes', ['-p',name,'config','path'], { encoding: 'utf8' }).trim();
   const profileDir = dirname(configPath);
   // Edit only the freshly created clone. Clear all inherited unrelated inputs.
-  const python = '/Users/jys/.hermes/hermes-agent/venv/bin/python';
+  const python = '/home/dev/.hermes/hermes-agent/venv/bin/python';
   execFileSync(python, ['-c', 'import sys,yaml; p=sys.argv[1]; c=yaml.safe_load(open(p)) or {}; c["mcp_servers"]={"antseed":{"url":sys.argv[2],"enabled":True,"timeout":20}}; c["memory"]={"memory_enabled":False}; c["plugins"]={"enabled":[],"disabled":[]}; c["hooks"]={}; open(p,"w").write(yaml.safe_dump(c,sort_keys=False))', configPath, `${f.url}/mcp`], { stdio: ['ignore','pipe','pipe'] });
   for (const p of ['skills','memories','SOUL.md','MEMORY.md','USER.md']) await rm(join(profileDir,p), { recursive: true, force: true });
   const discovery = await exec('hermes', ['-p',name,'mcp','test','antseed'], { timeout: 30000, maxBuffer: 1024*1024 });
