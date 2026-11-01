@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Database, RuntimeConfig, SqlExecutor } from '../shared/ports.js';
 import { DomainError } from '../shared/api.js';
 import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify } from 'jose';
+import { authenticateMcpKey, mcpSurfaceFor, registerMcpAccess, resendMailer, type Mailer, type McpKey } from './mcp-keys.js';
 
 export const roles = ['admin','crm_manager','member','viewer'] as const;
 export type Role = typeof roles[number];
@@ -24,11 +25,14 @@ export async function audit(tx: SqlExecutor, actor: Member, action: string, reso
 /** Authentication comes from Supabase; roles and invitations come only from our DB. */
 export class AccessControl {
   private readonly principals = new WeakMap<FastifyRequest, Member>();
+  private readonly keys = new WeakMap<FastifyRequest, McpKey>();
   private readonly jwks: ReturnType<typeof createRemoteJWKSet> | null;
-  constructor(readonly db: Database, readonly config: NonNullable<RuntimeConfig['access']>, private readonly fetcher: typeof fetch = fetch) {
+  constructor(readonly db: Database, readonly config: NonNullable<RuntimeConfig['access']>, private readonly fetcher: typeof fetch = fetch, private readonly mailer: Mailer = resendMailer(config.resendApiKey, config.emailFrom ?? 'AntSeed <onboarding@resend.dev>', fetcher)) {
     this.jwks = config.supabaseUrl ? createRemoteJWKSet(new URL(`${config.supabaseUrl.replace(/\/$/,'')}/auth/v1/.well-known/jwks.json`),{cacheMaxAge:600000,timeoutDuration:12000}) : null;
   }
   configured() { return !!(this.config.supabaseUrl && this.config.publishableKey); }
+  /** Set only for requests authenticated by a personal MCP key. */
+  mcpKey(request: FastifyRequest): McpKey | null { return this.keys.get(request) ?? null; }
   user(request: FastifyRequest): Member {
     const member = this.principals.get(request);
     if (!member) throw new DomainError('unauthenticated','Sign in to continue');
@@ -128,11 +132,18 @@ export class AccessControl {
       reply.header('Cache-Control','no-store');
       this.sameOrigin(request);
       if (path.startsWith('/health/') || path === '/login' || path === '/auth/config' || path === '/auth/login' || path === '/auth/signup' || path === '/auth/logout') return;
-      let token = request.headers.authorization?.match(/^Bearer ([^\s]+)$/)?.[1] ?? cookies(request)[cookieName];
+      const bearer = request.headers.authorization?.match(/^Bearer ([^\s]+)$/)?.[1], surface = mcpSurfaceFor(path);
+      // Personal MCP keys authenticate only their own connection; role and revocation are rechecked per request.
+      if (surface && bearer?.startsWith('ask_')) {
+        const { member, key } = await authenticateMcpKey(this.db, bearer, surface);
+        this.principals.set(request, member); this.keys.set(request, key); return;
+      }
+      if (surface && surface !== 'admin') throw new DomainError('unauthenticated', 'Use a personal MCP key from Connections');
+      let token = bearer ?? cookies(request)[cookieName];
       const refresh = cookies(request)[refreshName];
       if (!token && refresh) token = this.setSession(reply,await this.auth('/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:refresh})}));
       if (!token) {
-        if (request.method === 'GET' && !path.startsWith('/api/') && path !== '/mcp') return reply.redirect('/login');
+        if (request.method === 'GET' && !path.startsWith('/api/') && path !== '/mcp') return reply.redirect(path === '/mcp-approval' ? `/login?next=${encodeURIComponent(request.url)}` : '/login');
         throw new DomainError('unauthenticated','Sign in to continue');
       }
       let member: Member;
@@ -143,7 +154,7 @@ export class AccessControl {
         member = await this.identify(token);
       }
       this.principals.set(request,member);
-      if (path === '/mcp' || path === '/connections' || path === '/api/status' || path.startsWith('/api/telegram/') || path.startsWith('/api/chats')) {
+      if (path === '/mcp' || path === '/mcp-approval' || path === '/api/status' || path.startsWith('/api/telegram/') || path.startsWith('/api/chats')) {
         if (member.role !== 'admin') throw new DomainError('forbidden','Administrator access is required');
       }
       if (path.startsWith('/api/workspace/')) {
@@ -158,7 +169,7 @@ export class AccessControl {
           throw new DomainError('not_found','CRM relationship not found');
       }
       // Existing APIs remain protected even when a client bypasses our controls.
-      if (!['GET','HEAD'].includes(request.method) && path.startsWith('/api/') && !path.startsWith('/api/board/') && !path.startsWith('/api/workspace/')) {
+      if (!['GET','HEAD'].includes(request.method) && path.startsWith('/api/') && !path.startsWith('/api/board/') && !path.startsWith('/api/workspace/') && !path.startsWith('/api/mcp-')) {
         if (!canMoveCrm(member)) throw new DomainError('forbidden','CRM management permission is required');
         if (path === '/api/outreach/mode' && member.role !== 'admin') throw new DomainError('forbidden','Administrator access is required');
       }
@@ -185,6 +196,7 @@ export class AccessControl {
       return {signedOut:true};
     });
     app.get('/api/session',async request => {const member=this.user(request);return {member:{...member,myTasks:this.myTasks(member)},crmApproval:this.config.crmApproval};});
+    registerMcpAccess(app,this,this.mailer);
     app.get('/api/workspace/members',async () => ({items:(await this.db.query(`SELECT ${memberColumns} FROM workspace_members ORDER BY created_at,id`)).rows}));
     app.post('/api/workspace/members',async request => {
       const actor=this.user(request),input=z.strictObject({email:z.email().max(320).transform(e=>e.toLowerCase()),displayName:z.string().trim().max(200).default(''),role:z.enum(roles).default('member'),telegramUserId:z.string().regex(/^[1-9]\d{0,17}$/).nullable().default(null)}).parse(request.body);

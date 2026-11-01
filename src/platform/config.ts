@@ -62,6 +62,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
       adminEmail: nonblank(values['WORKSPACE_ADMIN_EMAIL'])?.toLowerCase() ?? null,
       appUrl: url('APP_URL', `http://localhost:${str('PORT', '3000')}`, ['http:', 'https:']).replace(/\/$/, ''),
       crmApproval: str('CRM_APPROVAL', 'direct') as 'direct' | 'telegram',
+      resendApiKey: nonblank(values['RESEND_API_KEY']), emailFrom: str('MCP_EMAIL_FROM', 'AntSeed <onboarding@resend.dev>'),
     },
     http: { host: str('HOST', '127.0.0.1'), port: int('PORT', 3000, 65535) },
     databaseUrl: url('DATABASE_URL', 'postgresql://antseed:antseed@127.0.0.1:5432/antseed', ['postgres:', 'postgresql:']),

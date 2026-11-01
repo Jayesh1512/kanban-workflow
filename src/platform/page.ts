@@ -50,12 +50,66 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font-data)}sma
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:3px}#login input{width:min(100%,25rem);margin-inline:0}.login-feedback{overflow-wrap:anywhere}.login-feedback[data-error="true"]{color:var(--danger);font-weight:600}#notice{color:var(--soft);font-size:13px}[hidden]{display:none!important}
 @media(max-width:700px){main{padding:16px 14px 32px}h1{font-size:23px}}`;
 
-/** Native workspace version: the shared top bar and brand tokens; operational internals are not shown. */
+const mcpStyles = String.raw`
+.section-title{font-size:18px;margin:28px 0 4px}#mcp .endpoints{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin:12px 0}#mcp .endpoints article{margin:0;background:var(--wash)}
+#mcp code,#mcp .url{font-family:var(--font-data);font-size:12px;overflow-wrap:anywhere}#mcp table{margin-top:8px}#mcp td,#mcp th{font-size:13px;vertical-align:top}#mcp .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+#mcp .row-actions button,#mcp .copy{min-height:30px;font-size:12px;padding:3px 10px}#mcp textarea{font:inherit;width:100%;min-height:70px;border:1px solid var(--line);border-radius:7px;padding:8px}#mcp select,#mcp input{max-width:100%}
+#mcp .created{border:1px solid var(--accent);background:var(--tint);border-radius:12px;padding:14px 16px}#mcp .inline{display:flex;gap:10px;flex-wrap:wrap;align-items:end}#mcp .inline label{margin:0}.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+#mcp-feedback[data-error=true]{color:var(--danger);font-weight:600}`;
+
+const mcpMarkup = `<section id="mcp" aria-labelledby="mcp-title"><h2 class="section-title" id="mcp-title">MCP connections</h2><p class="muted">Connect Hermes or another MCP client with a personal key. Keys are shown once; only a fingerprint is stored. Your role still applies on every call.</p>
+<div class="endpoints" id="mcp-endpoints"></div><p id="mcp-feedback" role="status"></p><div id="mcp-created" class="created" hidden></div>
+<article><h2>Your keys</h2><div class="inline"><label>Label <input id="mcp-label" maxlength="100" placeholder="e.g. Hermes laptop"></label><button id="mcp-create-crm" type="button" class="primary">Create CRM key</button><button id="mcp-create-admin" type="button" hidden>Create Admin key</button></div><table><thead><tr><th>Connection</th><th>Key</th><th>Access</th><th>Last used</th><th></th></tr></thead><tbody id="mcp-mine"></tbody></table></article>
+<article id="mcp-request-box" hidden><h2>Request more access</h2><p class="muted" id="mcp-email-note"></p><form id="mcp-request"><label>Access <select name="target" id="mcp-target"></select></label><label>Reason <textarea name="reason" required maxlength="2000" placeholder="What will you use it for?"></textarea></label><button type="submit">Send request to the admin</button></form><table><tbody id="mcp-my-requests"></tbody></table></article>
+<article id="mcp-admin" hidden><h2>All keys</h2><form id="mcp-admin-create" class="inline"><label>Connection <select name="surface"><option value="crm">CRM</option><option value="tasks">Tasks (your tasks)</option><option value="admin">Admin</option></select></label><label>Access <select name="level"></select></label><label>Member <select name="memberId" id="mcp-members"></select></label><label>Label <input name="label" maxlength="100"></label><button type="submit" class="primary">Create key</button></form>
+<table><thead><tr><th>Member</th><th>Connection</th><th>Key</th><th>Access</th><th>Last used</th><th></th></tr></thead><tbody id="mcp-all"></tbody></table><h2 class="section-title">Pending access requests</h2><table><tbody id="mcp-pending"></tbody></table></article></section>`;
+
+const mcpScript = String.raw`
+const mcpNames={crm:'CRM',tasks:'Tasks',admin:'Admin'},mcpLevels={propose:'Read + propose',full:'Full',read:'Read only'},mcpAllowed={crm:['propose','full'],tasks:['full','read'],admin:['full']};
+const mcpAbout={crm:'Search deals, details, follow-ups and pipeline. Propose keys turn edits and moves into approvals; full keys save directly.',tasks:'The owner’s personal tasks and own Work tickets. Keys come from the admin; read-only keys can be shared.',admin:'Every workspace tool. Needs admin approval, sent to the admin by email.'};
+let mcpMember=null,mcpState=null;
+const mcpEl=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
+const mcpWhen=v=>v?new Date(v).toLocaleString():'Never';
+function mcpSay(message,error=false){const f=el('mcp-feedback');f.textContent=message;f.dataset.error=String(error);}
+async function mcpApi(path,method='GET',body){const r=await fetch(path,{method,cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{})});const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.error?.message||'Request failed');return b;}
+function mcpYaml(surface,key){return 'mcp_servers:\n  antseed-'+surface+':\n    url: '+mcpState.endpoints[surface]+'\n    headers:\n      Authorization: "Bearer '+key+'"\n    enabled: true\n    timeout: 20\n';}
+function mcpCopy(text,label='Copy'){const b=mcpEl('button',label,'copy');b.type='button';b.onclick=async()=>{try{await navigator.clipboard.writeText(text);b.textContent='Copied';setTimeout(()=>b.textContent=label,1500);}catch{mcpSay('Copy failed. Select the text instead.',true);}};return b;}
+function mcpShowCreated(result){const box=el('mcp-created'),s=result.item.surface,pre=mcpEl('pre',mcpYaml(s,result.key));box.replaceChildren(mcpEl('h2','New '+mcpNames[s]+' key · '+mcpLevels[result.item.level]),mcpEl('p','Copy it now. It will not be shown again.','muted'),mcpEl('code',result.key,'url'),mcpCopy(result.key,'Copy key'),mcpEl('p','Hermes config (~/.hermes/config.yaml):','muted'),pre,mcpCopy(pre.textContent,'Copy config'));box.hidden=false;box.scrollIntoView({block:'nearest'});}
+function mcpKeyRow(k,all){const tr=mcpEl('tr'),actions=mcpEl('td'),wrap=mcpEl('div',undefined,'row-actions');if(all)tr.append(mcpEl('td',k.member_name));tr.append(mcpEl('td',mcpNames[k.surface]+(k.label?' · '+k.label:'')),mcpEl('td',k.key_prefix+'…'),mcpEl('td',mcpLevels[k.level]),mcpEl('td',mcpWhen(k.last_used_at)));
+ if(all&&k.surface==='crm'){const t=mcpEl('button',k.level==='full'?'Set to propose':'Set to full');t.type='button';t.onclick=()=>mcpAct(()=>mcpApi('/api/mcp-keys/'+k.id,'PATCH',{level:k.level==='full'?'propose':'full'}),'Access level changed.');wrap.append(t);}
+ const r=mcpEl('button','Revoke');r.type='button';r.onclick=()=>{if(confirm('Revoke this key? Clients using it stop working immediately.'))mcpAct(()=>mcpApi('/api/mcp-keys/'+k.id,'DELETE'),'Key revoked.');};wrap.append(r);actions.append(wrap);tr.append(actions);return tr;}
+function mcpRequestRow(q,admin){const tr=mcpEl('tr'),what=q.requested_surface==='crm'?'Full CRM access ('+(q.key_prefix||'')+'…)':'Admin MCP';const state=q.status==='pending'&&q.expired?'expired':q.status;
+ tr.append(mcpEl('td',(admin?q.member_name+' · ':'')+what),mcpEl('td',q.reason),mcpEl('td',state+(q.email_state==='not_configured'?' · email not configured':q.email_state==='failed'?' · email failed':'')));
+ if(admin&&q.status==='pending'&&!q.expired){const td=mcpEl('td'),wrap=mcpEl('div',undefined,'row-actions');for(const [action,label] of [['approve','Approve'],['deny','Deny']]){const b=mcpEl('button',label);b.type='button';b.onclick=()=>mcpAct(()=>mcpApi('/api/mcp-requests/'+q.id+'/decision','POST',{action}),action==='approve'?'Approved.':'Denied.');wrap.append(b);}td.append(wrap);tr.append(td);}return tr;}
+async function mcpAct(work,done){try{const r=await work();mcpSay(done);await mcpLoad();return r;}catch(e){mcpSay(e.message,true);}}
+function mcpLevelOptions(){const f=el('mcp-admin-create'),levels=mcpAllowed[f.elements.surface.value];f.elements.level.replaceChildren(...levels.map(l=>{const o=mcpEl('option',mcpLevels[l]);o.value=l;return o;}));}
+async function mcpLoad(){const admin=mcpMember.role==='admin';mcpState=await mcpApi('/api/mcp-keys');
+ el('mcp-endpoints').replaceChildren(...['crm','tasks','admin'].map(s=>{const a=mcpEl('article');a.append(mcpEl('h2',mcpNames[s]+' connection'),mcpEl('p',mcpState.endpoints[s],'url'),mcpCopy(mcpState.endpoints[s],'Copy URL'),mcpEl('p',mcpAbout[s],'muted'));return a;}));
+ el('mcp-mine').replaceChildren(...(mcpState.items.length?mcpState.items.map(k=>mcpKeyRow(k,false)):[(()=>{const tr=mcpEl('tr'),td=mcpEl('td','No keys yet.','muted');td.colSpan=5;tr.append(td);return tr;})()]));
+ el('mcp-create-admin').hidden=!mcpState.canCreateAdminKey;
+ el('mcp-request-box').hidden=admin;if(!admin){el('mcp-email-note').textContent=mcpState.emailConfigured?'The admin gets an email with approve and deny links.':'Email is not configured yet: the admin sees your request in Approvals.';
+  const options=[...mcpState.items.filter(k=>k.surface==='crm'&&k.level==='propose').map(k=>{const o=mcpEl('option','Full CRM access for key '+k.key_prefix+'…');o.value='crm:'+k.id;return o;}),(()=>{const o=mcpEl('option','Admin MCP connection');o.value='admin';return o;})()];el('mcp-target').replaceChildren(...options);
+  const mine=await mcpApi('/api/mcp-requests');el('mcp-my-requests').replaceChildren(...mine.items.slice(0,10).map(q=>mcpRequestRow(q,false)));}
+ el('mcp-admin').hidden=!admin;if(admin){const [all,pending,members]=await Promise.all([mcpApi('/api/mcp-keys?all=1'),mcpApi('/api/mcp-requests?status=pending'),mcpApi('/api/workspace/members')]);
+  el('mcp-all').replaceChildren(...all.items.map(k=>mcpKeyRow(k,true)));
+  el('mcp-pending').replaceChildren(...(pending.items.length?pending.items.map(q=>mcpRequestRow(q,true)):[(()=>{const tr=mcpEl('tr'),td=mcpEl('td','No pending requests.','muted');tr.append(td);return tr;})()]));
+  const sel=el('mcp-members'),keep=sel.value;sel.replaceChildren(...members.items.filter(m=>m.enabled).map(m=>{const o=mcpEl('option',(m.display_name||m.email)+(m.id===mcpMember.id?' (you)':''));o.value=m.id;return o;}));sel.value=keep||mcpMember.id;}}
+function mountMcp(member){mcpMember=member;
+ el('mcp-create-crm').onclick=async()=>{const r=await mcpAct(()=>mcpApi('/api/mcp-keys','POST',{surface:'crm',label:el('mcp-label').value}),'CRM key created.');if(r)mcpShowCreated(r);};
+ el('mcp-create-admin').onclick=async()=>{const r=await mcpAct(()=>mcpApi('/api/mcp-keys','POST',{surface:'admin',label:el('mcp-label').value}),'Admin key created.');if(r)mcpShowCreated(r);};
+ el('mcp-request').onsubmit=async e=>{e.preventDefault();const f=e.target,[surface,keyId]=f.elements.target.value.split(':');const r=await mcpAct(()=>mcpApi('/api/mcp-requests','POST',{surface,...(keyId?{keyId}:{}),reason:f.elements.reason.value}),'Request sent.');if(r){f.reset();mcpSay(r.email==='sent'?'Request sent. The admin was emailed.':r.email==='not_configured'?'Request saved. Email is not configured, so the admin will see it in Approvals.':'Request saved, but the email could not be sent. The admin will see it in Approvals.');}};
+ const f=el('mcp-admin-create');f.elements.surface.onchange=mcpLevelOptions;mcpLevelOptions();
+ f.onsubmit=async e=>{e.preventDefault();const r=await mcpAct(()=>mcpApi('/api/mcp-keys','POST',{surface:f.elements.surface.value,level:f.elements.level.value,memberId:f.elements.memberId.value,label:f.elements.label.value}),'Key created.');if(r)mcpShowCreated(r);};
+ mcpLoad().catch(e=>mcpSay(e.message,true));}`;
+
+/** Native workspace version: the shared top bar, MCP keys for everyone, Telegram/AI setup for admins only. */
 export const nativeConnectionsPage = onboardingPage
   .replace('<title>AntSeed connections</title>', `<title>Connections · AntSeed</title>${brandFontLink}`)
-  .replace(/<style>[\s\S]*?<\/style>/, `<style>${nativeTokens}${topbarStyles}${connectionStyles}</style>`)
-  .replace(/<main><h1>AntSeed connections<\/h1>[\s\S]*?<button id="refresh">/, `<main>${topbarMarkup}<div class="heading" id="content" tabindex="-1"><div><h1>Connections</h1><p class="muted">Telegram, chat intake and AI provider setup for the built-in board. This page shows actual connection state.</p></div></div><button id="refresh">`)
+  .replace(/<style>[\s\S]*?<\/style>/, `<style>${nativeTokens}${topbarStyles}${connectionStyles}${mcpStyles}</style>`)
+  .replace(/<main><h1>AntSeed connections<\/h1>[\s\S]*?<button id="refresh">/, `<main>${topbarMarkup}<div class="heading" id="content" tabindex="-1"><div><h1>Connections</h1><p class="muted">MCP access for agents, plus Telegram, chat intake and AI provider setup for admins.</p></div></div>${mcpMarkup}<div id="admin-setup" hidden><h2 class="section-title">Telegram and AI setup</h2><button id="refresh">`)
   .replace('<article><h2>Operational work</h2><pre id="work"></pre></article>', '')
-  .replace('<script>', `<script>${topbarScript}
-fetch('/api/session',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(s=>mountTopbar(s.member)).catch(()=>location.assign('/login'));
+  .replace('</main>', '</div></main>')
+  .replace("el('refresh').addEventListener('click',refresh);refresh();", '')
+  .replace('<script>', `<script>${topbarScript}${mcpScript}
+fetch('/api/session',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{mountTopbar(s.member);mountMcp(s.member);if(s.member.role==='admin'){el('admin-setup').hidden=false;el('refresh').addEventListener('click',refresh);refresh();}}).catch(()=>location.assign('/login'));
 `);

@@ -6,7 +6,7 @@ import type { Database } from '../shared/ports.js';
 import type { OutreachWorkflow } from '../outreach/service.js';
 import { RecordsRepository } from '../workflow/records.js';
 import { assert, command, messageRow } from '../workflow/sql.js';
-import { audit, canMoveCrm } from '../access/service.js';
+import { audit, canMoveCrm, type Member } from '../access/service.js';
 import { laneSchema } from '../shared/schemas.js';
 import { approvedChatSourceSql } from '../shared/source-approval.js';
 import { workParentIsCurrent } from '../shared/crm-first.js';
@@ -89,27 +89,32 @@ export function registerTicketDetails(app: FastifyInstance, db: Database, outrea
     return {items:rows.slice(0,input.limit).map(messageRow),nextCursor:rows.length>input.limit?Number(rows[input.limit-1]!.id):null};
   });
   app.post('/api/board/work/:id/move',async request=>{
-    await ready();const actor=app.workspaceAccess.user(request),id=idSchema.parse(request.params).id;
-    assert(canMoveCrm(actor),'forbidden','CRM management permission is required');
-    const input=z.strictObject({targetLane:laneSchema,expectedStageVersion:z.number().int().nonnegative(),reason:z.string().trim().min(1).max(4000),idempotencyKey:z.uuid()}).parse(request.body);
-    return command(db,`work:human-move:${id}`,input.idempotencyKey,{...input,actorId:actor.id},async tx=>{
-      const member=(await tx.query('SELECT role,enabled FROM workspace_members WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
-      assert(member?.enabled&&['admin','crm_manager'].includes(String(member.role)),'forbidden','CRM management permission is required');
-      const chat=(await tx.query('SELECT c.* FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c',[id])).rows[0];
-      const before=(await tx.query('SELECT * FROM tickets WHERE id=$1 FOR UPDATE',[id])).rows[0];
-      assert(chat&&before,'not_found','Work ticket not found');
-      assert(chat.inclusion==='included'&&!chat.is_control&&before.tracking_state==='active','conflict','Work ticket is no longer tracked');
-      assert((await tx.query(`SELECT ${approvedChatSourceSql('c')} AS approved FROM chats c WHERE c.id=$1`,[chat.id])).rows[0]?.approved,'conflict','Work source is no longer approved');
-      assert(await workParentIsCurrent(tx,id),'conflict','Work source no longer belongs to its approved CRM relationship');
-      assert(currentTicketMapping({mappingStatus:chat.mapping_status as 'confirmed',companyId:chat.company_id as string|null},
-        {kind:before.kind as 'company'|'contact_prospect',companyId:before.company_id as string|null}),'conflict','Ticket company mapping changed. Refresh before moving.');
-      assert(Number(before.stage_version)===input.expectedStageVersion,'conflict','This ticket changed. Reload its latest details before moving.');
-      if(before.lane===input.targetLane)return {id,lane:before.lane,stageVersion:Number(before.stage_version)};
-      const after=(await tx.query(`UPDATE tickets SET previous_active_lane=CASE WHEN $2='Blocked' AND lane IN ('To be started','Work in progress','Integrations') THEN lane ELSE previous_active_lane END,
-        lane=$2,stage_version=stage_version+1,updated_at=now() WHERE id=$1 RETURNING *`,[id,input.targetLane])).rows[0]!;
-      await tx.query("UPDATE proposals SET apply_state='stale',last_error='human_move',updated_at=now() WHERE ticket_id=$1 AND apply_state<>'applied'",[id]);
-      await audit(tx,actor,'work.move',id,{lane:before.lane,stageVersion:before.stage_version},{lane:after.lane,stageVersion:after.stage_version,reason:input.reason});
-      return {id,lane:after.lane,stageVersion:Number(after.stage_version)};
-    });
+    await ready();return moveWorkTicket(db,app.workspaceAccess.user(request),idSchema.parse(request.params).id,request.body);
+  });
+}
+
+const workMove=z.strictObject({targetLane:laneSchema,expectedStageVersion:z.number().int().nonnegative(),reason:z.string().trim().min(1).max(4000),idempotencyKey:z.uuid()});
+/** Direct human lane move, shared by the web board and full-level MCP keys. */
+export async function moveWorkTicket(db: Database, actor: Member, id: string, raw: unknown, source?: 'mcp') {
+  assert(canMoveCrm(actor),'forbidden','CRM management permission is required');
+  const input=workMove.parse(raw);
+  return command(db,`work:human-move:${id}`,input.idempotencyKey,{...input,actorId:actor.id},async tx=>{
+    const member=(await tx.query('SELECT role,enabled FROM workspace_members WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
+    assert(member?.enabled&&['admin','crm_manager'].includes(String(member.role)),'forbidden','CRM management permission is required');
+    const chat=(await tx.query('SELECT c.* FROM chats c JOIN tickets t ON t.chat_id=c.id WHERE t.id=$1 FOR UPDATE OF c',[id])).rows[0];
+    const before=(await tx.query('SELECT * FROM tickets WHERE id=$1 FOR UPDATE',[id])).rows[0];
+    assert(chat&&before,'not_found','Work ticket not found');
+    assert(chat.inclusion==='included'&&!chat.is_control&&before.tracking_state==='active','conflict','Work ticket is no longer tracked');
+    assert((await tx.query(`SELECT ${approvedChatSourceSql('c')} AS approved FROM chats c WHERE c.id=$1`,[chat.id])).rows[0]?.approved,'conflict','Work source is no longer approved');
+    assert(await workParentIsCurrent(tx,id),'conflict','Work source no longer belongs to its approved CRM relationship');
+    assert(currentTicketMapping({mappingStatus:chat.mapping_status as 'confirmed',companyId:chat.company_id as string|null},
+      {kind:before.kind as 'company'|'contact_prospect',companyId:before.company_id as string|null}),'conflict','Ticket company mapping changed. Refresh before moving.');
+    assert(Number(before.stage_version)===input.expectedStageVersion,'conflict','This ticket changed. Reload its latest details before moving.');
+    if(before.lane===input.targetLane)return {id,lane:before.lane,stageVersion:Number(before.stage_version)};
+    const after=(await tx.query(`UPDATE tickets SET previous_active_lane=CASE WHEN $2='Blocked' AND lane IN ('To be started','Work in progress','Integrations') THEN lane ELSE previous_active_lane END,
+      lane=$2,stage_version=stage_version+1,updated_at=now() WHERE id=$1 RETURNING *`,[id,input.targetLane])).rows[0]!;
+    await tx.query("UPDATE proposals SET apply_state='stale',last_error='human_move',updated_at=now() WHERE ticket_id=$1 AND apply_state<>'applied'",[id]);
+    await audit(tx,actor,'work.move',id,{lane:before.lane,stageVersion:before.stage_version},{lane:after.lane,stageVersion:after.stage_version,reason:input.reason,...(source?{source}:{})});
+    return {id,lane:after.lane,stageVersion:Number(after.stage_version)};
   });
 }

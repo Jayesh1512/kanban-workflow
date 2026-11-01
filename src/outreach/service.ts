@@ -13,7 +13,7 @@ import { ProviderHttp, type HttpOptions } from '../intelligence/http.js';
 import { approvedChatSourceSql } from '../shared/source-approval.js';
 import { crmFirstEnabled, workParentIsCurrent } from '../shared/crm-first.js';
 import { crmWorkProposalSchema } from '../shared/outreach-schemas.js';
-import { updateActionsSchema, updateFactSchema } from '../shared/schemas.js';
+import { updateActionsSchema, updateFactSchema, workstreamSchema } from '../shared/schemas.js';
 import { RecordsRepository, updateTicketActionsTx, updateFactTx } from '../workflow/records.js';
 import { assertEvidence } from '../workflow/sql.js';
 import { audit, canMoveCrm, type Member } from '../access/service.js';
@@ -27,7 +27,10 @@ const descriptions: Record<string, string> = {
     uncertain: 'Conflicting, stale, unrelated, third-party forwarded or insufficient evidence. Do not guess or take the highest-ranked stage.',
 };
 const replyPattern = /^(approve|reject|correct(?:\s*:\s*|\s+).+)\s*[.!]?$/i;
-type CrmCommand = { kind: 'work' | 'actions' | 'identity' | 'work_actions' | 'fact'; payload: Record<string, unknown> };
+type CrmCommand = { kind: 'work' | 'actions' | 'identity' | 'work_actions' | 'fact' | 'details'; payload: Record<string, unknown> };
+/** Notes/workstream change; approval keeps it from reconciliation like a human identity edit. */
+export const outreachDetailsSchema = z.strictObject({ relationshipId: z.uuid(), expectedIdentityVersion: z.number().int().nonnegative(), summary: z.string().trim().max(20000).optional(), workstream: workstreamSchema.nullable().optional(), reason: z.string().trim().min(1).max(4000) })
+    .refine(v => v.summary !== undefined || v.workstream !== undefined, 'Change notes or workstream');
 export class OutreachWorkflow extends OutreachRepository implements OutreachCommands {
     private readonly http: ProviderHttp;
     private readonly publicVikunja: string | null;
@@ -175,6 +178,12 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             idempotencyKey: i.idempotencyKey, targetStage: r.acceptedStage ?? 'lead', reason: i.reason }, 'manual', true,
             { kind: 'work', payload: { chatId: i.chatId, action: i.action } });
     }
+    /** Agent-proposed notes/workstream change; pending until approved in Approvals or Telegram. */
+    async proposeDetails(raw: unknown, origin: 'manual' | 'hermes' = 'hermes') {
+        const i = outreachDetailsSchema.parse(raw), r = (await this.get(i.relationshipId)).relationship;
+        return this.propose({ relationshipId: i.relationshipId, expectedEvidenceRevision: r.evidenceRevision, idempotencyKey: `crm-details:${digest(i)}`,
+            targetStage: r.acceptedStage ?? 'lead', reason: i.reason }, origin, true, { kind: 'details', payload: i });
+    }
     async proposeRecordChange(kind: 'work_actions' | 'fact', raw: unknown): Promise<unknown> {
         if (!await crmFirstEnabled(this.database)) {
             const records = new RecordsRepository(this.database);
@@ -204,8 +213,8 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
         } else if (command.kind === 'actions') {
             const i = outreachActionsSchema.parse(command.payload);
             if (Number(r.actions_version) !== i.expectedActionsVersion) throw new DomainError('conflict', 'Actions changed; request a fresh approval');
-        } else if (command.kind === 'identity') {
-            const i = outreachIdentitySchema.parse(command.payload);
+        } else if (command.kind === 'identity' || command.kind === 'details') {
+            const i = (command.kind === 'identity' ? outreachIdentitySchema : outreachDetailsSchema).parse(command.payload);
             if (Number(r.identity_version) !== i.expectedIdentityVersion) throw new DomainError('conflict', 'Identity changed; request a fresh approval');
         } else {
             const i = command.kind === 'work_actions' ? updateActionsSchema.parse(command.payload) : updateFactSchema.parse(command.payload);
@@ -332,6 +341,10 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             for (const a of i.actions) await tx.query(`INSERT INTO outreach_actions(relationship_id,text,actor,state,precision,local_date,instant,timezone)
                 VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, [r.id, a.text, a.actor, a.state, a.precision, a.localDate, a.instant, a.timezone]);
             await tx.query('UPDATE outreach_relationships SET actions_version=actions_version+1,evidence_revision=evidence_revision+1 WHERE id=$1', [r.id]);
+        } else if (command.kind === 'details') {
+            const i = outreachDetailsSchema.parse(command.payload);
+            await tx.query(`UPDATE outreach_relationships SET summary=coalesce($2,summary),workstream=CASE WHEN $4 THEN $3 ELSE workstream END,
+                identity_version=identity_version+1,evidence_revision=evidence_revision+1,updated_at=now() WHERE id=$1`, [r.id, i.summary ?? null, i.workstream ?? null, i.workstream !== undefined]);
         } else {
             const i = outreachIdentitySchema.parse(command.payload);
             await tx.query('INSERT INTO outreach_identity_audit(relationship_id,reason,before_value,after_value) VALUES($1,$2,$3,$4)', [r.id, i.reason, JSON.stringify({ displayName: r.display_name }), JSON.stringify({ displayName: i.displayName })]);

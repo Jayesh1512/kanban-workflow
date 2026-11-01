@@ -23,6 +23,7 @@ import { OutreachPublisher } from '../outreach/publisher.js';
 import { outreachPage, nativeOutreachPage } from '../outreach/page.js';
 import { NativeProposalWorkflow } from '../board/native-workflow.js';
 import { registerBoard } from '../board/routes.js';
+import { registerScopedMcp } from '../hermes/scoped.js';
 
 export function createWorkflowServices(platform: PlatformServices) {
   const native = platform.config.boardBackend === 'native';
@@ -55,7 +56,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   let outreachFailed = false;
   const analysisTasks = new Set<Promise<void>>(), analysisTimers = new Set<ReturnType<typeof setTimeout>>();
   const analysisFailed = [false, false];
-  let transports: ReturnType<typeof registerTransports> | null = null;
+  let transports: ReturnType<typeof registerTransports> | null = null, scoped: ReturnType<typeof registerScopedMcp> | null = null;
   let unsubscribe: (() => void) | null = null; const replies = new Set<Promise<void>>(); const abort = new AbortController();
   let state: ServiceStatus = { state: 'connecting', code: 'not_started', detail: 'Workflow has not started', checkedAt: platform.clock.now().toISOString() };
   async function migrationsReady(): Promise<'pending' | 'ready' | 'drift'> {
@@ -164,7 +165,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
     try { unsubscribe?.(); } catch (error) { errors.push(error); } finally { unsubscribe = null; }
     // Publish one shutdown promise for preClose, root onClose and direct callers.
     // All captured work drains even if an earlier cleanup action fails.
-    stopping = Promise.allSettled([transports?.close(), task, outreachTask, ...analysisTasks, ...replies]).then((results) => {
+    stopping = Promise.allSettled([transports?.close(), scoped?.close(), task, outreachTask, ...analysisTasks, ...replies]).then((results) => {
       for (const result of results) if (result.status === 'rejected') errors.push(result.reason);
       if (errors.length) throw new AggregateError(errors, 'Workflow shutdown failed');
     });
@@ -180,6 +181,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       app.get('/outreach', async (_request, reply) => reply.header('Cache-Control', 'no-store').type('text/html').send(platform.config.boardBackend === 'native' ? nativeOutreachPage : outreachPage));
       if (platform.config.boardBackend === 'native') registerBoard(app,platform.db,services.outreach,requireDatabaseReady,platform.config.timezone,{work:services.proposalRecords,intake:platform.chats as TelegramStore});
       transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach }, requireDatabaseReady);
+      if (platform.config.boardBackend === 'native') scoped = registerScopedMcp(app, platform.db, services.outreach, requireDatabaseReady, platform.config);
       registerStatus(app, async () => {
         const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
           try { return await read(); } catch (error) {
