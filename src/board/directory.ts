@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Database } from '../shared/ports.js';
 import { approvedChatSourceSql } from '../shared/source-approval.js';
-import { nativeTokens, topbarMarkup, topbarScript, topbarStyles } from './page.js';
+import { brandFontLink, nativeTokens, topbarMarkup, topbarScript, topbarStyles } from './page.js';
 
 /** Chats that count as "talking to" a company: admitted, business, mapped to a company. Alias: c. */
 const talkingSql = `c.company_id IS NOT NULL AND c.inclusion='included' AND NOT c.is_control AND ${approvedChatSourceSql('c')}`;
@@ -68,10 +68,10 @@ export function registerDirectory(app: FastifyInstance, db: Database, ready: () 
 
 const pageHead = (title: string) => String.raw`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} · AntSeed</title><style>
+<title>${title} · AntSeed</title>${brandFontLink}<style>
 ${nativeTokens}${topbarStyles}
 *{box-sizing:border-box}body{margin:0;color:var(--ink);background:var(--paper);font:14px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1900px;margin:auto;padding:20px 24px 40px}h1{font-size:26px;line-height:1.2;letter-spacing:-.025em;margin:0 0 8px}p{max-width:75ch;margin:8px 0}a{color:var(--accent);text-underline-offset:3px}.muted{color:var(--soft);font-size:12px}[hidden]{display:none!important}
-.topbar button,input{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:7px;min-height:42px;padding:9px 12px}input{width:100%}label{display:grid;gap:5px;font-size:12px;font-weight:600;max-width:420px;margin:16px 0}
+main button,input{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:7px;min-height:42px;padding:9px 12px}input{width:100%}label{display:grid;gap:5px;font-size:12px;font-weight:600;max-width:420px;margin:16px 0}
 .notice{border:1px solid var(--dangerline);color:var(--danger);background:var(--dangerbg);border-radius:8px;padding:12px 14px;margin:16px 0}.notice:empty{display:none}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}thead th{position:sticky;top:0;background:var(--wash);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);z-index:1}td>span,td>a{display:block}
 .outer>tbody>tr>td:first-child{width:22%;min-width:200px}.outer>tbody>tr>td:last-child{padding:0}.name{font-weight:700;font-size:15px;margin:0}.convo{margin:6px 0 0;padding:0;list-style:none}.convo li{font-size:12px;color:var(--soft)}
@@ -95,7 +95,7 @@ async function start(url,haystack,label){try{const s=await fetch('/api/session',
   el('count').textContent='· '+shown.length+(q?' of '+items.length:'')+' '+label;paint(shown,q);};el('search').oninput=window.render;window.render();}catch(e){el('notice').textContent=e.message;el('rows').replaceChildren();}}
 const emptyRow=(cols,text)=>{const r=node('tr'),td=node('td',text,'muted');td.colSpan=cols;r.append(td);return r;};`;
 
-export const directoryPage = pageHead('Directory') + String.raw`
+export const directoryPage = pageHead('CRM Directory') + String.raw`
 <main><div class="heading" id="content" tabindex="-1"><div><h1>Directory <span class="muted" id="count"></span></h1><p class="muted">Every company we are talking to, with the people we are in contact with. Read only; built from approved Telegram conversations. Our own team is on the <a href="/antseed-team">AntSeed team</a> page.</p></div></div>
 <div id="notice" class="notice" role="alert"></div>
 <label>Search<input id="search" type="search" placeholder="Company, person, email, @handle or website" autocomplete="off"></label>
@@ -115,7 +115,7 @@ const paint=(shown,q)=>el('rows').replaceChildren(...(shown.length?shown.map(row
 start('/api/board/directory',co=>[co.name,...co.domains,...co.people.flatMap(p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles])].join(' ').toLowerCase(),'companies');
 </script></body></html>`;
 
-export const teamPage = pageHead('AntSeed team') + String.raw`
+export const teamPage = pageHead('AntSeed Team') + String.raw`
 <main><div class="heading" id="content" tabindex="-1"><div><h1>AntSeed team <span class="muted" id="count"></span></h1><p class="muted">Our own people, kept out of the company <a href="/directory">Directory</a>. Read only. Last active and companies come from approved Telegram conversations only.</p></div></div>
 <div id="notice" class="notice" role="alert"></div>
 <label>Search<input id="search" type="search" placeholder="Name, email, @handle or company" autocomplete="off"></label>

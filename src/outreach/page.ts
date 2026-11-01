@@ -88,6 +88,6 @@ const nativeStyles = String.raw`${nativeTokens}${topbarStyles}${detailPanelStyle
 /** Native mode preserves the evidence UI while using workspace roles and direct human moves. */
 export const nativeOutreachPage = outreachPage
   .replace('</head>', `${brandFontLink}<style>${nativeStyles}</style><script>window.nativeWorkspace=true;${topbarScript}${detailPanelScript}</script></head>`)
-  .replace('<title>AntSeed · Outreach</title>', '<title>CRM · AntSeed</title>')
+  .replace('<title>AntSeed · Outreach</title>', '<title>CRM Pipeline · AntSeed</title>')
   .replace(/<section id="review"[\s\S]*?<\/section>/, '')
-  .replace(/<header>[\s\S]*?<\/header>/, `${topbarMarkup}<div class="heading" id="content" tabindex="-1"><div><h1>CRM pipeline</h1><p class="muted">Relationships by sales stage, with the conversations and next actions behind each one.</p></div></div>`);
+  .replace(/<header>[\s\S]*?<\/header>/, `${topbarMarkup}<div class="heading" id="content" tabindex="-1"><div><h1>CRM Pipeline</h1><p class="muted">Relationships by sales stage, with the conversations and next actions behind each one.</p></div></div>`);

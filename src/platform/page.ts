@@ -55,7 +55,7 @@ const mcpStyles = String.raw`
 #mcp code,#mcp .url{font-family:var(--font-data);font-size:12px;overflow-wrap:anywhere}#mcp table{margin-top:8px}#mcp td,#mcp th{font-size:13px;vertical-align:top}#mcp .row-actions{display:flex;gap:6px;flex-wrap:wrap}
 #mcp .row-actions button,#mcp .copy{min-height:30px;font-size:12px;padding:3px 10px}#mcp textarea{font:inherit;width:100%;min-height:70px;border:1px solid var(--line);border-radius:7px;padding:8px}#mcp select,#mcp input{max-width:100%}
 #mcp .created{border:1px solid var(--accent);background:var(--tint);border-radius:12px;padding:14px 16px}#mcp .inline{display:flex;gap:10px;flex-wrap:wrap;align-items:end}#mcp .inline label{margin:0}.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
-#mcp-feedback[data-error=true]{color:var(--danger);font-weight:600}#mcp-feedback:empty{display:none}
+#mcp-feedback[data-error=true]{color:var(--danger);font-weight:600}#mcp-feedback:empty{display:none}body>main>:not(.topbar):not(.skip){max-width:1100px}
 .step-card h2{display:flex;align-items:center;gap:10px}.num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--primary);color:var(--on-primary);font-size:12px;flex:none}#mcp .created{margin-top:14px}
 .fold{border:1px solid var(--line);border-radius:12px;padding:14px 20px;margin:14px 0;background:var(--paper)}.fold summary{cursor:pointer;font-weight:600;font-size:15px}.fold[open] summary{margin-bottom:10px}.fold h3{font-size:14px;margin:16px 0 4px}.setup{margin-top:32px}.setup article{background:var(--wash)}`;
 
