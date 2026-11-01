@@ -82,6 +82,11 @@ export class AccessControl {
         await tx.query(`INSERT INTO workspace_members(email,role) SELECT $1,'admin'
           WHERE NOT EXISTS(SELECT 1 FROM workspace_members) ON CONFLICT(email) DO NOTHING`,[email]);
       }
+      // A confirmed address on the auto-join domain gets the default role once; a disabled member stays disabled.
+      if (this.autoJoins(email)) {
+        const joined=(await tx.query(`INSERT INTO workspace_members(email,display_name,role) VALUES($1,$2,$3) ON CONFLICT(email) DO NOTHING RETURNING ${memberColumns}`,[email,email.split('@')[0],this.config.autoRole??'viewer'])).rows[0];
+        if (joined) await audit(tx,{id:String(joined.id),email,display_name:String(joined.display_name),role:joined.role as Role,version:Number(joined.version),enabled:true},'member.auto_join',String(joined.id),null,{role:joined.role,domain:this.config.autoDomain});
+      }
       const row = (await tx.query(`SELECT ${memberColumns},auth_user_id FROM workspace_members WHERE email=$1 FOR UPDATE`,[email])).rows[0];
       if (!row?.enabled || (row.auth_user_id && row.auth_user_id !== identity.id)) throw new DomainError('forbidden','You do not have access to this workspace. Ask an administrator for an invitation.');
       if (!row.auth_user_id && (await tx.query('SELECT 1 FROM workspace_members WHERE auth_user_id=$1 AND id<>$2',[identity.id,row.id])).rowCount)
@@ -114,6 +119,7 @@ export class AccessControl {
     return {id:String(row.id),email:String(row.email),display_name:String(row.display_name),role:row.role as Role,version:Number(row.version),enabled:true};
   }
   /** Personal "My tasks" belong to the configured administrator only (WORKSPACE_ADMIN_EMAIL). */
+  private autoJoins(email: string): boolean { return !!this.config.autoDomain && email.endsWith('@'+this.config.autoDomain); }
   myTasks(member: Member): boolean { return !!this.config.adminEmail && member.email.toLowerCase() === this.config.adminEmail; }
   private sameOrigin(request: FastifyRequest) {
     const origin = request.headers.origin;
@@ -184,7 +190,7 @@ export class AccessControl {
     });
     app.post('/auth/signup',async request => {
       const input=z.strictObject({email:z.email().max(320),password:z.string().min(12).max(1024)}).parse(request.body),email=input.email.toLowerCase();
-      const allowed=email===this.config.adminEmail || !!(await this.db.query('SELECT 1 FROM workspace_members WHERE email=$1 AND enabled',[email])).rowCount;
+      const allowed=email===this.config.adminEmail || this.autoJoins(email) || !!(await this.db.query('SELECT 1 FROM workspace_members WHERE email=$1 AND enabled',[email])).rowCount;
       // Do not disclose invitations through the public signup response.
       if (allowed) await this.auth(`/signup?redirect_to=${encodeURIComponent(new URL('/login',this.config.appUrl).href)}`,{method:'POST',body:JSON.stringify(input)});
       return {message:'If this address has workspace access, check your email to confirm your account. Then sign in.'};

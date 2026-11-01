@@ -24,7 +24,7 @@ export interface RuntimeConfig {
   boardBackend?: 'native' | 'vikunja';
   /** `web` serves the workspace HTTP surface only: no migrations, Telegram, workers or control consumers. */
   role?: 'all' | 'web';
-  access?: { supabaseUrl: string | null; publishableKey: string | null; adminEmail: string | null; appUrl: string; crmApproval: 'direct' | 'telegram'; resendApiKey?: string | null; emailFrom?: string };
+  access?: { supabaseUrl: string | null; publishableKey: string | null; adminEmail: string | null; autoDomain?: string | null; autoRole?: 'viewer' | 'member'; appUrl: string; crmApproval: 'direct' | 'telegram'; resendApiKey?: string | null; emailFrom?: string };
   http: { host: string; port: number };
   databaseUrl: string;
   timezone: string;

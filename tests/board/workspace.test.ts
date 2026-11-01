@@ -23,7 +23,7 @@ afterEach(async()=>{for(const close of cleanup.splice(0).reverse())await close()
 async function setup(){
   const db=await fixtureDatabase(names.map(name=>new URL(`../../db/migrations/${name}`,import.meta.url)));cleanup.push(()=>db.close());
   const identities=new Map<string,{id:string;email:string;email_confirmed_at:string|null}>();
-  for(const email of ['ravi@antseed.com','member@example.com','other@example.com','viewer@example.com','manager@example.com','intruder@example.com'])
+  for(const email of ['ravi@antseed.com','member@example.com','other@example.com','viewer@example.com','manager@example.com','intruder@example.com','newbie@antseed.com','spoof@antseed.com.evil.io'])
     identities.set(email,{id:randomUUID(),email,email_confirmed_at:'2026-10-29T00:00:00Z'});
   let providerFailure=false;
   let userRequests=0;
@@ -71,7 +71,7 @@ async function setup(){
   const sign=async(who='member',options:{issuer?:string;audience?:string;expires?:string}={})=>new SignJWT({email:`${who}@example.com`,user_metadata:{role:'admin'}})
     .setProtectedHeader({alg:'ES256',kid:'synthetic-jwt-key'}).setSubject(identities.get(`${who}@example.com`)!.id)
     .setIssuer(options.issuer??`${origin}/auth/v1`).setAudience(options.audience??'authenticated').setIssuedAt().setExpirationTime(options.expires??'5m').sign(keys.privateKey);
-  return {db,app,access,outreach,work,intake,members,headers,task,identities,sign,bootstrapTelegramId,userRequests:()=>userRequests,failProvider:()=>{providerFailure=true;}};
+  return {db,app,access,outreach,work,intake,members,headers,task,identities,sign,bootstrapTelegramId,origin,userRequests:()=>userRequests,failProvider:()=>{providerFailure=true;}};
 }
 describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQL engine)',()=>{
   it('assigns existing generated Work once, defaults future Work to Ravi, and includes both task types in My tasks',async()=>{
@@ -288,6 +288,19 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     h.identities.get('member@example.com')!.email_confirmed_at=null;
     await expect(h.access.identify('member@example.com')).rejects.toMatchObject({code:'unauthenticated'});
     expect((await h.db.query("SELECT email,role FROM workspace_members WHERE role='admin'")).rows).toEqual([{email:'ravi@antseed.com',role:'admin'}]);
+  });
+  it('lets confirmed addresses on the auto-join domain in as viewers, once, and never other domains',async()=>{
+    const h=await setup();
+    await expect(h.access.identify('newbie@antseed.com')).rejects.toMatchObject({code:'forbidden'});
+    const auto=new AccessControl(h.db,{supabaseUrl:h.origin,publishableKey:'synthetic-public-key',adminEmail:'ravi@antseed.com',autoDomain:'antseed.com',autoRole:'viewer',appUrl:'http://localhost:19490',crmApproval:'direct'});
+    expect(await auto.identify('newbie@antseed.com')).toMatchObject({email:'newbie@antseed.com',role:'viewer'});
+    expect(await auto.identify('newbie@antseed.com')).toMatchObject({role:'viewer'});
+    expect((await h.db.query("SELECT count(*)::int n FROM workspace_audit WHERE action='member.auto_join'")).rows[0]).toEqual({n:1});
+    await expect(auto.identify('spoof@antseed.com.evil.io')).rejects.toMatchObject({code:'forbidden'});
+    await h.db.query("UPDATE workspace_members SET enabled=false WHERE email='newbie@antseed.com'");
+    await expect(auto.identify('newbie@antseed.com')).rejects.toMatchObject({code:'forbidden'});
+    h.identities.set('fresh@antseed.com',{id:randomUUID(),email:'fresh@antseed.com',email_confirmed_at:null});
+    await expect(auto.identify('fresh@antseed.com')).rejects.toMatchObject({code:'unauthenticated'});
   });
   it('creates only the authenticated owner’s task and rejects ownership injection',async()=>{
     const h=await setup(),input=h.task();
