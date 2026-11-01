@@ -13,6 +13,7 @@ export async function fixtureDatabase(additionalMigrations: URL[] = []) {
   await engine.exec(await readFile(new URL('../../db/migrations/202610170003_contact_prospects.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610230001_chat_intake_approvals.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610230002_automatic_conversation_scope.sql', import.meta.url), 'utf8'));
+  await engine.exec(await readFile(new URL('../../db/migrations/202611010001_email_threads.sql', import.meta.url), 'utf8'));
   for (const migration of additionalMigrations) await engine.exec(await readFile(migration, 'utf8'));
   let tail: Promise<unknown> = Promise.resolve();
   const executor: SqlExecutor = { async query<R extends QueryResultRow = QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<R>> {

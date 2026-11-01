@@ -8,6 +8,7 @@ import type {
 } from './domain.js';
 import type { CorrectMappingInput, DecideProposalInput, ProposeLaneInput, SetInclusionInput, UpdateActionsInput, UpdateFactInput } from './schemas.js';
 import type { OutreachService } from './outreach-domain.js';
+import type { EmailService } from '../email/ingest.js';
 
 export interface Clock { now(): Date }
 export interface SqlExecutor {
@@ -209,7 +210,7 @@ export interface MutationStore {
   confirmRemote(id: UUID, actualBucketId: RemoteId): Promise<Mutation>;
   commit(id: UUID): Promise<Proposal>; // atomic ticket/version+proposal+mutation; idempotent
 }
-export interface DomainServices { chats: ChatService; records: RecordsService; proposals: ProposalService; analysis: AnalysisQueue; outreach: OutreachService }
+export interface DomainServices { chats: ChatService; records: RecordsService; proposals: ProposalService; analysis: AnalysisQueue; outreach: OutreachService; email: EmailService }
 export interface IdempotencyStore {
   run<T extends Json>(scope: string, key: string, request: Json, work: (tx: SqlExecutor) => Promise<T>): Promise<T>;
 }

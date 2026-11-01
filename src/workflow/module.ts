@@ -23,6 +23,7 @@ import { OutreachPublisher } from '../outreach/publisher.js';
 import { outreachPage, nativeOutreachPage } from '../outreach/page.js';
 import { NativeProposalWorkflow } from '../board/native-workflow.js';
 import { registerBoard } from '../board/routes.js';
+import { EmailIngest } from '../email/ingest.js';
 
 export function createWorkflowServices(platform: PlatformServices) {
   const native = platform.config.boardBackend === 'native';
@@ -179,7 +180,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       app.addHook('preClose', stop);
       app.get('/outreach', async (_request, reply) => reply.header('Cache-Control', 'no-store').type('text/html').send(platform.config.boardBackend === 'native' ? nativeOutreachPage : outreachPage));
       if (platform.config.boardBackend === 'native') registerBoard(app,platform.db,services.outreach,requireDatabaseReady,platform.config.timezone,{work:services.proposalRecords,intake:platform.chats as TelegramStore});
-      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach }, requireDatabaseReady);
+      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach, email: new EmailIngest(platform.db, platform.chats as TelegramStore) }, requireDatabaseReady);
       registerStatus(app, async () => {
         const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
           try { return await read(); } catch (error) {

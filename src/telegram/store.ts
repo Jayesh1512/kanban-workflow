@@ -4,6 +4,7 @@ import { command } from '../workflow/sql.js';
 import { automaticPolicy } from '../shared/automatic-policy.js';
 import { crmFirstEnabled } from '../shared/crm-first.js';
 import { queueIntake } from './intake.js';
+import { dropPendingEmail, promotePendingEmail } from '../email/pending.js';
 import { createHash } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
 import { DomainError } from '../shared/api.js';
@@ -55,9 +56,9 @@ export class TelegramStore implements IngestionStore, ChatService {
     });
   }
   private async initCursor(tx: SqlExecutor, chatId: string): Promise<void> {
-    await tx.query("INSERT INTO history_cursors(chat_id,status) SELECT id,CASE WHEN inclusion='included' AND NOT is_control THEN 'pending' ELSE 'paused' END FROM chats WHERE id=$1 ON CONFLICT DO NOTHING", [chatId]);
-    await tx.query("INSERT INTO live_checkpoints(chat_id,replay_required) SELECT id,(inclusion='included' AND NOT is_control) FROM chats WHERE id=$1 ON CONFLICT DO NOTHING", [chatId]);
-    await tx.query("INSERT INTO telegram_history_requests(chat_id,batch_size,remaining_batches) SELECT id,$2,CASE WHEN inclusion='included' AND NOT is_control THEN $3 ELSE 0 END FROM chats WHERE id=$1 ON CONFLICT DO NOTHING", [chatId, this.config.historyBatchSize, this.config.historyMaxBatches]);
+    await tx.query("INSERT INTO history_cursors(chat_id,status) SELECT id,CASE WHEN inclusion='included' AND NOT is_control THEN 'pending' ELSE 'paused' END FROM chats WHERE id=$1 AND kind<>'email' ON CONFLICT DO NOTHING", [chatId]);
+    await tx.query("INSERT INTO live_checkpoints(chat_id,replay_required) SELECT id,(inclusion='included' AND NOT is_control) FROM chats WHERE id=$1 AND kind<>'email' ON CONFLICT DO NOTHING", [chatId]);
+    await tx.query("INSERT INTO telegram_history_requests(chat_id,batch_size,remaining_batches) SELECT id,$2,CASE WHEN inclusion='included' AND NOT is_control THEN $3 ELSE 0 END FROM chats WHERE id=$1 AND kind<>'email' ON CONFLICT DO NOTHING", [chatId, this.config.historyBatchSize, this.config.historyMaxBatches]);
   }
   async lockedChat(tx: SqlExecutor, chatId: string): Promise<Chat> {
     const row = (await tx.query('SELECT * FROM chats WHERE id=$1 FOR UPDATE', [chatId])).rows[0];
@@ -162,7 +163,7 @@ export class TelegramStore implements IngestionStore, ChatService {
       await tx.query(`UPDATE tickets SET tracking_state=CASE WHEN $2::boolean AND
         ($3::text='confirmed' OR (kind='contact_prospect' AND company_id IS NULL AND $3 IN ('unresolved','ambiguous')))
         THEN 'active' ELSE 'suspended' END,updated_at=now() WHERE chat_id=$1`, [chat.id, inclusion === 'included', chat.mappingStatus]);
-      if (inclusion === 'included') await this.enqueue(tx, toChat(row));
+      if (inclusion === 'included') { await promotePendingEmail(tx, chat.id); await this.enqueue(tx, toChat(row)); } else await dropPendingEmail(tx, chat.id);
       return toChat(row);
   }
 
