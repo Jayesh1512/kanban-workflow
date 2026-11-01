@@ -10,6 +10,7 @@ import { approvedChatSourceSql } from '../shared/source-approval.js';
 import { crmFirstEnabled } from '../shared/crm-first.js';
 import { resolveTitleCompany } from '../workflow/title-company.js';
 import { prospectDisplayName } from '../shared/company-title.js';
+import { internalContactSql } from '../shared/team.js';
 
 const joins = `FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
  LEFT JOIN outreach_telegram_inputs i ON i.chat_id=s.chat_id`;
@@ -236,8 +237,9 @@ export class OutreachRepository implements OutreachService {
     const evidence = (await tx.query(`SELECT e.*,m.sender_id,m.sender_snapshot,m.forward_metadata,m.sent_at,(SELECT self_user_id FROM telegram_account LIMIT 1) AS self_id FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
       WHERE e.chat_id=$1 AND e.invalidated_at IS NULL AND m.deleted_at IS NULL AND e.message_version=m.version ORDER BY e.observed_at DESC,e.id LIMIT 101`, [source.chatId])).rows;
     const ids = evidence.slice(0, 100).map((e) => String(e.id));
+    // Our own team is never listed as a contact at the company (see /antseed-team).
     const people = (await tx.query(`SELECT p.* FROM contacts p
-      WHERE EXISTS(SELECT 1 FROM contact_evidence ce WHERE ce.contact_id=p.id AND ce.evidence_id=ANY($1::uuid[])) ORDER BY p.id`, [ids])).rows;
+      WHERE EXISTS(SELECT 1 FROM contact_evidence ce WHERE ce.contact_id=p.id AND ce.evidence_id=ANY($1::uuid[])) AND NOT ${internalContactSql('p',{members:false})} ORDER BY p.id`, [ids])).rows;
     const contacts: OutreachContact[] = [];
     for (const p of people) {
       const roles = (await tx.query<{ role: string }>(`SELECT r.role FROM contact_company_roles r WHERE r.contact_id=$1 AND r.company_id=$2

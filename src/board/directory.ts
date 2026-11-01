@@ -1,19 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { Database } from '../shared/ports.js';
 import { approvedChatSourceSql } from '../shared/source-approval.js';
+import { internalContactSql } from '../shared/team.js';
 import { brandFontLink, nativeTokens, topbarMarkup, topbarScript, topbarStyles } from './page.js';
 
 /** Chats that count as "talking to" a company: admitted, business, mapped to a company. Alias: c. */
 const talkingSql = `c.company_id IS NOT NULL AND c.inclusion='included' AND NOT c.is_control AND ${approvedChatSourceSql('c')}`;
 
-/** Our own team, not a contact at a company. Alias: p (contacts). An explicit 'external' mark always wins; stored data is never edited.
- * `app_settings` key `directory:team` ({"telegramUserIds":[...]}) pins people by Telegram ID, because the extractor rewrites a contact's affiliation. */
-const teamSql = `(p.affiliation='internal' OR (p.affiliation<>'external' AND (
-  array_to_string(p.names||p.usernames,' ') ~* 'ant\\s?seed'
-  OR EXISTS(SELECT 1 FROM contact_telegram_ids t WHERE t.contact_id=p.id AND (
-    t.telegram_user_id IN (SELECT self_user_id FROM telegram_account)
-    OR t.telegram_user_id IN (SELECT jsonb_array_elements_text(value->'telegramUserIds')::bigint FROM app_settings WHERE key='directory:team')
-    OR t.telegram_user_id IN (SELECT telegram_user_id FROM workspace_members WHERE telegram_user_id IS NOT NULL))))))`;
+const teamSql = internalContactSql('p');
 
 /** Read-only company/contact directory. Any signed-in member may read it (the global auth hook gates `/api/*`). */
 export function registerDirectory(app: FastifyInstance, db: Database, ready: () => Promise<void>) {
@@ -26,10 +20,7 @@ export function registerDirectory(app: FastifyInstance, db: Database, ready: () 
       SELECT p.id,p.names,p.usernames,p.emails,p.phones,
         (SELECT coalesce(array_agg(DISTINCT r.role ORDER BY r.role),'{}') FROM contact_company_roles r WHERE r.contact_id=p.id) AS roles,
         (SELECT max(m.sent_at) FROM messages m JOIN contact_telegram_ids t ON t.telegram_user_id=m.sender_id
-          WHERE t.contact_id=p.id AND m.deleted_at IS NULL AND m.chat_id IN (SELECT chat_id FROM scope)) AS last_active,
-        (SELECT coalesce(array_agg(DISTINCT s.canonical_name ORDER BY s.canonical_name),'{}') FROM scope s WHERE
-          EXISTS(SELECT 1 FROM messages m JOIN contact_telegram_ids t ON t.telegram_user_id=m.sender_id WHERE t.contact_id=p.id AND m.chat_id=s.chat_id AND m.deleted_at IS NULL)
-          OR EXISTS(SELECT 1 FROM contact_evidence ce JOIN evidence e ON e.id=ce.evidence_id WHERE ce.contact_id=p.id AND e.chat_id=s.chat_id AND e.invalidated_at IS NULL)) AS companies
+          WHERE t.contact_id=p.id AND m.deleted_at IS NULL AND m.chat_id IN (SELECT chat_id FROM scope)) AS last_active
       FROM contacts p WHERE ${teamSql} ORDER BY last_active DESC NULLS LAST,p.names[1],p.id`)).rows;
     return { items };
   });
@@ -116,12 +107,12 @@ start('/api/board/directory',co=>[co.name,...co.domains,...co.people.flatMap(p=>
 </script></body></html>`;
 
 export const teamPage = pageHead('AntSeed Team') + String.raw`
-<main><div class="heading" id="content" tabindex="-1"><div><h1>AntSeed team <span class="muted" id="count"></span></h1><p class="muted">Our own people, kept out of the company <a href="/directory">Directory</a>. Read only. Last active and companies come from approved Telegram conversations only.</p></div></div>
+<main><div class="heading" id="content" tabindex="-1"><div><h1>AntSeed Team <span class="muted" id="count"></span></h1><p class="muted">Our own people. They are kept out of the <a href="/directory">CRM Directory</a> and CRM contacts.</p></div></div>
 <div id="notice" class="notice" role="alert"></div>
-<label>Search<input id="search" type="search" placeholder="Name, email, @handle or company" autocomplete="off"></label>
-<table><thead><tr><th scope="col">Teammate</th><th scope="col">Designation</th><th scope="col">Email</th><th scope="col">Telegram</th><th scope="col">Phone</th><th scope="col">Last active</th><th scope="col">Working with</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody></table></main>
+<label>Search<input id="search" type="search" placeholder="Name, email or @handle" autocomplete="off"></label>
+<table><thead><tr><th scope="col">Teammate</th><th scope="col">Designation</th><th scope="col">Email</th><th scope="col">Telegram</th><th scope="col">Phone</th><th scope="col">Last active</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table></main>
 <script>${commonScript}
-function row(p){const r=node('tr'),name=node('td');name.append(node('span',personName(p)));r.append(name,cell(...p.roles.map(x=>node('span',x))),...contactCells(p),cell(node('span',day(p.last_active))),cell(...p.companies.map(c=>node('span',c))));return r;}
-const paint=(shown,q)=>el('rows').replaceChildren(...(shown.length?shown.map(row):[emptyRow(7,q?'No match.':'No teammates found yet.')]));
-start('/api/board/directory/team',p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles,...p.companies].join(' ').toLowerCase(),'people');
+function row(p){const r=node('tr'),name=node('td');name.append(node('span',personName(p)));r.append(name,cell(...p.roles.map(x=>node('span',x))),...contactCells(p),cell(node('span',day(p.last_active))));return r;}
+const paint=(shown,q)=>el('rows').replaceChildren(...(shown.length?shown.map(row):[emptyRow(6,q?'No match.':'No teammates found yet.')]));
+start('/api/board/directory/team',p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles].join(' ').toLowerCase(),'people');
 </script></body></html>`;
