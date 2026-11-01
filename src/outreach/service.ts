@@ -659,6 +659,7 @@ FROM current_relationships`)).rows[0] ?? {};
             followUpsDue: Number(kpi.follow_ups_due ?? 0),
             pendingApprovals: Number(row.pending_proposals ?? 0),
             dealsWon: Number(kpi.deals_won ?? 0),
+            ...(this.nativeBoard ? { funnel: await this.funnel() } : {}),
         }, unresolved: this.nativeBoard ? [] : requests, conflicts: this.nativeBoard ? [] : conflicts, workBoardUrl: this.nativeBoard ? '/work' : this.publicVikunja && work ? `${this.publicVikunja.replace(/\/$/, '')}/projects/${work.project_id}/${work.view_id}` : null, nativeUrl: this.nativeBoard ? null : this.publicVikunja && row.project_id && row.view_id ? `${this.publicVikunja.replace(/\/$/, '')}/projects/${row.project_id}/${row.view_id}` : null };
     }
 }

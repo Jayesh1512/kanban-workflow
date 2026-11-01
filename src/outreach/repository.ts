@@ -118,6 +118,20 @@ export class OutreachRepository implements OutreachService {
     });
   }
 
+  /** Funnel counts over exactly the relationships the native board lists, archived excluded, so cards always match the lanes. */
+  async funnel() {
+    const f = (await this.db.query(`SELECT count(*)::int AS all_deals,
+        count(DISTINCT coalesce(r.company_id::text,lower(r.display_name)))::int AS unique_companies,
+        count(*) FILTER (WHERE r.accepted_stage='lead')::int AS lead,
+        count(*) FILTER (WHERE r.accepted_stage='qualification')::int AS qualification,
+        count(*) FILTER (WHERE r.accepted_stage='negotiation')::int AS negotiation,
+        count(*) FILTER (WHERE r.accepted_stage='won')::int AS won
+      FROM outreach_relationships r WHERE r.retained AND r.accepted_stage IS NOT NULL AND r.accepted_stage<>'archived'
+        AND EXISTS(SELECT 1 ${joins} WHERE rs.relationship_id=r.id AND rs.enrollment_state IN ('active','pending') AND ${eligible} AND ${identityMatches})`)).rows[0] ?? {};
+    return { allDeals: Number(f.all_deals ?? 0), uniqueCompanies: Number(f.unique_companies ?? 0), lead: Number(f.lead ?? 0),
+      qualification: Number(f.qualification ?? 0), negotiation: Number(f.negotiation ?? 0), won: Number(f.won ?? 0) };
+  }
+
   async list(raw: OutreachListInput, placement: 'all' | 'accepted' | 'unplaced' = 'all') {
     const input = outreachListSchema.parse(raw);
     return this.db.transaction(async (tx) => {
