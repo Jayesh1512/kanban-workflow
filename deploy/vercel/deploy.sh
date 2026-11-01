@@ -24,6 +24,8 @@ if [ "${1:-}" != "--code" ]; then
   put DATABASE_CA < "$CONFIG/database-ca.crt"
   for key in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY WORKSPACE_ADMIN_EMAIL CRM_APPROVAL; do value "$CONFIG/access.env" "$key" | put "$key"; done
   printf %s "$APP_URL" | put APP_URL
+  # Optional MCP approval email (Resend); skipped until present in access.env.
+  for key in RESEND_API_KEY MCP_EMAIL_FROM; do [ -n "$(value "$CONFIG/access.env" "$key")" ] && value "$CONFIG/access.env" "$key" | put "$key"; done
 fi
 
 # Deploy from a git-free copy: Hobby blocks CLI deploys whose git metadata names a non-member commit author.
