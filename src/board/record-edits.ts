@@ -97,36 +97,10 @@ export async function editCrmRelationship(db: Database, actor: Member, id: strin
 }
 
 /** Direct human edits and permanent deletes for shared Work and CRM records (admins and CRM managers). */
-export function registerRecordEdits(app: FastifyInstance, db: Database, ready:()=>Promise<void>, intake?: TelegramStore) {
-  const manager=async(request:FastifyRequest)=>{
-    await ready();const actor=app.workspaceAccess.user(request);
-    assert(canMoveCrm(actor),'forbidden','CRM management permission is required');return actor;
-  };
-  app.get('/api/board/people',async request=>{
-    await ready();app.workspaceAccess.user(request);
-    return {items:(await db.query(`SELECT id,coalesce(nullif(display_name,''),split_part(email,'@',1)) AS name FROM workspace_members
-      WHERE enabled ORDER BY lower(coalesce(nullif(display_name,''),email))`)).rows};
-  });
-
-  app.patch('/api/board/work/:id',async request=>editWorkTicket(db,await manager(request),idSchema.parse(request.params).id,request.body));
-
-  app.delete('/api/board/work/:id',async request=>{
-    const actor=await manager(request),id=idSchema.parse(request.params).id;
-    const input=z.strictObject({expectedActionsVersion:z.number().int().nonnegative()}).parse(request.body);
-    return db.transaction(async tx=>{
-      await recheck(tx,actor);const before=await lockTicket(tx,id);
-      assert(Number(before.actions_version)===input.expectedActionsVersion,'conflict','This ticket changed. Reload its latest details before deleting.');
-      await audit(tx,actor,'work.delete',id,{chatId:String(before.chat_id),headline:before.headline,nextAction:before.next_action,lane:before.lane,crmRelationshipId:before.crm_relationship_id},null);
-      await removeTicketTx(tx,id);return {deleted:true};
-    });
-  });
-
-  app.patch('/api/board/crm/:id',async request=>editCrmRelationship(db,await manager(request),idSchema.parse(request.params).id,request.body));
-
-  app.delete('/api/board/crm/:id',async request=>{
-    const actor=await manager(request),id=idSchema.parse(request.params).id;
-    const input=z.strictObject({expectedEvidenceRevision:z.number().int().nonnegative()}).parse(request.body);
-    return db.transaction(async tx=>{
+/** Hard-deletes a CRM relationship, its Work and dependent rows, audited; its source chats are excluded so reconciliation cannot recreate it. */
+export async function deleteCrmRelationship(db: Database, actor: Member, id: string, expectedEvidenceRevision: number, intake?: TelegramStore) {
+  const input={expectedEvidenceRevision};
+  return db.transaction(async tx=>{
       await recheck(tx,actor);const {row:before,chats,tickets}=await lockRelationship(tx,id);
       assert(Number(before.evidence_revision)===input.expectedEvidenceRevision,'conflict','This relationship changed. Reload its latest details before deleting.');
       await audit(tx,actor,'crm.delete',id,{displayName:before.display_name,stage:before.accepted_stage,companyId:before.company_id,chatIds:chats,workTicketIds:tickets},null);
@@ -159,6 +133,38 @@ export function registerRecordEdits(app: FastifyInstance, db: Database, ready:()
         else if(!intake){await tx.query("UPDATE chats SET inclusion='excluded',policy_version=policy_version+1,updated_at=now() WHERE id=$1 AND inclusion<>'excluded'",[chatId]);excluded++;}
       }
       return {deleted:true,workTickets:tickets.length,excludedChats:excluded};
+  });
+}
+
+export function registerRecordEdits(app: FastifyInstance, db: Database, ready:()=>Promise<void>, intake?: TelegramStore) {
+  const manager=async(request:FastifyRequest)=>{
+    await ready();const actor=app.workspaceAccess.user(request);
+    assert(canMoveCrm(actor),'forbidden','CRM management permission is required');return actor;
+  };
+  app.get('/api/board/people',async request=>{
+    await ready();app.workspaceAccess.user(request);
+    return {items:(await db.query(`SELECT id,coalesce(nullif(display_name,''),split_part(email,'@',1)) AS name FROM workspace_members
+      WHERE enabled ORDER BY lower(coalesce(nullif(display_name,''),email))`)).rows};
+  });
+
+  app.patch('/api/board/work/:id',async request=>editWorkTicket(db,await manager(request),idSchema.parse(request.params).id,request.body));
+
+  app.delete('/api/board/work/:id',async request=>{
+    const actor=await manager(request),id=idSchema.parse(request.params).id;
+    const input=z.strictObject({expectedActionsVersion:z.number().int().nonnegative()}).parse(request.body);
+    return db.transaction(async tx=>{
+      await recheck(tx,actor);const before=await lockTicket(tx,id);
+      assert(Number(before.actions_version)===input.expectedActionsVersion,'conflict','This ticket changed. Reload its latest details before deleting.');
+      await audit(tx,actor,'work.delete',id,{chatId:String(before.chat_id),headline:before.headline,nextAction:before.next_action,lane:before.lane,crmRelationshipId:before.crm_relationship_id},null);
+      await removeTicketTx(tx,id);return {deleted:true};
     });
+  });
+
+  app.patch('/api/board/crm/:id',async request=>editCrmRelationship(db,await manager(request),idSchema.parse(request.params).id,request.body));
+
+  app.delete('/api/board/crm/:id',async request=>{
+    const actor=await manager(request),id=idSchema.parse(request.params).id;
+    const input=z.strictObject({expectedEvidenceRevision:z.number().int().nonnegative()}).parse(request.body);
+    return deleteCrmRelationship(db,actor,id,input.expectedEvidenceRevision,intake);
   });
 }
