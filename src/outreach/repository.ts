@@ -70,7 +70,9 @@ export class OutreachRepository implements OutreachService {
       }
       const r = (await tx.query(`INSERT INTO outreach_relationships(identity_key,kind,company_id,display_name,summary,workstream)
         VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(identity_key) DO UPDATE SET
-        display_name=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.display_name ELSE EXCLUDED.display_name END,summary=EXCLUDED.summary,workstream=EXCLUDED.workstream,retained=true
+        display_name=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.display_name ELSE EXCLUDED.display_name END,
+        summary=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.summary ELSE EXCLUDED.summary END,
+        workstream=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.workstream ELSE EXCLUDED.workstream END,retained=true
         RETURNING id,accepted_stage`, [key, i.company_id ? 'company' : 'contact_prospect', i.company_id,
         i.canonical_name || i.title || 'Unnamed contact', '', i.workstream])).rows[0]!;
       const source = (await tx.query(`INSERT INTO outreach_source_threads(kind,source_key,chat_id,ticket_id,source_revision,observed_at,reconciled_at)
@@ -179,9 +181,9 @@ export class OutreachRepository implements OutreachService {
     const nextAction = knownAction || (accepted ? 'Next action not recorded' : 'Review initial placement');
     return { id: String(r.id), kind: r.kind as OutreachRelationship['kind'], companyId: r.company_id as string | null,
       displayName: name, title: ticketTitle({ identity: name, description, nextAction, eta }), nextStep: `Next: ${nextAction} · ETA: ${eta}`,
-      // Shared company summaries can contain excluded/pending-source claims.
-      // M1 has no provenance-bound accepted aggregate summary writer yet.
-      summary: '', workstream: r.workstream as OutreachRelationship['workstream'], acceptedStage: accepted,
+      // Shared company summaries can contain excluded/pending-source claims, so only
+      // notes a person wrote on this relationship (identity_version>0) are shown.
+      summary: Number(r.identity_version) > 0 ? String(r.summary ?? '') : '', workstream: r.workstream as OutreachRelationship['workstream'], acceptedStage: accepted,
       displayStage: stage, stageBasis: accepted ? 'accepted' : provisional ? 'provisional' : 'unknown',
       stageReason: provisional ? r.provisional_reason as string | null : null,
       stageVersion: Number(r.stage_version), evidenceRevision: Number(r.evidence_revision), identityVersion:Number(r.identity_version),actionsVersion:Number(r.actions_version),

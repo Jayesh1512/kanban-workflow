@@ -191,6 +191,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         const sales=await safe(async()=>{const s=await services.outreach.status();return {state:s.unresolved_requests!=='0'&&Number(s.unresolved_requests)>0?'degraded':s.mode==='publish'&&s.state==='ready'?'ready':'connecting',code:Number(s.unresolved_requests)>0?'publication_unresolved':s.mode!=='publish'?'observe_only':null,detail:`Sales board ${s.state}; ${s.pending_proposals} proposals; ${s.pending_publications} publications; ${s.unresolved_requests} unresolved requests`,checkedAt:platform.clock.now().toISOString()};});
         return { workflow: { ...state }, extraction, jev, outreach:sales };
       });
+      if (platform.config.role === 'web') return; // Control replies are consumed by the primary process.
       const operational = async (message:import('../shared/ports.js').ControlMessage) => {
         if (stopped) throw new Error('Workflow stopping; retain inbox reply');
         if (platform.config.boardBackend === 'native' && !(await platform.db.query("SELECT 1 FROM workspace_members WHERE telegram_user_id=$1 AND enabled AND role IN ('admin','crm_manager')",[message.senderId])).rowCount) return;
@@ -203,7 +204,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         unsubscribe=()=>{offSales();offWork();};
       }else unsubscribe=platform.control.subscribe(operational);
     },
-    async start() { if (started || stopped) return; started = true; schedule(); scheduleOutreach(); scheduleAnalysis(0); scheduleAnalysis(1); },
+    async start() { if (started || stopped) return; started = true; if (platform.config.role === 'web') { state = { state: 'ready', code: null, detail: 'Web role: workers run on the primary process', checkedAt: platform.clock.now().toISOString() }; return; } schedule(); scheduleOutreach(); scheduleAnalysis(0); scheduleAnalysis(1); },
     stop,
     async status() { return { ...state }; },
   };

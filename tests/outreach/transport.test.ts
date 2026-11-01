@@ -36,7 +36,7 @@ describe('Outreach canonical HTTP / official SDK parity', () => {
     const page = await app.inject('/outreach');
     expect(page.headers['cache-control']).toBe('no-store');
     expect(page.body).toContain('aria-label="Pipeline KPIs"');
-    for (const label of ['Companies in talks', 'Approved conversations', 'Active opportunities', 'Follow-ups due', 'Pending approvals', 'Deals won']) expect(page.body).toContain(label);
+    for (const label of ['Unique leads', 'All deals', 'Qualified deals', 'Deals won', 'Pending approvals', 'Follow-ups due']) expect(page.body).toContain(label);
     for (const path of ['/api/outreach/relationships?stage=Completed', '/api/outreach/relationships?extra=true', '/api/outreach/relationships?limit=201', '/api/outreach/relationships/not-a-uuid']) expect((await app.inject(path)).statusCode).toBe(400);
     ready = false;
     expect((await app.inject('/api/outreach/relationships')).statusCode).toBe(503);

@@ -30,13 +30,13 @@ export function registerTicketDetails(app: FastifyInstance, db: Database, outrea
   };
   app.get('/api/board/work',async request=>{
     await ready();const input=pageSchema.parse(request.query);
-    const rows=(await db.query(`SELECT t.id,t.lane,t.stage_version,t.summary,t.next_action,t.workstream,t.follow_up_at,t.eta_at,t.owner_id,
+    const rows=(await db.query(`SELECT t.id,t.lane,t.stage_version,t.actions_version,t.summary,t.next_action,t.workstream,t.follow_up_at,t.eta_at,t.owner_id,
       coalesce(nullif(m.display_name,''),split_part(m.email,'@',1),'Unassigned') AS owner_name,
       coalesce(co.canonical_name,c.title) AS company_name FROM tickets t JOIN chats c ON c.id=t.chat_id
       LEFT JOIN companies co ON co.id=t.company_id LEFT JOIN workspace_members m ON m.id=t.owner_id
       WHERE ${visibleWorkSql}
       AND ($1::uuid IS NULL OR t.id>$1) ORDER BY t.id LIMIT $2`,[input.cursor??null,input.limit+1])).rows;
-    return {items:rows.slice(0,input.limit).map(t=>({id:t.id,lane:t.lane,stageVersion:t.stage_version,summary:t.summary,nextAction:t.next_action,
+    return {items:rows.slice(0,input.limit).map(t=>({id:t.id,lane:t.lane,stageVersion:t.stage_version,actionsVersion:t.actions_version,summary:t.summary,nextAction:t.next_action,
       workstream:t.workstream,followUpAt:t.follow_up_at,etaAt:t.eta_at,companyName:t.company_name,owner_id:t.owner_id,owner_name:t.owner_name,kind:'work'})),
       nextCursor:rows.length>input.limit?String(rows[input.limit-1]!.id):null};
   });
@@ -61,7 +61,7 @@ export function registerTicketDetails(app: FastifyInstance, db: Database, outrea
     await ready();const id=idSchema.parse(request.params).id;await work(id);
     const context=await records.getContext({ticketId:id,limit:50});
     const facts=await records.listFacts({ticketId:id,limit:50});
-    const metadata=(await db.query("SELECT t.created_at,t.updated_at,t.owner_id,t.headline,coalesce(nullif(m.display_name,''),split_part(m.email,'@',1),'Unassigned') AS owner_name FROM tickets t LEFT JOIN workspace_members m ON m.id=t.owner_id WHERE t.id=$1",[id])).rows[0];
+    const metadata=(await db.query("SELECT t.created_at,t.updated_at,t.owner_id,t.headline,t.actions_source,coalesce(nullif(m.display_name,''),split_part(m.email,'@',1),'Unassigned') AS owner_name FROM tickets t LEFT JOIN workspace_members m ON m.id=t.owner_id WHERE t.id=$1",[id])).rows[0];
     const proposals=(await db.query(`SELECT id,source_lane,target_lane,reason,origin,decision,apply_state,created_at,decided_at,applied_at
       FROM proposals WHERE ticket_id=$1 AND ($2::boolean OR decision<>'pending')
       ORDER BY created_at DESC,id DESC LIMIT 100`,[id,canMoveCrm(app.workspaceAccess.user(request))])).rows;
@@ -72,7 +72,7 @@ export function registerTicketDetails(app: FastifyInstance, db: Database, outrea
       [context.ticket.chatId,evidenceIds,context.messages.map(m=>m.id)])).rows;
     // Message history pages use message IDs so every stored, undeleted message is reachable.
     const messages=(await db.query('SELECT * FROM messages WHERE chat_id=$1 AND deleted_at IS NULL ORDER BY id DESC LIMIT 51',[context.ticket.chatId])).rows;
-    return {...context,title:workTitle(context.ticket.nextAction,metadata?.headline as string|null??null),companyName:context.company?.canonicalName??context.chat.title,metadata,evidence: evidence.map(e=>({id:e.id,excerpt:e.excerpt,sourceUrl:e.source_url,observedAt:e.observed_at,messageId:e.message_id})),
+    return {...context,title:workTitle(context.ticket.nextAction,metadata?.headline as string|null??null,metadata?.actions_source==='manual'),companyName:context.company?.canonicalName??context.chat.title,metadata,evidence: evidence.map(e=>({id:e.id,excerpt:e.excerpt,sourceUrl:e.source_url,observedAt:e.observed_at,messageId:e.message_id})),
       facts:facts.items,factsCursor:facts.nextCursor,messages:messages.slice(0,50).map(messageRow),
       messagesCursor:messages.length>50?Number(messages[49]!.id):null,proposals,history:await history(id)};
   });

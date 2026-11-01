@@ -15,8 +15,9 @@ export function shortAction(action: string): string {
 }
 
 const generic = /^(?:confirm|clarify) next step$/i;
-/** Card/panel title: the owner's short action, else the stored plain-language headline, else a neutral prompt. */
-export function workTitle(nextAction: string | null, headline: string | null): string {
+/** Card/panel title: a human-set headline, else the owner's short action, else the stored plain-language headline, else a neutral prompt. */
+export function workTitle(nextAction: string | null, headline: string | null, manual = false): string {
+  if (manual && headline?.trim()) return headline.trim();
   const action = nextAction?.trim() ? shortAction(nextAction) : '';
   if (action && !(generic.test(action) && headline?.trim())) return action;
   return headline?.trim() || action || 'Review conversation';

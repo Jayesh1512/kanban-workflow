@@ -22,6 +22,8 @@ export interface Database extends SqlExecutor {
 }
 export interface RuntimeConfig {
   boardBackend?: 'native' | 'vikunja';
+  /** `web` serves the workspace HTTP surface only: no migrations, Telegram, workers or control consumers. */
+  role?: 'all' | 'web';
   access?: { supabaseUrl: string | null; publishableKey: string | null; adminEmail: string | null; appUrl: string; crmApproval: 'direct' | 'telegram' };
   http: { host: string; port: number };
   databaseUrl: string;

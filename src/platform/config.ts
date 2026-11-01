@@ -55,6 +55,7 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   catch { throw new Error('Invalid TIMEZONE'); }
   const config: RuntimeConfig = {
     boardBackend: str('BOARD_BACKEND', 'native') as 'native' | 'vikunja',
+    role: str('APP_ROLE', 'all') as 'all' | 'web',
     access: {
       supabaseUrl: nonblank(values['SUPABASE_URL']),
       publishableKey: nonblank(values['SUPABASE_PUBLISHABLE_KEY']) ?? nonblank(values['SUPABASE_ANON_KEY']),
@@ -83,6 +84,8 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     jev: { provider, endpoint, model, apiKey: provider === 'openai' ? nonblank(values['OPENAI_API_KEY']) : nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },
   };
   if (!['native', 'vikunja'].includes(config.boardBackend!)) throw new Error('Invalid BOARD_BACKEND');
+  if (!['all', 'web'].includes(config.role!)) throw new Error('Invalid APP_ROLE');
+  if (config.role === 'web' && config.boardBackend !== 'native') throw new Error('APP_ROLE=web requires the native board');
   if (!['direct', 'telegram'].includes(config.access!.crmApproval)) throw new Error('Invalid CRM_APPROVAL');
   if (config.access!.supabaseUrl) {
     const authUrl = new URL(config.access!.supabaseUrl);
