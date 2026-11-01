@@ -1,4 +1,5 @@
 import { visibleWorkSql } from './work-visibility.js';
+import { registerDirectory } from './directory.js';
 import { registerApprovals, type ApprovalServices } from './approvals.js';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
@@ -26,11 +27,14 @@ export function registerBoard(app: FastifyInstance, db: Database, outreach: Outr
   const access = app.workspaceAccess;
   registerTicketDetails(app,db,outreach,ready);
   registerApprovals(app,db,outreach,ready,approvals);
+  registerDirectory(app,db,ready);
   app.get('/login',async (_request,reply)=>reply.type('text/html; charset=utf-8').send(loginPage));
-  for (const path of ['/dashboard','/work','/team','/approvals']) app.get(path,async (_request,reply)=>reply.type('text/html; charset=utf-8').send(workspacePage));
+  app.get('/work',async (request,reply)=>access.myTasks(access.user(request))?reply.type('text/html; charset=utf-8').send(workspacePage):reply.redirect('/dashboard'));
+  for (const path of ['/dashboard','/team','/approvals']) app.get(path,async (_request,reply)=>reply.type('text/html; charset=utf-8').send(workspacePage));
   app.get('/api/board/tasks',async request => {
     await ready(); const member=access.user(request);
     const input=z.strictObject({scope:z.enum(['mine','team']).default('mine'),limit:z.coerce.number().int().min(1).max(200).default(100),cursor:z.uuid().optional()}).parse(request.query);
+    if(input.scope==='mine'&&!access.myTasks(member))throw new DomainError('forbidden','My tasks is not available for this account');
     const rows=(await db.query(`WITH tasks AS (
       SELECT ${taskSelect},'personal'::text AS kind,NULL::text AS company,NULL::text AS next_action,NULL::text AS headline FROM personal_tasks t JOIN workspace_members m ON m.id=t.owner_id
       UNION ALL

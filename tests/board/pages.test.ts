@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { loginPage, workspacePage } from '../../src/board/page.js';
+import { directoryPage, teamPage } from '../../src/board/directory.js';
 import { nativeOutreachPage, outreachPage } from '../../src/outreach/page.js';
 
 const scripts = (html: string) => [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]!);
 
 describe('native workspace pages (static shell checks)', () => {
-  for (const [name, html] of Object.entries({ loginPage, workspacePage, nativeOutreachPage, outreachPage })) {
+  for (const [name, html] of Object.entries({ loginPage, workspacePage, nativeOutreachPage, outreachPage, directoryPage, teamPage })) {
     it(`${name}: inline scripts parse and no template placeholder leaks`, () => {
       for (const script of scripts(html)) expect(() => new Function(script)).not.toThrow();
       expect(html).not.toMatch(/\$\{/);
     });
   }
+  it('shows the My tasks link and page only when the session says myTasks', () => {
+    expect(workspacePage).toContain('id="mytasks-link" hidden');
+    expect(workspacePage).toContain('hidden=!member.myTasks');
+    expect(workspacePage).toContain("mode==='work'&&!member.myTasks");
+  });
   it('offers password sign-in and invited sign-up, never a magic link', () => {
     expect(loginPage).toContain('/auth/login');
     expect(loginPage).toContain('/auth/signup');

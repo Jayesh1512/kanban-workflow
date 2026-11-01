@@ -109,6 +109,8 @@ export class AccessControl {
     if (!row) return this.identify(token);
     return {id:String(row.id),email:String(row.email),display_name:String(row.display_name),role:row.role as Role,version:Number(row.version),enabled:true};
   }
+  /** Personal "My tasks" belong to the configured administrator only (WORKSPACE_ADMIN_EMAIL). */
+  myTasks(member: Member): boolean { return !!this.config.adminEmail && member.email.toLowerCase() === this.config.adminEmail; }
   private sameOrigin(request: FastifyRequest) {
     const origin = request.headers.origin;
     // Confirmation links return from Supabase as cross-site document navigations.
@@ -182,7 +184,7 @@ export class AccessControl {
       finally { this.clearSession(reply); }
       return {signedOut:true};
     });
-    app.get('/api/session',async request => ({member:this.user(request),crmApproval:this.config.crmApproval}));
+    app.get('/api/session',async request => {const member=this.user(request);return {member:{...member,myTasks:this.myTasks(member)},crmApproval:this.config.crmApproval};});
     app.get('/api/workspace/members',async () => ({items:(await this.db.query(`SELECT ${memberColumns} FROM workspace_members ORDER BY created_at,id`)).rows}));
     app.post('/api/workspace/members',async request => {
       const actor=this.user(request),input=z.strictObject({email:z.email().max(320).transform(e=>e.toLowerCase()),displayName:z.string().trim().max(200).default(''),role:z.enum(roles).default('member'),telegramUserId:z.string().regex(/^[1-9]\d{0,17}$/).nullable().default(null)}).parse(request.body);
