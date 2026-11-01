@@ -95,7 +95,16 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     const first=(await h.app.inject({url:'/api/board/tasks?scope=mine&limit=1',headers:h.headers('admin')})).json();
     const next=(await h.app.inject({url:'/api/board/tasks?scope=mine&limit=2&cursor='+first.nextCursor,headers:h.headers('admin')})).json();
     expect(new Set([...first.items,...next.items].map((t:{id:string})=>t.id)).size).toBe(3);expect(next.nextCursor).toBeNull();
-    expect((await h.app.inject({url:'/api/board/tasks?scope=mine',headers:h.headers('other')})).json().items.map((t:{id:string})=>t.id)).toEqual([other.id]);
+    // "My tasks" is the configured administrator's alone; everyone else keeps team tasks.
+    for(const who of ['other','member','manager','viewer']){
+      expect((await h.app.inject({url:'/api/board/tasks?scope=mine',headers:h.headers(who)})).statusCode).toBe(403);
+      expect((await h.app.inject({url:'/api/board/tasks?scope=team',headers:h.headers(who)})).statusCode).toBe(200);
+      const redirect=await h.app.inject({url:'/work',headers:h.headers(who)});
+      expect([redirect.statusCode,redirect.headers.location]).toEqual([302,'/dashboard']);
+      expect((await h.app.inject({url:'/api/session',headers:h.headers(who)})).json().member.myTasks).toBe(false);
+    }
+    expect((await h.app.inject({url:'/work',headers:h.headers('admin')})).statusCode).toBe(200);
+    expect((await h.app.inject({url:'/api/session',headers:h.headers('admin')})).json().member.myTasks).toBe(true);
     expect((await h.app.inject({url:'/api/board/tasks?scope=team',headers:h.headers('viewer')})).json().items).toHaveLength(5);
     expect((await h.app.inject({url:`/api/board/work/${legacy.id}/detail`,headers:h.headers('admin')})).json().metadata).toMatchObject({owner_id:h.members.admin!.id,owner_name:'ravi'});
     expect((await h.db.query("SELECT * FROM workspace_audit WHERE action='work.assign'")).rowCount).toBe(1);
@@ -171,6 +180,45 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     const dupe=(await h.db.query("SELECT id FROM outreach_sales_proposals WHERE idempotency_key='forced-dupe'")).rows[0]!;
     for(const id of [a.id,dupe.id])expect((await h.app.inject({method:'POST',url:`/api/board/approvals/proposals/${id}/decision`,headers:h.headers('manager'),payload:{action:'approve',reason:'ok',idempotencyKey:'dedupe-'+id}})).statusCode).toBe(200);
     expect((await h.db.query("SELECT 1 FROM tickets WHERE crm_relationship_id=$1 AND next_action='Prepare the integration plan'",[r.id])).rowCount).toBe(1);
+  });
+  it('lets every signed-in role read the company directory, and only approved company conversations appear',async()=>{
+    const h=await setup();
+    const co=(await h.db.query("INSERT INTO companies(canonical_name,domains) VALUES('Acme Robotics','{acme.example}'),('Hidden Co','{hidden.example}') RETURNING id,canonical_name")).rows;
+    const acme=co.find(c=>c.canonical_name==='Acme Robotics')!,hidden=co.find(c=>c.canonical_name==='Hidden Co')!;
+    await h.db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status,company_id) VALUES(71,'group','Acme x AntSeed','included','confirmed',$1),(72,'group','Hidden chat','included','confirmed',$2)",[acme.id,hidden.id]);
+    await h.db.query("INSERT INTO chat_intake_requests(chat_id,policy_version,decision,decision_origin,operator_reason,decided_at) VALUES(71,0,'approved','operator','Synthetic consent',now())");
+    await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,1,555,'2026-10-20T10:00:00Z','Hello'),(71,2,555,'2026-10-25T10:00:00Z','Pricing?')");
+    const person=(await h.db.query("INSERT INTO contacts(names,usernames,emails,phones,affiliation) VALUES('{Jane Doe}','{janedoe}','{jane@acme.example}','{+15550100}','external') RETURNING id")).rows[0]!;
+    const staff=(await h.db.query("INSERT INTO contacts(names,affiliation) VALUES('{Our Teammate}','internal') RETURNING id")).rows[0]!;
+    await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(555,$1)",[person.id]);
+    // Teammates are recognised by an "Antseed" display name; an explicit external mark overrides that.
+    const sam=(await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Sam | Antseed\"}','{samseed}','unknown') RETURNING id")).rows[0]!;
+    const pat=(await h.db.query("INSERT INTO contacts(names,affiliation) VALUES('{Pat Antseed Partner}','external') RETURNING id")).rows[0]!;
+    await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(556,$1)",[sam.id]);
+    // Pinned by Telegram ID in settings: stays on the team page even though the extractor rewrites affiliation.
+    const javier=(await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Javier Privado Id\"}','{ajgonzal}','unknown') RETURNING id")).rows[0]!;
+    await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(557,$1)",[javier.id]);
+    await h.db.query("INSERT INTO app_settings(key,value) VALUES('directory:team','{\"telegramUserIds\":[\"557\"]}')");
+    await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,4,557,'2026-10-27T10:00:00Z','Hi')");
+    await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,3,556,'2026-10-26T10:00:00Z','From our side')");
+    await h.db.query("INSERT INTO contact_company_roles(contact_id,company_id,role) VALUES($1,$2,'Partner lead')",[pat.id,acme.id]);
+    await h.db.query("INSERT INTO contact_company_roles(contact_id,company_id,role) VALUES($1,$3,'CTO'),($2,$3,'Partnerships')",[person.id,staff.id,acme.id]);
+    for(const who of ['admin','manager','member','viewer']){
+      const items=(await h.app.inject({url:'/api/board/directory',headers:h.headers(who)})).json().items;
+      expect(items.map((c:{name:string})=>c.name)).toEqual(['Acme Robotics']);
+      expect(items[0]).toMatchObject({domains:['acme.example'],conversations:[{title:'Acme x AntSeed'}]});
+      expect(items[0].people.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Jane Doe','Pat Antseed Partner']);
+      const jane=items[0].people.find((x:{names:string[]})=>x.names[0]==='Jane Doe');
+      expect(jane).toMatchObject({names:['Jane Doe'],usernames:['janedoe'],emails:['jane@acme.example'],phones:['+15550100'],roles:['CTO']});
+      expect(new Date(jane.last_contacted).toISOString()).toBe('2026-10-25T10:00:00.000Z');
+      const team=(await h.app.inject({url:'/api/board/directory/team',headers:h.headers(who)})).json().items;
+      expect(team.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Javier Privado Id','Our Teammate','Sam | Antseed']);
+      expect(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed')).toMatchObject({companies:['Acme Robotics'],usernames:['samseed']});
+      expect(new Date(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed').last_active).toISOString()).toBe('2026-10-26T10:00:00.000Z');
+      for(const url of ['/directory','/antseed-team'])expect((await h.app.inject({url,headers:h.headers(who)})).statusCode).toBe(200);
+    }
+    expect((await h.app.inject({method:'POST',url:'/api/board/directory',headers:h.headers('admin'),payload:{}})).statusCode).toBeGreaterThanOrEqual(400);
+    expect((await h.app.inject({url:'/api/board/directory'})).statusCode).toBe(401);
   });
   it('keeps rejected and corrected initial placements hidden and rejects stale web decisions',async()=>{
     const h=await setup();await h.outreach.reconcile();const r=(await h.outreach.listReviewRelationships({})).items[0]!;
@@ -257,7 +305,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
       expect((await h.app.inject({method:'DELETE',url:'/api/board/tasks/'+task.id,headers:h.headers(who),payload:{expectedVersion:0}})).statusCode).toBe(404);
     }
     expect((await h.app.inject({url:'/api/board/tasks?scope=team',headers:h.headers('other')})).json().items).toHaveLength(1);
-    expect((await h.app.inject({url:'/api/board/tasks',headers:h.headers('other')})).json().items).toHaveLength(0);
+    expect((await h.app.inject({url:'/api/board/tasks',headers:h.headers('other')})).statusCode).toBe(403);
     expect((await h.app.inject({method:'PATCH',url:'/api/board/tasks/'+task.id,headers:h.headers(),payload:edit})).statusCode).toBe(200);
     expect((await h.app.inject({method:'PATCH',url:'/api/board/tasks/'+task.id,headers:h.headers(),payload:edit})).statusCode).toBe(409);
     expect((await h.db.query('SELECT lane,version FROM personal_tasks')).rows).toEqual([{lane:'Completed',version:1}]);
@@ -361,7 +409,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
   });
   it('validates Supabase public-key JWTs locally, checks issuer/audience/expiry, and ignores user-supplied role claims',async()=>{
     const h=await setup(),token=await h.sign(),before=h.userRequests(),headers={authorization:`Bearer ${token}`};
-    expect((await h.app.inject({url:'/api/board/tasks',headers})).statusCode).toBe(200);
+    expect((await h.app.inject({url:'/api/board/tasks?scope=team',headers})).statusCode).toBe(200);
     expect((await h.app.inject({url:'/api/workspace/members',headers})).statusCode).toBe(403);
     expect(h.userRequests()).toBe(before); // Normal API requests use JWKS, not the Auth endpoint quota.
     for(const options of [{issuer:'https://another-project.example/auth/v1'},{audience:'anon'},{expires:'-1s'}]){
