@@ -112,7 +112,9 @@ export const teamPage = pageHead('AntSeed Team') + String.raw`
 <label>Search<input id="search" type="search" placeholder="Name, email or @handle" autocomplete="off"></label>
 <table><thead><tr><th scope="col">Teammate</th><th scope="col">Designation</th><th scope="col">Email</th><th scope="col">Telegram</th><th scope="col">Phone</th><th scope="col">Last active</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table></main>
 <script>${commonScript}
-function row(p){const r=node('tr'),name=node('td');name.append(node('span',personName(p)));r.append(name,cell(...p.roles.map(x=>node('span',x))),...contactCells(p),cell(node('span',day(p.last_active))));return r;}
+// Teammates are listed by first name only; search still matches their full names and handles.
+const firstName=p=>(String(p.names?.[0]||'').trim().split(/[\s|,]+/)[0])||personName(p);
+function row(p){const r=node('tr'),name=node('td');name.append(node('span',firstName(p)));r.append(name,cell(...p.roles.map(x=>node('span',x))),...contactCells(p),cell(node('span',day(p.last_active))));return r;}
 const paint=(shown,q)=>el('rows').replaceChildren(...(shown.length?shown.map(row):[emptyRow(6,q?'No match.':'No teammates found yet.')]));
 start('/api/board/directory/team',p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles].join(' ').toLowerCase(),'people');
 </script></body></html>`;
