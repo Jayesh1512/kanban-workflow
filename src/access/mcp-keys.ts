@@ -6,6 +6,9 @@ import { DomainError } from '../shared/api.js';
 import { audit, type AccessControl, type Member, type Role } from './service.js';
 import { brandFontLink, nativeTokens, topbarMarkup, topbarScript, topbarStyles } from '../board/page.js';
 
+/** MCP_TEAM_ELEVATED=on lets non-admins propose through CRM MCP and request full/Admin access; off (default) keeps the team read-only. */
+export const teamElevated = () => process.env['MCP_TEAM_ELEVATED'] === 'on';
+
 export type McpSurface = 'crm' | 'tasks' | 'admin';
 export interface McpKey { id: string; surface: McpSurface; level: 'propose' | 'full' | 'read'; memberId: string }
 export type Mailer = (message: { to: string; subject: string; text: string; html: string }) => Promise<'sent' | 'not_configured' | 'failed'>;
@@ -154,6 +157,7 @@ export function registerMcpAccess(app: FastifyInstance, access: AccessControl, m
   app.post('/api/mcp-requests', async request => {
     const actor = access.user(request);
     if (actor.role === 'admin') throw new DomainError('conflict', 'Administrators can create or upgrade keys directly');
+    if (!teamElevated()) throw new DomainError('forbidden', 'Only read-only CRM access is available for now');
     const input = z.strictObject({ surface: z.enum(['crm', 'admin']), keyId: z.uuid().optional(), reason: z.string().trim().min(1).max(2000) }).parse(request.body);
     const token = secret('');
     const created = await db.transaction(async tx => {

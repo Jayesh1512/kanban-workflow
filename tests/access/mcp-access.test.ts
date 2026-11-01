@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
@@ -17,7 +17,9 @@ import { fixtureDatabase } from '../workflow/database.js';
 
 const names=['202610250001_outreach_core.sql','202610260001_outreach_workflow.sql','202610260002_stable_outreach_sources.sql','202610270004_operator_intake_approvals.sql','202610280001_crm_first.sql','202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql','202611010001_mcp_access.sql'];
 const cleanup:Array<()=>Promise<unknown>>=[];
-afterEach(async()=>{for(const close of cleanup.splice(0).reverse())await close();});
+// Most cases exercise team propose/requests; the read-only default is covered separately below.
+beforeEach(()=>{process.env['MCP_TEAM_ELEVATED']='on';});
+afterEach(async()=>{delete process.env['MCP_TEAM_ELEVATED'];for(const close of cleanup.splice(0).reverse())await close();});
 
 /** Real Fastify routes, MCP SDK client and a local Auth boundary over an isolated PostgreSQL engine; never touches hosted services. */
 async function setup(emailConfigured=true){
@@ -121,6 +123,16 @@ describe('scoped MCP keys, levels and admin approval (local SQL engine, syntheti
     expect((await h.db.query("SELECT 1 FROM workspace_audit WHERE resource_id=$1 AND action='crm.update' AND after_value->>'source'='mcp'",[h.relationshipId])).rowCount).toBe(1);
   });
 
+  it('keeps the team read-only by default: read tools only and no access requests',async()=>{
+    delete process.env['MCP_TEAM_ELEVATED'];
+    const h=await setup();
+    const created=await h.key('member',{surface:'crm',label:'Hermes'});
+    expect(created.status).toBe(200);
+    expect(await toolNames(await h.client('/mcp/crm',created.body.key))).toEqual(['follow_ups_due','get_deal','pipeline_summary','search_deals']);
+    expect((await h.app.inject({method:'POST',url:'/api/mcp-requests',headers:h.headers('member'),payload:{surface:'admin',reason:'x'}})).statusCode).toBe(403);
+    const admin=await h.key('admin',{surface:'crm',level:'full'});
+    expect(await toolNames(await h.client('/mcp/crm',admin.body.key))).toEqual(['add_note','edit_deal','follow_ups_due','get_deal','move_deal','pipeline_summary','search_deals']);
+  });
   it('pins Tasks keys to the workspace owner and keeps read keys read-only',async()=>{
     const h=await setup();
     expect((await h.key('admin',{surface:'tasks',level:'propose'})).status).toBe(400);
