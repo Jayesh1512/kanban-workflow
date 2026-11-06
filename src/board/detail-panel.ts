@@ -10,7 +10,7 @@ export const detailPanelStyles = String.raw`
 /** Shared by Overview, Work, and CRM. Stored text is always inserted as textContent. */
 export const detailPanelScript = String.raw`
 window.createTicketPanel=function({member,onChange}){
- const lanes=${JSON.stringify(LANES)},stages=${JSON.stringify(SALES_STAGES)},workstreams=${JSON.stringify(WORKSTREAMS)};
+ const lanes=${JSON.stringify([...LANES.filter(l=>l!=='Archived'),'Archived'])},stages=${JSON.stringify(SALES_STAGES)},workstreams=${JSON.stringify(WORKSTREAMS)};
  let people=null;const loadPeople=()=>people??=api('/api/board/people').then(r=>r.items).catch(e=>{people=null;throw e;});
  const n=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
  const dialog=n('dialog',undefined,'ticket-panel');dialog.setAttribute('aria-labelledby','ticket-panel-title');

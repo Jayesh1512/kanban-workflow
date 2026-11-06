@@ -93,20 +93,20 @@ describe('native workspace pages (static shell checks)', () => {
     for (const old of ['AI suggestion pending', 'Pending approval · not applied', 'proposal-note']) expect(workspacePage).not.toContain(old);
   });
   it('CRM Pipeline has one compact filter/sort row (native only), persisted in localStorage and the URL', () => {
-    for (const id of ['id="filters"', 'id="f-ws"', 'id="f-fu"', 'id="f-pending"', 'id="f-archived"', 'id="f-sort"', 'id="f-clear"', 'id="f-shown"']) expect(nativeOutreachPage).toContain(id);
+    for (const id of ['id="filters"', 'id="f-ws"', 'id="f-fu"', 'id="f-pending"', 'id="f-sort"', 'id="f-clear"', 'id="f-shown"']) expect(nativeOutreachPage).toContain(id);
     expect(outreachPage).not.toContain('id="filters"');
-    for (const part of ["localStorage.setItem(viewKey", 'history.replaceState', 'Sort: Last activity', 'Show Archived']) expect(nativeOutreachPage).toContain(part);
+    for (const part of ["localStorage.setItem(viewKey", 'history.replaceState', 'Sort: Last activity']) expect(nativeOutreachPage).toContain(part);
+    expect(nativeOutreachPage).not.toContain('f-archived');
   });
   it('CRM filters and in-stage sorts work on loaded rows', () => {
     const source = scripts(nativeOutreachPage).join('\n');
     const line = (start: string) => source.split('\n').find((l) => l.startsWith(start))!;
     const run = new Function('view', `${line('const dayKey=')}${line('function passes(r)')}${line('const sorters=')}return {passes,sorters,dayKey};`) as
       (view: object) => { passes: (r: object) => boolean; sorters: Record<string, (a: object, b: object) => number>; dayKey: (d: Date) => string };
-    const base = { ws: '', fu: '', pending: '', archived: '', sort: 'activity' };
+    const base = { ws: '', fu: '', pending: '', sort: 'activity' };
     const { passes, dayKey } = run(base);
     const today = dayKey(new Date()), past = '2000-01-01', far = '2999-01-01';
-    expect(passes({ acceptedStage: 'archived' })).toBe(false);
-    expect(run({ ...base, archived: '1' }).passes({ acceptedStage: 'archived' })).toBe(true);
+    expect(passes({ acceptedStage: 'archived' })).toBe(true); // the Archived lane is always shown
     expect(run({ ...base, ws: 'Buyer' }).passes({ acceptedStage: 'lead', workstream: 'Provider' })).toBe(false);
     expect(run({ ...base, ws: 'none' }).passes({ acceptedStage: 'lead', workstream: null })).toBe(true);
     const overdue = run({ ...base, fu: 'overdue' }).passes, week = run({ ...base, fu: 'week' }).passes, none = run({ ...base, fu: 'none' }).passes;

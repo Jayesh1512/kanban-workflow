@@ -98,7 +98,7 @@ ${topbarMarkup}
 ${topbarScript}
 ${detailPanelScript}
 let ticketPanel=null;
-const lanes=${JSON.stringify(LANES)},stages=${JSON.stringify(SALES_STAGES)};
+const lanes=${JSON.stringify([...LANES.filter(l=>l!=='Archived'),'Archived'])},stages=${JSON.stringify(SALES_STAGES)};
 const el=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const mode=location.pathname==='/work'?'work':location.pathname==='/team'?'team':location.pathname==='/approvals'?'approvals':'dashboard';
