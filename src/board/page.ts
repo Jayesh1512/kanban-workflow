@@ -108,7 +108,7 @@ const feeds={},sources={crm:'/api/outreach/relationships?limit=100',team:'/api/b
 let member=null,source=mode==='dashboard'?'crm':'mine',loading=false,openId=null,creationKey=crypto.randomUUID();
 const feed=()=>feeds[source]||(feeds[source]={rows:[],cursor:null,loaded:false});
 const json=(method,body)=>({method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-async function api(path,options){let response;try{response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options});}catch{throw Error('Could not reach the server. Check your connection and try again.');}
+async function api(path,options){let response;/* Reads retry twice: a restart of the server is a pause, not an error. */const readOnly=!options||!options.method||options.method==='GET';for(let attempt=0;;attempt++){try{response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options});break;}catch{if(!readOnly||attempt>=2)throw Error('Could not reach the server. Check your connection and try again.');await new Promise(done=>setTimeout(done,1500));}}
  let data=null;try{data=await response.json();}catch{}
  if(response.status===401){location.assign('/login');throw Error('Your session ended. Sign in again.');}
  if(!response.ok){const error=Error(data?.error?.message||'Request failed. Try again.');error.status=response.status;throw error;}
