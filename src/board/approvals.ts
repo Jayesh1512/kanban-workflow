@@ -39,7 +39,15 @@ export function registerApprovals(app: FastifyInstance, db: Database, outreach: 
       r.display_name,r.accepted_stage FROM outreach_sales_proposals p
       JOIN outreach_relationships r ON r.id=p.relationship_id WHERE p.state='pending' AND r.retained
       AND ($1::uuid IS NULL OR p.id>$1) ORDER BY p.id LIMIT $2`,[input.cursor??null,input.limit+1])).rows;
-    return page(rows,input.limit);
+    // A suggestion built on conversation that has since changed cannot be approved. Retire it here so it never sits
+    // in the list as a button that only errors; the relationship falls back to a manual stage pick.
+    const items:Record<string,unknown>[]=[];
+    for(const row of rows.slice(0,input.limit)){
+      let current=true;
+      try{current=await outreach.isProposalCurrent(String(row.id));}catch{current=true;}
+      if(current)items.push(row);
+    }
+    return {items,nextCursor:rows.length>input.limit?String(rows[input.limit-1]!.id):null};
   });
   app.post('/api/board/approvals/proposals/:id/decision',async request=>{
     const actor=await reviewer(request),id=idSchema.parse(request.params).id;

@@ -45,14 +45,14 @@ const lockTicket=async(tx:SqlExecutor,id:string)=>{
   assert(row,'not_found','Work ticket not found');return row;
 };
 /** Chat -> ticket -> relationship, the lock order used by reconciliation and moves. */
-const lockRelationship=async(tx:SqlExecutor,id:string)=>{
+const lockRelationship=async(tx:SqlExecutor,id:string,allowUnplaced=false)=>{
   const chats=(await tx.query<{chat_id:string}>(`SELECT s.chat_id::text FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
     WHERE rs.relationship_id=$1 AND s.chat_id IS NOT NULL ORDER BY s.chat_id`,[id])).rows.map(r=>r.chat_id);
   for(const chat of chats)await tx.query('SELECT id FROM chats WHERE id=$1 FOR UPDATE',[chat]);
   const tickets=(await tx.query<{id:string}>(`SELECT id FROM tickets WHERE crm_relationship_id=$1
     OR creation_proposal_id IN (SELECT id FROM outreach_sales_proposals WHERE relationship_id=$1) ORDER BY id FOR UPDATE`,[id])).rows.map(r=>r.id);
   const row=(await tx.query('SELECT * FROM outreach_relationships WHERE id=$1 AND retained FOR UPDATE',[id])).rows[0];
-  assert(row?.accepted_stage,'not_found','CRM relationship not found');
+  assert(row&&(allowUnplaced||row.accepted_stage),'not_found','CRM relationship not found');
   return {row,chats,tickets};
 };
 
@@ -136,6 +136,24 @@ export async function deleteCrmRelationship(db: Database, actor: Member, id: str
   });
 }
 
+/** Name and notes only, for a relationship that may still be waiting for its first stage. Next actions and stage are left untouched. */
+const identityEdit=z.strictObject({displayName:text(300).min(1),summary:text(20000),expectedEvidenceRevision:z.number().int().nonnegative()});
+export async function editRelationshipIdentity(db: Database, actor: Member, id: string, raw: unknown) {
+  const input=identityEdit.parse(raw);
+  return db.transaction(async tx=>{
+    await recheck(tx,actor);const {row:before}=await lockRelationship(tx,id,true);
+    assert(Number(before.evidence_revision)===input.expectedEvidenceRevision,'conflict','This relationship changed. Reload its latest details before saving.');
+    // identity_version>0 tells reconciliation to keep the human name and notes.
+    const after=(await tx.query(`UPDATE outreach_relationships SET display_name=$2,summary=$3,identity_version=identity_version+1,
+      evidence_revision=evidence_revision+1,updated_at=now() WHERE id=$1 RETURNING *`,[id,input.displayName,input.summary])).rows[0]!;
+    // Pending AI suggestions describe the record before this edit.
+    await tx.query("UPDATE outreach_sales_proposals SET state='stale' WHERE relationship_id=$1 AND state='pending' AND command_kind IN ('actions','identity')",[id]);
+    await tx.query("UPDATE outreach_control_outbox SET state='cancelled' WHERE proposal_id IN (SELECT id FROM outreach_sales_proposals WHERE relationship_id=$1 AND state='stale') AND state<>'sent'",[id]);
+    await audit(tx,actor,'crm.update',id,{displayName:before.display_name,summary:before.summary},{displayName:after.display_name,summary:after.summary});
+    return {id,evidenceRevision:Number(after.evidence_revision)};
+  });
+}
+
 export function registerRecordEdits(app: FastifyInstance, db: Database, ready:()=>Promise<void>, intake?: TelegramStore) {
   const manager=async(request:FastifyRequest)=>{
     await ready();const actor=app.workspaceAccess.user(request);
@@ -161,6 +179,8 @@ export function registerRecordEdits(app: FastifyInstance, db: Database, ready:()
   });
 
   app.patch('/api/board/crm/:id',async request=>editCrmRelationship(db,await manager(request),idSchema.parse(request.params).id,request.body));
+
+  app.patch('/api/board/approvals/relationships/:id/identity',async request=>editRelationshipIdentity(db,await manager(request),idSchema.parse(request.params).id,request.body));
 
   app.delete('/api/board/crm/:id',async request=>{
     const actor=await manager(request),id=idSchema.parse(request.params).id;

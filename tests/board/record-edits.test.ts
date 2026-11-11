@@ -101,6 +101,19 @@ describe('direct Work and CRM edits and deletes (local SQL engine, synthetic Aut
     expect((await h.db.query("SELECT state FROM outreach_actions WHERE relationship_id=$1",[h.relationshipId])).rows).toEqual([{state:'cancelled'}]);
   });
 
+  it('renames a relationship that has no stage yet, keeps it unplaced, and blocks viewers and stale saves',async()=>{
+    const h=await setup();await h.db.query('UPDATE outreach_relationships SET accepted_stage=NULL WHERE id=$1',[h.relationshipId]);
+    const url=`/api/board/approvals/relationships/${h.relationshipId}/identity`;
+    const before=(await h.outreach.get(h.relationshipId)).relationship;
+    const payload={displayName:'Celo Network L2',summary:'Contact: Lena H, Celo Devrel',expectedEvidenceRevision:before.evidenceRevision};
+    expect((await h.app.inject({method:'PATCH',url,headers:h.headers('viewer'),payload})).statusCode).toBe(403);
+    expect((await h.app.inject({method:'PATCH',url,headers:h.headers('manager'),payload:{...payload,expectedEvidenceRevision:before.evidenceRevision+5}})).statusCode).toBe(409);
+    const ok=await h.app.inject({method:'PATCH',url,headers:h.headers('manager'),payload});expect(ok.statusCode).toBe(200);
+    const row=(await h.db.query('SELECT display_name,summary,accepted_stage,identity_version FROM outreach_relationships WHERE id=$1',[h.relationshipId])).rows[0]!;
+    expect(row).toMatchObject({display_name:'Celo Network L2',summary:'Contact: Lena H, Celo Devrel',accepted_stage:null});
+    expect(Number(row.identity_version)).toBeGreaterThan(0);
+    expect((await h.db.query("SELECT 1 FROM workspace_audit WHERE action='crm.update' AND resource_id=$1",[h.relationshipId])).rowCount).toBeGreaterThan(0);
+  });
   it('deletes a CRM relationship completely, with its Work, and keeps reconciliation from recreating it',async()=>{
     const h=await setup();const url=`/api/board/crm/${h.relationshipId}`;
     const revision=(await h.outreach.get(h.relationshipId)).relationship.evidenceRevision;

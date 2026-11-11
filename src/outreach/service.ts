@@ -272,7 +272,8 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             if (p.state !== 'pending')
                 throw new DomainError('conflict', 'Sales proposal already decided or stale');
             const m = await this.manifest(tx, String(p.relationship_id));
-            if (m.hash !== p.input_hash || !m.eligible.length || m.eligible.some(s => s.source_revision !== s.current_revision))
+            // Rejecting is always safe, so only approve/correct need current evidence.
+            if (input.action !== 'reject' && (m.hash !== p.input_hash || !m.eligible.length || m.eligible.some(s => s.source_revision !== s.current_revision)))
                 throw new DomainError('stale_proposal', 'Sales evidence or membership changed; request a fresh proposal');
             const change: CrmCommand | null = p.command_kind && p.command_kind !== 'stage' ? { kind: p.command_kind as CrmCommand['kind'], payload: p.command_payload as Record<string, unknown> } : null;
             if (change && input.action === 'correct') throw new DomainError('validation', 'Reject this data/Work proposal and submit a revised proposal for separate approval');
