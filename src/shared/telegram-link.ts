@@ -3,6 +3,7 @@
  * and a validated public username, never from message text.
  */
 export function telegramChatUrl(chat: { id: string; kind: string; username: string | null }, latestMessageId?: number | null): string | null {
+  if (chat.kind === 'email') return null; // email threads are not Telegram chats
   if (chat.username && /^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(chat.username)) return `https://t.me/${chat.username}`;
   if (!/^-?\d+$/.test(chat.id)) return null;
   if (chat.kind === 'user') return `tg://openmessage?user_id=${chat.id}`;

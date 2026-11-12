@@ -9,4 +9,5 @@ describe('telegramChatUrl', () => {
   it('falls back to the first message without a known one', () => { expect(telegramChatUrl({ id: '-1001234567890', kind: 'supergroup', username: null })).toBe('https://t.me/c/1234567890/1'); });
   it('opens a basic group by chat id', () => { expect(telegramChatUrl({ id: '-4455', kind: 'group', username: null })).toBe('tg://openmessage?chat_id=4455'); });
   it('returns nothing for a non-numeric id', () => { expect(telegramChatUrl({ id: 'x', kind: 'user', username: null })).toBeNull(); });
+  it('returns nothing for an email thread', () => { expect(telegramChatUrl({ id: '-4000000000000000001', kind: 'email', username: null })).toBeNull(); });
 });
