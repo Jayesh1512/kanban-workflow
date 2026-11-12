@@ -67,8 +67,10 @@ export interface OutreachSource {
     eligible: boolean;
     sourceRevision: string;
     latestSourceAt: string | null;
-    /** Opens this conversation in the Telegram app; null for email reports. */
+    /** Opens this conversation in the Telegram app; null for email threads and reports. */
     telegramUrl?: string | null;
+    /** Kind of the backing chat ('email' for a mail thread); the source kind stays 'telegram' for any chat-backed source. */
+    chatKind?: string | null;
 }
 export interface OutreachSourceContext extends OutreachSource {
     reportSummary?: string;

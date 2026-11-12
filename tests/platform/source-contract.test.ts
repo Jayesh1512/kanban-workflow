@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { OutreachRepository } from '../../src/outreach/repository.js';
 import { counterpartyTitle, cleanSubject, emailThreadSchema } from '../../src/email/ingest.js';
+import { sourceLabel } from '../../src/outreach/card-format.js';
 import { fixtureDatabase } from '../workflow/database.js';
 
 // Every source adds a chat whose title is the counterparty; the shared pipeline builds the card.
@@ -40,6 +41,15 @@ describe('every source builds the same kind of card', () => {
     const shapes: string[][] = [];
     for (const { chat } of sources) { const h = await fixture(); shapes.push(Object.keys(await card(h, chat)).sort()); }
     expect(shapes[1]).toEqual(shapes[0]);
+  });
+  it.each([
+    { ...sources[0]!, link: 'tg://openmessage?user_id=1009', chatKind: 'user', label: 'Telegram' },
+    { ...sources[1]!, link: null, chatKind: 'email', label: 'email thread' },
+  ])('$name: opens and labels its source truthfully (no Telegram link for non-Telegram sources)', async ({ chat, link, chatKind, label }) => {
+    const h = await fixture(); const c = await card(h, chat);
+    const source = (await h.repo.get(c.id)).activeSources.concat((await h.repo.get(c.id)).pendingSources)[0]!;
+    expect(source).toMatchObject({ telegramUrl: link, chatKind });
+    expect(sourceLabel(source)).toBe(label);
   });
   it('a placed or edited card is never renamed by a later rebuild', async () => {
     const h = await fixture(); const c = await card(h, sources[1]!.chat);

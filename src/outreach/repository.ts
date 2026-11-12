@@ -317,7 +317,7 @@ export class OutreachRepository implements OutreachService {
     const chat = source.chatId ? (await tx.query('SELECT kind,username FROM chats WHERE id=$1', [source.chatId])).rows[0] : null;
     const latest = source.chatId ? (await tx.query('SELECT max(id) AS id FROM messages WHERE chat_id=$1 AND deleted_at IS NULL', [source.chatId])).rows[0] : null;
     const telegramUrl = chat && source.chatId ? telegramChatUrl({ id: source.chatId, kind: String(chat.kind), username: chat.username as string | null }, latest?.id == null ? null : Number(latest.id)) : null;
-    return { ...source, telegramUrl, contacts, facts: hydrated,
+    return { ...source, telegramUrl, chatKind: chat ? String(chat.kind) : null, contacts, facts: hydrated,
       evidence: evidence.slice(0, 100).map((e) => ({ id: String(e.id), excerpt: String(e.excerpt), sourceUrl: e.source_url as string | null, observedAt: nullableIso(e.observed_at)!,sentAt:iso(e.sent_at),author:{id:e.sender_id==null?null:String(e.sender_id),party:e.sender_id!=null&&String(e.sender_id)===String(e.self_id)?'antseed' as const:'unknown' as const,names:(e.sender_snapshot as {names?:string[]})?.names??[]},forward:e.forward_metadata as import('../shared/domain.js').ForwardProvenance })),
       coverage: { evidenceLimit: 100, factLimit: 100, truncated: evidence.length > 100 || facts.length > 100 } };
   }
