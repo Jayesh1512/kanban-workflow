@@ -13,6 +13,7 @@ export async function telegramFixture(options: { approvalFirst?: boolean } = {})
   await engine.exec(await readFile(new URL('../../db/migrations/202610230002_automatic_conversation_scope.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202610270004_operator_intake_approvals.sql', import.meta.url), 'utf8'));
   await engine.exec(await readFile(new URL('../../db/migrations/202611010001_email_threads.sql', import.meta.url), 'utf8'));
+  await engine.exec(await readFile(new URL('../../db/migrations/202611120001_email_thread_subject.sql', import.meta.url), 'utf8'));
   const wrap = (client: Pick<PGlite, 'query'>): SqlExecutor => ({ async query<R extends QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<R>> {
     const r = await client.query<R>(text, values); return { rows: r.rows, rowCount: r.rows.length || r.affectedRows || 0, command: '', fields: [], oid: 0 };
   } });

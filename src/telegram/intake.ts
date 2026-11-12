@@ -58,7 +58,7 @@ export class ChatIntake {
       if (!control) return null;
       // Five unresolved delivered requests maximum; new live activity/manual
       // requests are prioritized. At most one new request each thirty seconds.
-      const item = (await tx.query(`SELECT r.*,c.title,c.kind,c.username FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id
+      const item = (await tx.query(`SELECT r.*,CASE WHEN et.subject IS NULL THEN c.title ELSE c.title||' — '||et.subject END AS title,c.kind,c.username FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id LEFT JOIN email_threads et ON et.chat_id=c.id
         WHERE r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
         AND (r.attempts<10 OR r.control_chat_id IS DISTINCT FROM $1) AND (r.lease_until IS NULL OR r.lease_until<now())
         AND (r.delivery_state<>'sent' OR r.control_chat_id IS DISTINCT FROM $1)

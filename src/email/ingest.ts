@@ -26,6 +26,24 @@ const EMAIL_USER_BASE = 1n << 60n;
 export const emailUserId = (email: string): string =>
   String(EMAIL_USER_BASE + (createHash('sha256').update(email.trim().toLowerCase()).digest().readBigUInt64BE() & (EMAIL_USER_BASE - 1n)));
 const EMAIL_CHAT_BASE = 4_000_000_000_000_000_000n;
+const clean = (v: string) => v.replace(/["<>\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+/** Subject without reply/forward prefixes ("Re: Fwd: Cedar" → "Cedar"). */
+export const cleanSubject = (subject: string): string => clean(subject).replace(/^(?:(?:re|fwd?|aw|sv)\s*:\s*)+/i, '').trim() || clean(subject);
+/**
+ * Card-name source, same convention as a Telegram direct chat (the other person):
+ * the first participant who is not the mailbox, by name, else by address.
+ * Falls back to the cleaned subject when the mailbox is the only participant.
+ */
+export function counterpartyTitle(input: z.output<typeof emailThreadSchema>): string {
+  const mine = input.mailbox.toLowerCase();
+  for (const m of input.messages) {
+    for (const a of [m.from, ...m.to, ...m.cc]) {
+      if (a.email.toLowerCase() === mine) continue;
+      return (clean(a.name ?? '') || a.email).slice(0, 200);
+    }
+  }
+  return cleanSubject(input.subject).slice(0, 200);
+}
 const line = (label: string, list: { email: string; name?: string | undefined }[]) => list.length ? `${label}: ${list.map((a) => a.name ? `${a.name} <${a.email}>` : a.email).join(', ')}\n` : '';
 
 /**
@@ -43,8 +61,8 @@ export class EmailIngest implements EmailService {
       const existing = (await tx.query('SELECT chat_id FROM email_threads WHERE thread_key=$1', [key])).rows[0]?.['chat_id'];
       let chatId = existing == null ? undefined : String(existing);
       if (!chatId) {
-        chatId = String((await tx.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-($1::bigint+nextval('email_chat_id_seq')),'email',$2,'undecided') RETURNING id", [EMAIL_CHAT_BASE, input.subject])).rows[0]!['id']);
-        await tx.query('INSERT INTO email_threads(thread_key,chat_id) VALUES($1,$2)', [key, chatId]);
+        chatId = String((await tx.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-($1::bigint+nextval('email_chat_id_seq')),'email',$2,'undecided') RETURNING id", [EMAIL_CHAT_BASE, counterpartyTitle(input)])).rows[0]!['id']);
+        await tx.query('INSERT INTO email_threads(thread_key,chat_id,subject) VALUES($1,$2,$3)', [key, chatId, cleanSubject(input.subject)]);
       }
       const chat = await this.store.lockedChat(tx, chatId);
       if (chat.inclusion === 'excluded') return { chatId, inclusion: chat.inclusion, accepted: 0 }; // rejected: keep no content
