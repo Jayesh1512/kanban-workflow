@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { API_OPERATIONS, DomainError, type ApiError } from '../shared/api.js';
 import type { DomainServices } from '../shared/ports.js';
 import { crmWorkProposalSchema, outreachIdentitySchema, emailReportSchema, importCommitSchema, outreachActionsSchema, salesAssessmentSchema, salesDecisionSchema, salesProposalListSchema, salesProposalSchema, outreachGetSchema, outreachListSchema } from '../shared/outreach-schemas.js';
+import { emailThreadSchema } from '../email/ingest.js';
 import { chatIdSchema, correctMappingSchema, dateFactSchema, decideProposalSchema, idempotencyKeySchema, laneSchema, pageInputSchema, proposeLaneSchema, setInclusionSchema, updateActionsSchema, updateFactSchema, uuidSchema, workstreamSchema } from '../shared/schemas.js';
 
 type ServiceName = (typeof API_OPERATIONS)[number]['service'];
@@ -38,6 +39,7 @@ export function createBindings(s: DomainServices, transport: Transport): Record<
     'outreach.correctIdentity': bind(outreachIdentitySchema,'Propose a displayed CRM identity correction with expected version and reason; CRM-first mode requires Telegram approval.',v=>sales(s,'correctIdentity',v)),
     'outreach.setMode': bind(z.strictObject({mode:z.enum(['observe','publish','paused'])}),'HTTP operator publication mode; does not release unresolved remote request barriers.',v=>sales(s,'setMode',v)),
     'outreach.status': bind(z.strictObject({}),'Read sales board publication state and unresolved request count.',()=>sales(s,'status'),true),
+    'email.ingestThread': bind(emailThreadSchema, 'Push one mailbox thread (subject plus messages). It becomes a pending source: nothing is analysed or shown until the thread is approved by replying in the Telegram control group or on the Approvals tab. Repeating a messageKey is a no-op; pushing new messages to an approved thread analyses them.', (v) => s.email.ingestThread(v)),
     'chats.list': bind(pageInputSchema, 'List discovered chats, inclusion policy and company mapping. Includes archived chats.', (v) => s.chats.list(page(v)), true),
     'chats.setInclusion': bind(setInclusionSchema, 'Include or exclude one chat using its expected policy version and durable idempotency key.', (v) => s.chats.setInclusion(v)),
     'chats.importStatus': bind(z.strictObject({ chatId: chatIdSchema }), 'Read durable bounded history-import status for a chat.', (v) => s.chats.importStatus(v.chatId), true),
