@@ -10,6 +10,7 @@ export const emailThreadSchema = z.strictObject({
   mailbox: z.email().max(320), // the mailbox Hermes read; namespaces thread keys and identifies our own messages
   threadKey: z.string().trim().min(1).max(500),
   subject: z.string().trim().min(1).max(500),
+  labels: z.array(z.string().trim().min(1).max(100)).max(50).default([]), // provider labels (Gmail labelIds); a promotions label drops a new thread
   messages: z.array(z.strictObject({
     messageKey: z.string().trim().min(1).max(500), // provider message id; makes repeats a no-op
     from: address, to: z.array(address).max(50).default([]), cc: z.array(address).max(50).default([]),
@@ -19,7 +20,9 @@ export const emailThreadSchema = z.strictObject({
   })).min(1).max(50),
 });
 export type EmailThreadInput = z.input<typeof emailThreadSchema>;
-export interface EmailService { ingestThread(raw: unknown): Promise<{ chatId: string; inclusion: 'undecided' | 'included' | 'excluded'; accepted: number }> }
+export interface EmailService { ingestThread(raw: unknown): Promise<{ chatId: string | null; inclusion: 'undecided' | 'included' | 'excluded'; accepted: number; skipped?: 'promotion' }> }
+// ponytail: label match only; add SPAM/TRASH or header checks here if promotions slip through.
+const PROMOTION_LABELS = new Set(['CATEGORY_PROMOTIONS']);
 
 // Telegram user IDs stay below 2^52; this range keeps an address's stable pseudo-user clear of them.
 const EMAIL_USER_BASE = 1n << 60n;
@@ -79,6 +82,9 @@ export class EmailIngest implements EmailService {
   async ingestThread(raw: unknown) {
     const input = emailThreadSchema.parse(raw);
     const key = `${input.mailbox.toLowerCase()}:${input.threadKey}`;
+    // Promotions never enter the approvals list. A thread someone already admitted or rejected keeps flowing, so a stray label cannot drop a real reply.
+    if (input.labels.some((l) => PROMOTION_LABELS.has(l.toUpperCase())) && !(await this.db.query('SELECT 1 FROM email_threads WHERE thread_key=$1', [key])).rowCount)
+      return { chatId: null, inclusion: 'excluded' as const, accepted: 0, skipped: 'promotion' as const };
     const stored = await this.db.transaction(async (tx) => {
       await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`email:thread:${key}`]);
       const existing = (await tx.query('SELECT chat_id FROM email_threads WHERE thread_key=$1', [key])).rows[0]?.['chat_id'];

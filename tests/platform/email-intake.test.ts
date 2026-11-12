@@ -27,6 +27,17 @@ describe('email threads use the Telegram approval flow, real SQL', () => {
   afterEach(async () => { await f.db.close(); });
   const reply = async (text: string, messageId = 100) => { await f.store.ingest({ type: 'message', message: { ...fixtureMessage(messageId, '-1001', text), replyToId: sent[0]!.id, sentAt: new Date().toISOString() } }); await bus.tick(); };
 
+  it('skips a new promotion thread before it reaches Approvals; a handled thread is never dropped by a label', async () => {
+    const promo = await email.ingestThread(thread({ threadKey: 'promo-1', labels: ['INBOX', 'CATEGORY_PROMOTIONS'] }));
+    expect(promo).toEqual({ chatId: null, inclusion: 'excluded', accepted: 0, skipped: 'promotion' });
+    for (const table of ['chats', 'email_threads', 'email_messages', 'chat_intake_requests']) {
+      const where = table === 'chats' ? "kind='email'" : 'true';
+      expect((await f.db.query(`SELECT 1 FROM ${table} WHERE ${where}`)).rowCount).toBe(0);
+    }
+    expect(await email.ingestThread(thread({ labels: ['CATEGORY_PERSONAL'] }))).toMatchObject({ inclusion: 'undecided', accepted: 1 }); // other labels pass
+    const again = await email.ingestThread(thread({ labels: ['category_promotions'], messages: [{ messageKey: 'm2', from: { email: 'riya@cedar.test' }, sentAt: '2026-11-02T09:00:00Z', body: 'Following up' }] }));
+    expect(again).toMatchObject({ inclusion: 'undecided', accepted: 1 }); expect(again).not.toHaveProperty('skipped'); // known thread keeps flowing
+  });
   it('holds the thread, asks in Telegram, and releases content to analysis only after approve', async () => {
     const pushed = await email.ingestThread(thread());
     expect(pushed).toMatchObject({ inclusion: 'undecided', accepted: 1 });

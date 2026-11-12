@@ -4,6 +4,7 @@ Hermes reads a mailbox and pushes threads to the existing `/mcp` endpoint with `
 
 ```json
 { "mailbox": "me@antseed.com", "threadKey": "<gmail thread id>", "subject": "Cedar integration",
+  "labels": ["INBOX", "CATEGORY_PERSONAL"],
   "messages": [{ "messageKey": "<gmail message id>", "from": { "email": "riya@cedar.com", "name": "Riya Shah" },
     "to": [{ "email": "me@antseed.com" }], "cc": [], "sentAt": "2026-11-01T09:00:00+05:30", "body": "…", "sourceUrl": "https://mail.google.com/…" }] }
 ```
@@ -16,6 +17,14 @@ Hermes reads a mailbox and pushes threads to the existing `/mcp` endpoint with `
 4. **reject** → held content is dropped; later pushes for that thread are discarded.
 
 Pushing again is safe: a repeated `messageKey` is a no-op; new messages on an approved thread go straight to analysis. `threadKey` is namespaced by `mailbox`.
+
+## Promotions are skipped
+
+Pass the provider's labels in `labels` (Gmail `labelIds`, as `get_thread` returns them). A **new** thread carrying
+`CATEGORY_PROMOTIONS` is dropped before anything is stored: no chat, no held message, no Approvals entry. The
+call returns `{ chatId: null, skipped: "promotion" }`. A thread someone already admitted or rejected is never
+dropped by a label, so a real reply keeps flowing. The agent can also filter earlier with the Gmail query
+`-category:promotions`.
 
 ## Identity
 
