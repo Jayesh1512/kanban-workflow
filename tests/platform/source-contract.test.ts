@@ -7,9 +7,10 @@ import { fixtureDatabase } from '../workflow/database.js';
 // To add a source, append a sample here: this test then holds it to the same card standard.
 const email = (extra = {}) => emailThreadSchema.parse({ mailbox: 'me@antseed.com', threadKey: 't', subject: 'Re: Fwd: Cedar integration',
   messages: [{ messageKey: 'm', from: { email: 'riya@cedar.com', name: 'Riya Shah' }, sentAt: '2026-11-01T09:00:00Z', body: 'Hello' }], ...extra });
+// A source names its chat after the counterparty: the company when known, else the person.
 const sources = [
-  { name: 'telegram direct chat', chat: { id: '1009', kind: 'user', title: 'Riya Shah' } },
-  { name: 'email thread', chat: { id: '-4000000000000000001', kind: 'email', title: counterpartyTitle(email()) } },
+  { name: 'telegram direct chat', expected: 'Cedar', chat: { id: '1009', kind: 'user', title: 'Cedar' } },
+  { name: 'email thread', expected: 'Cedar', chat: { id: '-4000000000000000001', kind: 'email', title: counterpartyTitle(email()) } },
 ];
 
 const cleanup: Array<() => Promise<void>> = [];
@@ -29,9 +30,9 @@ async function card(h: Awaited<ReturnType<typeof fixture>>, chat: { id: string; 
 }
 
 describe('every source builds the same kind of card', () => {
-  it.each(sources)('$name: named after the counterparty, unplaced prospect with the standard fields', async ({ chat }) => {
+  it.each(sources)('$name: named after the counterparty company, unplaced prospect with the standard fields', async ({ chat, expected }) => {
     const h = await fixture(); const c = await card(h, chat);
-    expect(c.displayName).toBe('Riya Shah');
+    expect(c.displayName).toBe(expected);
     expect(c).toMatchObject({ kind: 'contact_prospect', companyId: null, acceptedStage: null });
     expect(c.nextStep).toMatch(/^Next: Review initial placement · ETA: /);
   });
@@ -49,16 +50,30 @@ describe('every source builds the same kind of card', () => {
   });
 });
 
-describe('email counterparty title', () => {
-  it('uses the other person, by name, else address; never the mailbox', () => {
-    expect(counterpartyTitle(email())).toBe('Riya Shah');
-    expect(counterpartyTitle(email({ messages: [{ messageKey: 'm', from: { email: 'riya@cedar.com' }, sentAt: '2026-11-01T09:00:00Z', body: '' }] }))).toBe('riya@cedar.com');
+describe('email counterparty title: company first, then person, then address', () => {
+  const msg = (from: string, name?: string, extra = {}) => ({ messageKey: 'm', from: { email: from, ...(name ? { name } : {}) }, sentAt: '2026-11-01T09:00:00Z', body: '', ...extra });
+  const one = (from: string, name?: string, subject = 'Intro', known: { name: string; domains: string[] }[] = []) =>
+    counterpartyTitle(email({ subject, messages: [msg(from, name)] }), known);
+  it('names the company from the sender domain, using the subject casing when it has one', () => {
+    expect(one('anna@chatprd.ai', 'Anna Lee', 'ChatPRD: Comparing inference providers')).toBe('ChatPRD');
+    expect(one('riya@cedar.com', 'Riya Shah')).toBe('Cedar');
+    expect(one('x@mail.wynd.xyz', 'X')).toBe('Wynd');
+    expect(one('a@acme.co.uk')).toBe('Acme');
   });
-  it('our own outbound mail is titled after the recipient', () => {
-    expect(counterpartyTitle(email({ messages: [{ messageKey: 'm', from: { email: 'ME@antseed.com' }, to: [{ email: 'lena@celo.org', name: 'Lena H' }], sentAt: '2026-11-01T09:00:00Z', body: '' }] }))).toBe('Lena H');
+  it('prefers the directory spelling when a company owns the domain; two owners is ambiguous, so the person is used', () => {
+    expect(one('sam@hedra.com', 'Sam', 'Intro', [{ name: 'Hedra Labs', domains: ['Hedra.com'] }])).toBe('Hedra Labs');
+    expect(one('sam@hedra.com', 'Sam', 'Intro', [{ name: 'A', domains: ['hedra.com'] }, { name: 'B', domains: ['hedra.com'] }])).toBe('Sam');
+  });
+  it('uses the person, then the address, for free-mail and our own domain', () => {
+    expect(one('jo@gmail.com', 'Jo Park')).toBe('Jo Park');
+    expect(one('jo@gmail.com')).toBe('jo@gmail.com');
+    expect(one('teammate@antseed.com', 'Team Mate')).toBe('Team Mate');
+  });
+  it('titles our own outbound mail after the recipient\'s company, and never the mailbox', () => {
+    expect(counterpartyTitle(email({ messages: [msg('ME@antseed.com', undefined, { to: [{ email: 'lena@celo.org', name: 'Lena H' }] })] }))).toBe('Celo');
   });
   it('falls back to the subject without Re:/Fwd: prefixes', () => {
-    expect(counterpartyTitle(email({ messages: [{ messageKey: 'm', from: { email: 'me@antseed.com' }, sentAt: '2026-11-01T09:00:00Z', body: '' }] }))).toBe('Cedar integration');
+    expect(counterpartyTitle(email({ messages: [msg('me@antseed.com')] }))).toBe('Cedar integration');
     expect(cleanSubject('RE: re: Fwd: Hedra <> Ant Seed | intro')).toBe('Hedra Ant Seed | intro');
   });
 });

@@ -9,7 +9,7 @@ source never sets card fields itself.
 | What | Rule |
 |---|---|
 | Chat row | One `chats` row per conversation, `kind` set, and an id that cannot collide with another source (email ids are negative and above 4×10^18). |
-| `title` | The **counterparty**: the person or organisation on the other side, as a Telegram direct chat is named. Never a subject line, an id or the word "email". Our own side ("Antseed") may appear; the pipeline strips it. |
+| `title` | The **counterparty**: the company on the other side, else the person, else their address. Never a subject line, an id or the word "email". Our own side ("Antseed") may appear; the pipeline strips it. |
 | Messages | Rows in `messages` with a stable `sender_id` per person. Email maps each address to a stable pseudo id (`emailUserId`); our own mail uses the connected account's id so it counts as outbound. |
 | Approval | The normal `chat_intake_requests` approval, before any content is analysed. |
 
@@ -29,7 +29,13 @@ keeps its name, summary and workstream, whatever a source's title later becomes.
 
 ## Email specifics
 
-`counterpartyTitle` picks the first participant who is not the mailbox, by name, else address, and
-falls back to the subject without `Re:`/`Fwd:`. The subject is kept in `email_threads.subject`
-and shown beside the title on the intake prompt and Approvals tab. Threads pushed before this
-rule keep their subject as the title.
+`counterpartyTitle` names the thread after the counterparty's **company**, then the person, then the address:
+
+1. A directory company (`companies.domains`) that owns the counterparty's domain, spelled as the directory has it. Two owners is ambiguous and is skipped.
+2. Else the name read off the counterparty's own business domain (`riya@mail.chatprd.ai` → `chatprd`), using the subject's casing when the subject spells it (`ChatPRD`), otherwise capitalised.
+3. Else the person's name, else their address. Our own domain and free-mail domains (gmail, outlook, ...) never name a company.
+4. If the mailbox is the only participant, the subject without `Re:`/`Fwd:`.
+
+The subject is kept in `email_threads.subject` and shown beside the title on the intake prompt and
+Approvals tab. Threads pushed before this rule keep their subject as the title. Once analysis runs,
+the confirmed company replaces a prospect's name through the usual company link.

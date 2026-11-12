@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { PeerSnapshot } from '../shared/domain.js';
-import type { Database, TelegramMessageInput } from '../shared/ports.js';
+import type { Database, SqlExecutor, TelegramMessageInput } from '../shared/ports.js';
 import type { TelegramStore } from '../telegram/store.js';
 import { queueIntake } from '../telegram/intake.js';
 
@@ -29,20 +29,37 @@ const EMAIL_CHAT_BASE = 4_000_000_000_000_000_000n;
 const clean = (v: string) => v.replace(/["<>\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
 /** Subject without reply/forward prefixes ("Re: Fwd: Cedar" → "Cedar"). */
 export const cleanSubject = (subject: string): string => clean(subject).replace(/^(?:(?:re|fwd?|aw|sv)\s*:\s*)+/i, '').trim() || clean(subject);
+const FREE_MAIL = new Set(['gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'yahoo.com', 'icloud.com', 'me.com', 'proton.me', 'protonmail.com', 'aol.com']);
+const SECOND_LEVEL = new Set(['co', 'com', 'org', 'net', 'ac', 'gov']);
+const domainOf = (email: string) => email.slice(email.lastIndexOf('@') + 1).toLowerCase();
+/** Company name read off a business domain ("mail.chatprd.ai" → "chatprd"); the subject's own casing wins ("ChatPRD"). */
+function companyFromDomain(domain: string, subject: string): string | null {
+  const parts = domain.split('.'), n = parts.length;
+  const label = n >= 3 && SECOND_LEVEL.has(parts[n - 2]!) && parts[n - 1]!.length === 2 ? parts[n - 3] : parts[n - 2];
+  if (!label || FREE_MAIL.has(domain)) return null;
+  const cased = subject.split(/[^\p{L}\p{N}]+/u).find((w) => w.toLowerCase() === label);
+  return cased ?? label[0]!.toUpperCase() + label.slice(1);
+}
+/** The addresses that are not the mailbox: who the thread is with, first appearance first. */
+const others = (input: z.output<typeof emailThreadSchema>) =>
+  input.messages.flatMap((m) => [m.from, ...m.to, ...m.cc]).filter((a) => a.email.toLowerCase() !== input.mailbox.toLowerCase());
 /**
- * Card-name source, same convention as a Telegram direct chat (the other person):
- * the first participant who is not the mailbox, by name, else by address.
+ * Card name, standardised across sources: the counterparty's COMPANY, else the person, else the address.
+ * Company = a directory company that owns the counterparty's domain (`known`), else the name read off
+ * their own business domain; our own domain and free-mail domains never name a company.
  * Falls back to the cleaned subject when the mailbox is the only participant.
  */
-export function counterpartyTitle(input: z.output<typeof emailThreadSchema>): string {
-  const mine = input.mailbox.toLowerCase();
-  for (const m of input.messages) {
-    for (const a of [m.from, ...m.to, ...m.cc]) {
-      if (a.email.toLowerCase() === mine) continue;
-      return (clean(a.name ?? '') || a.email).slice(0, 200);
-    }
+export function counterpartyTitle(input: z.output<typeof emailThreadSchema>, known: { name: string; domains: string[] }[] = []): string {
+  const who = others(input), ours = domainOf(input.mailbox);
+  for (const a of who) {
+    const d = domainOf(a.email);
+    if (d === ours) continue;
+    const hit = known.filter((c) => c.domains.some((x) => x.toLowerCase() === d));
+    const company = hit.length === 1 ? hit[0]!.name : hit.length === 0 ? companyFromDomain(d, cleanSubject(input.subject)) : null; // several owners: ambiguous, so fall through
+    if (company) return clean(company).slice(0, 200);
   }
-  return cleanSubject(input.subject).slice(0, 200);
+  const first = who[0];
+  return first ? (clean(first.name ?? '') || first.email).slice(0, 200) : cleanSubject(input.subject).slice(0, 200);
 }
 const line = (label: string, list: { email: string; name?: string | undefined }[]) => list.length ? `${label}: ${list.map((a) => a.name ? `${a.name} <${a.email}>` : a.email).join(', ')}\n` : '';
 
@@ -53,6 +70,12 @@ const line = (label: string, list: { email: string; name?: string | undefined }[
  */
 export class EmailIngest implements EmailService {
   constructor(private readonly db: Database, private readonly store: TelegramStore) {}
+  /** Directory companies that own a counterparty's domain, so a known company is named as the directory spells it. */
+  private async knownCompanies(tx: SqlExecutor, input: z.output<typeof emailThreadSchema>) {
+    const domains = [...new Set(others(input).map((a) => domainOf(a.email)))];
+    const rows = (await tx.query('SELECT canonical_name,domains FROM companies WHERE EXISTS(SELECT 1 FROM unnest(domains) d WHERE lower(d)=ANY($1::text[]))', [domains])).rows;
+    return rows.map((r) => ({ name: String(r['canonical_name']), domains: (r['domains'] as string[]) ?? [] }));
+  }
   async ingestThread(raw: unknown) {
     const input = emailThreadSchema.parse(raw);
     const key = `${input.mailbox.toLowerCase()}:${input.threadKey}`;
@@ -61,7 +84,7 @@ export class EmailIngest implements EmailService {
       const existing = (await tx.query('SELECT chat_id FROM email_threads WHERE thread_key=$1', [key])).rows[0]?.['chat_id'];
       let chatId = existing == null ? undefined : String(existing);
       if (!chatId) {
-        chatId = String((await tx.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-($1::bigint+nextval('email_chat_id_seq')),'email',$2,'undecided') RETURNING id", [EMAIL_CHAT_BASE, counterpartyTitle(input)])).rows[0]!['id']);
+        chatId = String((await tx.query("INSERT INTO chats(id,kind,title,inclusion) VALUES(-($1::bigint+nextval('email_chat_id_seq')),'email',$2,'undecided') RETURNING id", [EMAIL_CHAT_BASE, counterpartyTitle(input, await this.knownCompanies(tx, input))])).rows[0]!['id']);
         await tx.query('INSERT INTO email_threads(thread_key,chat_id,subject) VALUES($1,$2,$3)', [key, chatId, cleanSubject(input.subject)]);
       }
       const chat = await this.store.lockedChat(tx, chatId);
