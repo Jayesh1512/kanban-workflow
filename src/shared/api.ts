@@ -15,6 +15,7 @@ export const API_OPERATIONS = [
   { method: 'PUT', path: '/api/outreach/relationships/:relationshipId/identity', tool: 'correct_sales_identity', service: 'outreach.correctIdentity' },
   { method: 'PUT', path: '/api/outreach/mode', tool: null, service: 'outreach.setMode' },
   { method: 'GET', path: '/api/outreach/status', tool: 'get_sales_status', service: 'outreach.status' },
+  { method: 'POST', path: '/api/email/threads', tool: 'ingest_email_thread', service: 'email.ingestThread' },
   { method: 'GET', path: '/api/chats', tool: 'list_chats', service: 'chats.list' },
   { method: 'PUT', path: '/api/chats/:chatId/inclusion', tool: 'set_chat_inclusion', service: 'chats.setInclusion' },
   { method: 'GET', path: '/api/chats/:chatId/import', tool: 'get_import_status', service: 'chats.importStatus' },
