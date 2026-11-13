@@ -28,8 +28,22 @@ export function registerDirectory(app: FastifyInstance, db: Database, ready: () 
     await ready();
     // `companies` and `contacts` are the primary source: every company row is listed, whether or not we have a chat with it.
     // Conversations are secondary detail (approved company chats only).
-    const companies = (await db.query(`SELECT co.id,co.canonical_name AS name,co.domains,co.source,co.funding,co.location,co.employees,co.category,
+    // Reached out = the company shows up in the CRM (an outreach relationship, by company or by exact name, or a ticket) or has a
+    // decision waiting in the Approvals tab (stage proposal or lane proposal). Planned = tier A/B and not reached yet (see below).
+    const companies = (await db.query(`WITH reach AS (
+        SELECT r.company_id,'CRM · '||coalesce(sd.label,'no stage yet') AS via FROM outreach_relationships r
+          LEFT JOIN outreach_stage_definitions sd ON sd.id=r.accepted_stage WHERE r.retained AND r.company_id IS NOT NULL
+        UNION ALL SELECT co.id,'CRM · '||coalesce(sd.label,'no stage yet') FROM outreach_relationships r
+          JOIN companies co ON lower(co.canonical_name)=lower(r.display_name) LEFT JOIN outreach_stage_definitions sd ON sd.id=r.accepted_stage
+          WHERE r.retained AND r.kind='contact_prospect'
+        UNION ALL SELECT t.company_id,'CRM ticket · '||t.lane FROM tickets t WHERE t.company_id IS NOT NULL
+        UNION ALL SELECT r.company_id,'Approvals · stage proposal' FROM outreach_sales_proposals p
+          JOIN outreach_relationships r ON r.id=p.relationship_id WHERE p.state='pending' AND r.retained AND r.company_id IS NOT NULL
+        UNION ALL SELECT t.company_id,'Approvals · lane proposal' FROM proposals p JOIN tickets t ON t.id=p.ticket_id
+          WHERE p.decision='pending' AND p.apply_state<>'stale' AND t.company_id IS NOT NULL)
+      SELECT co.id,co.canonical_name AS name,co.domains,co.source,co.funding,co.location,co.employees,co.category,
         co.outreach_tier AS "outreachTier",co.outreach_score AS "outreachScore",co.status,co.summary,
+        coalesce((SELECT array_agg(DISTINCT x.via ORDER BY x.via) FROM reach x WHERE x.company_id=co.id),'{}') AS "reachedVia",
         coalesce((SELECT jsonb_agg(jsonb_build_object('title',c.title,'lastMessageAt',lm.at) ORDER BY lm.at DESC NULLS LAST)
           FROM chats c LEFT JOIN LATERAL (SELECT max(m.sent_at) AS at FROM messages m WHERE m.chat_id=c.id AND m.deleted_at IS NULL) lm ON true
           WHERE c.company_id=co.id AND ${talkingSql}),'[]'::jsonb) AS conversations
@@ -53,7 +67,15 @@ export function registerDirectory(app: FastifyInstance, db: Database, ready: () 
       list.push(person);
       byCompany.set(String(company_id), list);
     }
-    return { items: companies.map((co) => ({ ...co, people: byCompany.get(String(co.id)) ?? [] })) };
+    // Will reach out = not reached yet, and the sheet rates it tier A (target now) or B (target after enrichment).
+    const planned = (tier: unknown) => /^[AB]\b/.test(String(tier ?? ''));
+    return {
+      items: companies.map((co) => ({
+        ...co,
+        outreach: co.reachedVia.length ? 'reached' : planned(co.outreachTier) ? 'planned' : 'none',
+        people: byCompany.get(String(co.id)) ?? [],
+      })),
+    };
   });
 }
 
@@ -66,7 +88,7 @@ main button,input{font:inherit;color:var(--ink);background:var(--paper);border:1
 .notice{border:1px solid var(--dangerline);color:var(--danger);background:var(--dangerbg);border-radius:8px;padding:12px 14px;margin:16px 0}.notice:empty{display:none}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}thead th{position:sticky;top:0;background:var(--wash);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);z-index:1}td>span,td>a{display:block}
 .outer>tbody>tr>td:first-child{width:22%;min-width:200px}.outer>tbody>tr>td:last-child{padding:0}.name{font-weight:700;font-size:15px;margin:0}.convo{margin:6px 0 0;padding:0;list-style:none}.convo li{font-size:12px;color:var(--soft)}
-.people th{position:static;background:none;padding:8px 12px;border-bottom:1px solid var(--line);font-size:11px}.people td{padding:8px 12px;border-bottom:1px solid var(--line)}.people tr:last-child td{border-bottom:0}.people td[rowspan]{border-right:1px solid var(--line);width:14%}
+.outer>tbody>tr.reached>td:first-child{box-shadow:inset 4px 0 #1a7f4b;background:rgba(26,127,75,.09)}.outer>tbody>tr.planned>td:first-child{box-shadow:inset 4px 0 #b7791f;background:rgba(183,121,31,.1)}.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;padding:1px 8px;margin:4px 4px 0 0}.badge.reached{background:#1a7f4b;color:#fff}.badge.planned{background:#b7791f;color:#fff}.legend{display:flex;gap:14px;font-size:12px;margin:8px 0}.legend .badge{margin:0}.people th{position:static;background:none;padding:8px 12px;border-bottom:1px solid var(--line);font-size:11px}.people td{padding:8px 12px;border-bottom:1px solid var(--line)}.people tr:last-child td{border-bottom:0}.people td[rowspan]{border-right:1px solid var(--line);width:14%}
 @media(max-width:900px){.outer{display:block;overflow-x:auto}}
 </style></head><body>
 ${topbarMarkup}`;
@@ -89,6 +111,7 @@ const emptyRow=(cols,text)=>{const r=node('tr'),td=node('td',text,'muted');td.co
 export const directoryPage = pageHead('CRM Directory') + String.raw`
 <main><div class="heading" id="content" tabindex="-1"><div><h1>Directory <span class="muted" id="count"></span></h1><p class="muted">Every company in our database with its people. Read only; read directly from the <code>companies</code> and <code>contacts</code> tables, which hold sheet-imported prospects as well as companies from approved conversations. Our own team is on the <a href="/antseed-team">AntSeed team</a> page.</p></div></div>
 <div id="notice" class="notice" role="alert"></div>
+<div class="legend"><span><span class="badge reached">Reached out</span> in the CRM or waiting in Approvals</span><span><span class="badge planned">Will reach out</span> tier A or B, not yet contacted</span></div>
 <label>Search<input id="search" type="search" placeholder="Company, person, email, source, funding or website" autocomplete="off"></label>
 <table class="outer"><thead><tr><th scope="col">Company</th><th scope="col">People</th></tr></thead><tbody id="rows"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table></main>
 <script>${commonScript}
@@ -103,12 +126,14 @@ function peopleTable(co){const t=node('table','','people'),head=node('tr');for(c
  co.people.forEach((p,i)=>{const r=node('tr');if(!i)r.append(websites);
   r.append(cell(node('span',personName(p))),cell(...designation(p).map(x=>node('span',x))),cell(...p.emails.map(e=>link('mailto:'+e,e))),cell(...linksOf(p).map(x=>{const w=node('span');w.append(x);return w;})),cell(...p.phones.map(x=>link('tel:'+x.replace(/[^\d+]/g,''),x))),cell(node('span',day(p.last_contacted))));body.append(r);});return t;}
 function row(co){const r=node('tr'),name=node('td'),convo=node('ul',undefined,'convo');name.append(node('p',co.name,'name'));
+ if(co.outreach!=='none'){r.className=co.outreach;name.append(node('span',co.outreach==='reached'?'Reached out':'Will reach out','badge '+co.outreach));}
+ for(const v of co.reachedVia)name.append(node('div',v,'muted'));
  const facts=[co.source,co.outreachTier,co.funding&&'Funding '+co.funding,co.location,co.employees&&co.employees+' people'].filter(Boolean);
  for(const f of facts)name.append(node('div',f,'muted'));
  for(const c of co.conversations)convo.append(node('li',c.title+' · last message '+day(c.lastMessageAt)));name.append(convo);
  const people=node('td');people.append(peopleTable(co));r.append(name,people);return r;}
 const paint=(shown,q)=>el('rows').replaceChildren(...(shown.length?shown.map(row):[emptyRow(2,q?'No match.':'No companies yet.')]));
-start('/api/board/directory',co=>[co.name,co.source,co.outreachTier,co.funding,co.location,...co.domains,...co.people.flatMap(p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles,p.title])].filter(Boolean).join(' ').toLowerCase(),'companies');
+start('/api/board/directory',co=>[co.name,co.source,co.outreachTier,co.outreach==='reached'?'reached out':co.outreach==='planned'?'will reach out':'',co.funding,co.location,...co.domains,...co.people.flatMap(p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles,p.title])].filter(Boolean).join(' ').toLowerCase(),'companies');
 </script></body></html>`;
 
 export const teamPage = pageHead('AntSeed Team') + String.raw`

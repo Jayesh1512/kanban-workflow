@@ -190,6 +190,8 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,1,555,'2026-10-20T10:00:00Z','Hello'),(71,2,555,'2026-10-25T10:00:00Z','Pricing?')");
     const person=(await h.db.query("INSERT INTO contacts(names,usernames,emails,phones,affiliation) VALUES('{Jane Doe}','{janedoe}','{jane@acme.example}','{+15550100}','external') RETURNING id")).rows[0]!;
     const staff=(await h.db.query("INSERT INTO contacts(names,affiliation) VALUES('{Our Teammate}','internal') RETURNING id")).rows[0]!;
+    await h.db.query("INSERT INTO outreach_relationships(identity_key,kind,company_id,display_name,accepted_stage) VALUES('company:acme','company',$1,'Acme Robotics','qualification')",[acme.id]);
+    await h.db.query("UPDATE companies SET outreach_tier='A — target now' WHERE id=$1",[hidden.id]);
     await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(555,$1)",[person.id]);
     // Teammates are recognised by an "Antseed" display name; an explicit external mark overrides that.
     const sam=(await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Sam | Antseed\"}','{samseed}','unknown') RETURNING id")).rows[0]!;
@@ -211,6 +213,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     for(const who of ['admin','manager','member','viewer']){
       const items=(await h.app.inject({url:'/api/board/directory',headers:h.headers(who)})).json().items;
       expect(items.map((c:{name:string})=>c.name)).toEqual(['Acme Robotics','Hidden Co']);
+      const by=(n:string)=>items.find((c:{name:string})=>c.name===n);expect([by('Acme Robotics').outreach,by('Acme Robotics').reachedVia,by('Hidden Co').outreach]).toEqual(['reached',['CRM · Qualification'],'planned']);
       expect(items[0]).toMatchObject({domains:['acme.example'],conversations:[{title:'Acme x AntSeed'}]});
       expect(items[1]).toMatchObject({source:'openrouter_apps',funding:'$4.5M',conversations:[],people:[{names:['Hana Hidden'],title:'Co-Founder & CEO',linkedin:'https://www.linkedin.com/in/hana-hidden'}]});
       expect(items[0].people.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Jane Doe','Pat Antseed Partner']);
