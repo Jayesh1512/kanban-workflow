@@ -52,5 +52,8 @@ durably; successful live Jev inference and authenticated Telegram acceptance
 remain unverified. M0–M4 code/local acceptance and the fresh canonical deployment
 passed independent QA. The [narrated working-project demo](artifacts/demo/README.md)
 labels synthetic inputs and the remaining live boundaries.
+The `companies` and `contacts` tables are the primary data source for all
+companies and their people; see [company directory](docs/COMPANY_DIRECTORY.md).
+
 See [delivery evidence](docs/DELIVERY_STATUS.md),
 [architecture](docs/ARCHITECTURE.md) and [project brief](docs/PROJECT_BRIEF.md).

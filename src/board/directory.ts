@@ -26,27 +26,27 @@ export function registerDirectory(app: FastifyInstance, db: Database, ready: () 
   });
   app.get('/api/board/directory', async () => {
     await ready();
-    const companies = (await db.query(`SELECT co.id,co.canonical_name AS name,co.domains,
-        jsonb_agg(jsonb_build_object('title',c.title,'lastMessageAt',lm.at) ORDER BY lm.at DESC NULLS LAST) AS conversations
-      FROM companies co JOIN chats c ON c.company_id=co.id AND ${talkingSql}
-      LEFT JOIN LATERAL (SELECT max(m.sent_at) AS at FROM messages m WHERE m.chat_id=c.id AND m.deleted_at IS NULL) lm ON true
-      GROUP BY co.id ORDER BY lower(co.canonical_name),co.id LIMIT 1000`)).rows;
-    // A person belongs to a company by a recorded role there or by evidence in one of its chats; our own team is listed on /antseed-team instead.
-    // Last contacted = their latest message in those chats, else the latest evidence that mentions them.
+    // `companies` and `contacts` are the primary source: every company row is listed, whether or not we have a chat with it.
+    // Conversations are secondary detail (approved company chats only).
+    const companies = (await db.query(`SELECT co.id,co.canonical_name AS name,co.domains,co.source,co.funding,co.location,co.employees,co.category,
+        co.outreach_tier AS "outreachTier",co.outreach_score AS "outreachScore",co.status,co.summary,
+        coalesce((SELECT jsonb_agg(jsonb_build_object('title',c.title,'lastMessageAt',lm.at) ORDER BY lm.at DESC NULLS LAST)
+          FROM chats c LEFT JOIN LATERAL (SELECT max(m.sent_at) AS at FROM messages m WHERE m.chat_id=c.id AND m.deleted_at IS NULL) lm ON true
+          WHERE c.company_id=co.id AND ${talkingSql}),'[]'::jsonb) AS conversations
+      FROM companies co ORDER BY co.outreach_score DESC NULLS LAST,lower(co.canonical_name),co.id LIMIT 1000`)).rows;
+    // A person belongs to a company by contacts.company_id (primary), a recorded role there, or evidence in one of its approved chats.
+    // Our own team is listed on /antseed-team instead. Last contacted = their latest message in the company's approved chats.
     const people = (await db.query(`WITH scope AS (SELECT c.id AS chat_id,c.company_id FROM chats c WHERE ${talkingSql}),
-      link AS (SELECT company_id,contact_id FROM contact_company_roles
+      link AS (SELECT company_id,id AS contact_id FROM contacts WHERE company_id IS NOT NULL
+        UNION SELECT company_id,contact_id FROM contact_company_roles
         UNION SELECT s.company_id,ce.contact_id FROM scope s JOIN evidence e ON e.chat_id=s.chat_id JOIN contact_evidence ce ON ce.evidence_id=e.id)
-      SELECT l.company_id,p.id,p.names,p.usernames,p.emails,p.phones,
+      SELECT l.company_id,p.id,p.names,p.usernames,p.emails,p.phones,p.title,p.linkedin,p.x_account AS "xAccount",p.telegram,p.discord,
         (SELECT coalesce(array_agg(DISTINCT r.role ORDER BY r.role),'{}') FROM contact_company_roles r WHERE r.contact_id=p.id AND r.company_id=l.company_id) AS roles,
-        greatest(
-          (SELECT max(m.sent_at) FROM messages m JOIN contact_telegram_ids t ON t.telegram_user_id=m.sender_id
-            WHERE t.contact_id=p.id AND m.deleted_at IS NULL AND m.chat_id IN (SELECT chat_id FROM scope WHERE company_id=l.company_id)),
-          (SELECT max(e.observed_at) FROM contact_evidence ce JOIN evidence e ON e.id=ce.evidence_id
-            WHERE ce.contact_id=p.id AND e.invalidated_at IS NULL AND e.chat_id IN (SELECT chat_id FROM scope WHERE company_id=l.company_id))
-        ) AS last_contacted
+        (SELECT max(m.sent_at) FROM messages m JOIN contact_telegram_ids t ON t.telegram_user_id=m.sender_id
+          WHERE t.contact_id=p.id AND m.deleted_at IS NULL AND m.chat_id IN (SELECT chat_id FROM scope WHERE company_id=l.company_id)) AS last_contacted
       FROM link l JOIN contacts p ON p.id=l.contact_id
-      WHERE NOT ${teamSql} AND l.company_id IN (SELECT company_id FROM scope)
-      ORDER BY last_contacted DESC NULLS LAST,p.id`)).rows;
+      WHERE NOT ${teamSql}
+      ORDER BY last_contacted DESC NULLS LAST,p.names[1],p.id`)).rows;
     const byCompany = new Map<string, Record<string, unknown>[]>();
     for (const { company_id, ...person } of people) {
       const list = byCompany.get(String(company_id)) ?? [];
@@ -87,23 +87,28 @@ async function start(url,haystack,label){try{const s=await fetch('/api/session',
 const emptyRow=(cols,text)=>{const r=node('tr'),td=node('td',text,'muted');td.colSpan=cols;r.append(td);return r;};`;
 
 export const directoryPage = pageHead('CRM Directory') + String.raw`
-<main><div class="heading" id="content" tabindex="-1"><div><h1>Directory <span class="muted" id="count"></span></h1><p class="muted">Every company we are talking to, with the people we are in contact with. Read only; built from approved Telegram conversations. Our own team is on the <a href="/antseed-team">AntSeed team</a> page.</p></div></div>
+<main><div class="heading" id="content" tabindex="-1"><div><h1>Directory <span class="muted" id="count"></span></h1><p class="muted">Every company in our database with its people. Read only; read directly from the <code>companies</code> and <code>contacts</code> tables, which hold sheet-imported prospects as well as companies from approved conversations. Our own team is on the <a href="/antseed-team">AntSeed team</a> page.</p></div></div>
 <div id="notice" class="notice" role="alert"></div>
-<label>Search<input id="search" type="search" placeholder="Company, person, email, @handle or website" autocomplete="off"></label>
-<table class="outer"><thead><tr><th scope="col">Company</th><th scope="col">People we are in contact with</th></tr></thead><tbody id="rows"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table></main>
+<label>Search<input id="search" type="search" placeholder="Company, person, email, source, funding or website" autocomplete="off"></label>
+<table class="outer"><thead><tr><th scope="col">Company</th><th scope="col">People</th></tr></thead><tbody id="rows"><tr><td colspan="2" class="muted">Loading…</td></tr></tbody></table></main>
 <script>${commonScript}
 const site=d=>link(/^https?:\/\//i.test(d)?d:'https://'+d,d.replace(/^https?:\/\//i,'').replace(/\/$/,''));
-function peopleTable(co){const t=node('table','','people'),head=node('tr');for(const h of ['Website','Contact','Designation','Email','Telegram','Phone','Last contacted'])head.append(node('th',h));
+const ext=(href,label)=>href?link(href,label):null;
+const linksOf=p=>[ext(p.linkedin,'LinkedIn'),ext(p.xAccount,'X'),...p.usernames.map(u=>link('https://t.me/'+encodeURIComponent(u),'@'+u)),p.telegram&&!p.usernames.length?ext(p.telegram,'Telegram'):null,ext(p.discord,'Discord')].filter(Boolean);
+const designation=p=>[...new Set([p.title,...p.roles].filter(Boolean))];
+function peopleTable(co){const t=node('table','','people'),head=node('tr');for(const h of ['Website','Contact','Designation','Email','Links','Phone','Last contacted'])head.append(node('th',h));
  const thead=node('thead');thead.append(head);const body=node('tbody');t.append(thead,body);
  const websites=cell(...co.domains.map(site));websites.rowSpan=Math.max(co.people.length,1);
  if(!co.people.length){const r=node('tr');r.append(websites);const td=node('td','No contacts recorded yet','muted');td.colSpan=6;r.append(td);body.append(r);return t;}
  co.people.forEach((p,i)=>{const r=node('tr');if(!i)r.append(websites);
-  r.append(cell(node('span',personName(p))),cell(...p.roles.map(x=>node('span',x))),...contactCells(p),cell(node('span',day(p.last_contacted))));body.append(r);});return t;}
+  r.append(cell(node('span',personName(p))),cell(...designation(p).map(x=>node('span',x))),cell(...p.emails.map(e=>link('mailto:'+e,e))),cell(...linksOf(p).map(x=>{const w=node('span');w.append(x);return w;})),cell(...p.phones.map(x=>link('tel:'+x.replace(/[^\d+]/g,''),x))),cell(node('span',day(p.last_contacted))));body.append(r);});return t;}
 function row(co){const r=node('tr'),name=node('td'),convo=node('ul',undefined,'convo');name.append(node('p',co.name,'name'));
+ const facts=[co.source,co.outreachTier,co.funding&&'Funding '+co.funding,co.location,co.employees&&co.employees+' people'].filter(Boolean);
+ for(const f of facts)name.append(node('div',f,'muted'));
  for(const c of co.conversations)convo.append(node('li',c.title+' · last message '+day(c.lastMessageAt)));name.append(convo);
  const people=node('td');people.append(peopleTable(co));r.append(name,people);return r;}
 const paint=(shown,q)=>el('rows').replaceChildren(...(shown.length?shown.map(row):[emptyRow(2,q?'No match.':'No companies yet.')]));
-start('/api/board/directory',co=>[co.name,...co.domains,...co.people.flatMap(p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles])].join(' ').toLowerCase(),'companies');
+start('/api/board/directory',co=>[co.name,co.source,co.outreachTier,co.funding,co.location,...co.domains,...co.people.flatMap(p=>[...p.names,...p.usernames.map(u=>'@'+u),...p.emails,...p.phones,...p.roles,p.title])].filter(Boolean).join(' ').toLowerCase(),'companies');
 </script></body></html>`;
 
 export const teamPage = pageHead('AntSeed Team') + String.raw`

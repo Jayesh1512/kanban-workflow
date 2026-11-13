@@ -181,7 +181,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     for(const id of [a.id,dupe.id])expect((await h.app.inject({method:'POST',url:`/api/board/approvals/proposals/${id}/decision`,headers:h.headers('manager'),payload:{action:'approve',reason:'ok',idempotencyKey:'dedupe-'+id}})).statusCode).toBe(200);
     expect((await h.db.query("SELECT 1 FROM tickets WHERE crm_relationship_id=$1 AND next_action='Prepare the integration plan'",[r.id])).rowCount).toBe(1);
   });
-  it('lets every signed-in role read the company directory, and only approved company conversations appear',async()=>{
+  it('lets every signed-in role read the company directory straight from the companies/contacts tables; only approved conversations are listed',async()=>{
     const h=await setup();
     const co=(await h.db.query("INSERT INTO companies(canonical_name,domains) VALUES('Acme Robotics','{acme.example}'),('Hidden Co','{hidden.example}') RETURNING id,canonical_name")).rows;
     const acme=co.find(c=>c.canonical_name==='Acme Robotics')!,hidden=co.find(c=>c.canonical_name==='Hidden Co')!;
@@ -204,11 +204,15 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,4,557,'2026-10-27T10:00:00Z','Hi')");
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,3,556,'2026-10-26T10:00:00Z','From our side')");
     await h.db.query("INSERT INTO contact_company_roles(contact_id,company_id,role) VALUES($1,$2,'Partner lead')",[pat.id,acme.id]);
+    // A sheet-imported prospect: no chat at all, linked to its company only through contacts.company_id.
+    await h.db.query("INSERT INTO contacts(names,emails,affiliation,company_id,title,linkedin) VALUES('{Hana Hidden}','{hana@hidden.example}','external',$1,'Co-Founder & CEO','https://www.linkedin.com/in/hana-hidden')",[hidden.id]);
+    await h.db.query("UPDATE companies SET source='openrouter_apps',funding='$4.5M' WHERE id=$1",[hidden.id]);
     await h.db.query("INSERT INTO contact_company_roles(contact_id,company_id,role) VALUES($1,$3,'CTO'),($2,$3,'Partnerships')",[person.id,staff.id,acme.id]);
     for(const who of ['admin','manager','member','viewer']){
       const items=(await h.app.inject({url:'/api/board/directory',headers:h.headers(who)})).json().items;
-      expect(items.map((c:{name:string})=>c.name)).toEqual(['Acme Robotics']);
+      expect(items.map((c:{name:string})=>c.name)).toEqual(['Acme Robotics','Hidden Co']);
       expect(items[0]).toMatchObject({domains:['acme.example'],conversations:[{title:'Acme x AntSeed'}]});
+      expect(items[1]).toMatchObject({source:'openrouter_apps',funding:'$4.5M',conversations:[],people:[{names:['Hana Hidden'],title:'Co-Founder & CEO',linkedin:'https://www.linkedin.com/in/hana-hidden'}]});
       expect(items[0].people.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Jane Doe','Pat Antseed Partner']);
       const jane=items[0].people.find((x:{names:string[]})=>x.names[0]==='Jane Doe');
       expect(jane).toMatchObject({names:['Jane Doe'],usernames:['janedoe'],emails:['jane@acme.example'],phones:['+15550100'],roles:['CTO']});
