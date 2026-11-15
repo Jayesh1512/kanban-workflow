@@ -279,32 +279,28 @@
     ],
     "7": [
       {
-        "id": "FM-013",
-        "title": "AIP-2: Recognized Usage Trust",
-        "url": "https://aips.antseed.com/aip-2",
-        "date": "2026-07-08",
-        "kind": "authored technical proposal",
-        "note": "AIP-2: Recognized Usage Trust. Marked Final in the current standards page. The standard combines settlement, identity, seller-pool power and policies; status alone is not deployment evidence."
+        "title": "Model verification: the fingerprint swarm",
+        "url": "https://antseed.com/blog/model-verification-fingerprint-swarm",
+        "kind": "Antseed Team blog",
+        "note": "Describes signed response authentication: the seller signs what it served and cannot later deny serving those exact bytes."
       },
       {
-        "id": "FM-014",
-        "title": "AIP-4: Proof-Carrying Wash-Trading Enforcement",
-        "url": "https://aips.antseed.com/aip-4",
-        "date": "2026-08-18",
-        "kind": "authored technical proposal",
-        "note": "AIP-4: Proof-Carrying Wash-Trading Enforcement. Current page credits Shahaf Antwarg and Alexander Ludwig. It specifies proof-backed fabricated-volume findings and proportional reward consequences."
+        "title": "The Antseed Verification Layer is Live",
+        "url": "https://antseed.com/blog/antseed-verification-layer",
+        "kind": "Antseed Team blog",
+        "note": "Independent auditors check the model itself. Results count for one to two weeks and providers are checked again every week."
+      },
+      {
+        "title": "Reputation",
+        "url": "https://antseed.com/docs/reputation",
+        "kind": "Supporting product documentation",
+        "note": "Each buyer computes a 0–100 trust score per seller from public records and stake. There is no central reputation authority."
       },
       {
         "title": "Model verification",
         "url": "https://antseed.com/docs/model-verification/",
         "kind": "Supporting product documentation",
-        "note": "KBF is statistical evidence. SAME means no evidence of substitution, not proof of identity for every response. Current audits use approved auditors; a DIFF requires confirmation."
-      },
-      {
-        "title": "Verification layer product update",
-        "url": "https://antseed.com/blog/antseed-verification-layer/",
-        "kind": "Supporting product documentation",
-        "note": "Antseed Team byline. Product supplement for published evidence, auditor roles and verification behavior, not personally attributed to either founder."
+        "note": "KBF is statistical evidence. SAME means no evidence of substitution, not proof of identity for every response."
       }
     ],
     "8": [
@@ -364,14 +360,14 @@
         "title": "AntSeedStats",
         "url": "https://antseedstats.com/",
         "kind": "Third-party on-chain analytics (CC BY 4.0)",
-        "date": "2026-11-15",
-        "note": "Every figure on this slide was read live from antseedstats.com (homepage and public API) on 15 November 2026: gross volume settled, active participants, models on sale, sellers settling, tokens consumed, median saving and service health. Figures change continuously, so read them again before you quote them. The source labels the 82 as DIEM stakers."
+        "date": "2026-11",
+        "note": "Figures on this slide are as supplied by the Antseed team from antseedstats.com, retrieved November 2026: gross volume settled, active participants, models on sale, sellers settling, tokens consumed, median saving and service health. They change continuously, so re-check before quoting. The source labels the 82 as DIEM stakers."
       },
       {
         "title": "Network summary API",
         "url": "https://antseedstats.com/api/v1/network/summary",
         "kind": "Third-party on-chain analytics (CC BY 4.0)",
-        "date": "2026-11-15",
+        "date": "2026-11",
         "note": "Lifetime settled USDC, buyers and sellers with on-chain settlement, and token counts."
       },
       {
