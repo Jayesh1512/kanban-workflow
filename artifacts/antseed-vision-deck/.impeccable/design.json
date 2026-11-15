@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T14:02:23.502925+00:00",
+  "title": "Design System: Antseed Vision Deck",
+  "extensions": {
+    "colorMeta": {
+      "action-green": {
+        "role": "primary",
+        "displayName": "Action green",
+        "tonalRamp": [
+          "oklch(15% 0.1248 132.24)",
+          "oklch(27% 0.1248 132.24)",
+          "oklch(38% 0.1248 132.24)",
+          "oklch(49% 0.1248 132.24)",
+          "oklch(61% 0.1248 132.24)",
+          "oklch(72% 0.1248 132.24)",
+          "oklch(83% 0.1248 132.24)",
+          "oklch(95% 0.1248 132.24)"
+        ]
+      },
+      "night-green-text": {
+        "role": "primary",
+        "displayName": "Night green text",
+        "tonalRamp": [
+          "oklch(15% 0.1350 129.24)",
+          "oklch(27% 0.1350 129.24)",
+          "oklch(38% 0.1350 129.24)",
+          "oklch(49% 0.1350 129.24)",
+          "oklch(61% 0.1350 129.24)",
+          "oklch(72% 0.1350 129.24)",
+          "oklch(83% 0.1350 129.24)",
+          "oklch(95% 0.1350 129.24)"
+        ]
+      },
+      "acid-light": {
+        "role": "primary",
+        "displayName": "Acid light",
+        "tonalRamp": [
+          "oklch(15% 0.2042 122.84)",
+          "oklch(27% 0.2042 122.84)",
+          "oklch(38% 0.2042 122.84)",
+          "oklch(49% 0.2042 122.84)",
+          "oklch(61% 0.2042 122.84)",
+          "oklch(72% 0.2042 122.84)",
+          "oklch(83% 0.2042 122.84)",
+          "oklch(95% 0.2042 122.84)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(27% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(83% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Page",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(27% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(83% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15% 0.0233 135.20)",
+          "oklch(27% 0.0233 135.20)",
+          "oklch(38% 0.0233 135.20)",
+          "oklch(49% 0.0233 135.20)",
+          "oklch(61% 0.0233 135.20)",
+          "oklch(72% 0.0233 135.20)",
+          "oklch(83% 0.0233 135.20)",
+          "oklch(95% 0.0233 135.20)"
+        ]
+      },
+      "h1-second": {
+        "role": "neutral",
+        "displayName": "H1 second",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(27% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(83% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "title-second": {
+        "role": "neutral",
+        "displayName": "Title second",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(27% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(83% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Body",
+        "tonalRamp": [
+          "oklch(15% 0.0243 237.19)",
+          "oklch(27% 0.0243 237.19)",
+          "oklch(38% 0.0243 237.19)",
+          "oklch(49% 0.0243 237.19)",
+          "oklch(61% 0.0243 237.19)",
+          "oklch(72% 0.0243 237.19)",
+          "oklch(83% 0.0243 237.19)",
+          "oklch(95% 0.0243 237.19)"
+        ]
+      },
+      "small": {
+        "role": "neutral",
+        "displayName": "Small",
+        "tonalRamp": [
+          "oklch(15% 0.0217 157.42)",
+          "oklch(27% 0.0217 157.42)",
+          "oklch(38% 0.0217 157.42)",
+          "oklch(49% 0.0217 157.42)",
+          "oklch(61% 0.0217 157.42)",
+          "oklch(72% 0.0217 157.42)",
+          "oklch(83% 0.0217 157.42)",
+          "oklch(95% 0.0217 157.42)"
+        ]
+      },
+      "dot": {
+        "role": "neutral",
+        "displayName": "Dot",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(27% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(83% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "night-page": {
+        "role": "neutral",
+        "displayName": "Night page",
+        "tonalRamp": [
+          "oklch(15% 0.0066 178.79)",
+          "oklch(27% 0.0066 178.79)",
+          "oklch(38% 0.0066 178.79)",
+          "oklch(49% 0.0066 178.79)",
+          "oklch(61% 0.0066 178.79)",
+          "oklch(72% 0.0066 178.79)",
+          "oklch(83% 0.0066 178.79)",
+          "oklch(95% 0.0066 178.79)"
+        ]
+      },
+      "night-rail": {
+        "role": "neutral",
+        "displayName": "Night rail",
+        "tonalRamp": [
+          "oklch(15% 0.0084 169.51)",
+          "oklch(27% 0.0084 169.51)",
+          "oklch(38% 0.0084 169.51)",
+          "oklch(49% 0.0084 169.51)",
+          "oklch(61% 0.0084 169.51)",
+          "oklch(72% 0.0084 169.51)",
+          "oklch(83% 0.0084 169.51)",
+          "oklch(95% 0.0084 169.51)"
+        ]
+      },
+      "night-text": {
+        "role": "neutral",
+        "displayName": "Night text",
+        "tonalRamp": [
+          "oklch(15% 0.0070 124.45)",
+          "oklch(27% 0.0070 124.45)",
+          "oklch(38% 0.0070 124.45)",
+          "oklch(49% 0.0070 124.45)",
+          "oklch(61% 0.0070 124.45)",
+          "oklch(72% 0.0070 124.45)",
+          "oklch(83% 0.0070 124.45)",
+          "oklch(95% 0.0070 124.45)"
+        ]
+      },
+      "night-gray": {
+        "role": "neutral",
+        "displayName": "Night gray",
+        "tonalRamp": [
+          "oklch(15% 0.0133 156.88)",
+          "oklch(27% 0.0133 156.88)",
+          "oklch(38% 0.0133 156.88)",
+          "oklch(49% 0.0133 156.88)",
+          "oklch(61% 0.0133 156.88)",
+          "oklch(72% 0.0133 156.88)",
+          "oklch(83% 0.0133 156.88)",
+          "oklch(95% 0.0133 156.88)"
+        ]
+      },
+      "night-dot": {
+        "role": "neutral",
+        "displayName": "Night dot",
+        "tonalRamp": [
+          "oklch(15% 0.0094 164.47)",
+          "oklch(27% 0.0094 164.47)",
+          "oklch(38% 0.0094 164.47)",
+          "oklch(49% 0.0094 164.47)",
+          "oklch(61% 0.0094 164.47)",
+          "oklch(72% 0.0094 164.47)",
+          "oklch(83% 0.0094 164.47)",
+          "oklch(95% 0.0094 164.47)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Pixel H1",
+        "purpose": "Two-tone cover, ELSH 11; no final period."
+      },
+      "headline": {
+        "displayName": "Pixel section title",
+        "purpose": "Two-tone section role, ELSH 40; final period."
+      },
+      "counter": {
+        "displayName": "Mono counter",
+        "purpose": "Compact navigation detail with tabular numerals."
+      }
+    },
+    "shadows": [
+      {
+        "name": "primary-button-day",
+        "value": "0 3.5px .5px 0 rgba(46, 74, 14, .1), inset 0 -.5px 0 0 rgba(200, 230, 170, .63), inset 0 -2px 1px 0 #3b5e17",
+        "purpose": "Official primary button lip and subtle day shadow."
+      },
+      {
+        "name": "primary-button-night",
+        "value": "inset 0 -2px 1px 0 #3b5e17",
+        "purpose": "Official dark-theme primary button lip."
+      },
+      {
+        "name": "controls-ring",
+        "value": "inset 0 0 0 1px #fff",
+        "purpose": "Day navigation frame’s kit ring; no invented stage shadow."
+      },
+      {
+        "name": "controls-ring-night",
+        "value": "inset 0 0 0 .5px rgba(236, 238, 233, .16)",
+        "purpose": "Night navigation frame’s canonical faint ring."
+      }
+    ],
+    "motion": [
+      {
+        "name": "page-theme",
+        "value": ".6s ease-in-out",
+        "purpose": "Page and surface colors change with the theme."
+      },
+      {
+        "name": "painting-theme",
+        "value": "1200ms ease-in-out",
+        "purpose": "A soft front reveals the separate paired painting from top to bottom."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "Finished still with no transition or idle animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-reflow",
+        "value": "760px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "action-primary",
+      "description": "One official filled action per group, with action green in both themes.",
+      "html": "<a class=\"ds-primary\" href=\"#\">Get started</a>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;height:var(--button-height,44px);padding:0 var(--button-padding-x,20px);border:0;border-radius:var(--radius-button,10px);font:500 15px/20px var(--font-sans,Geist,system-ui,sans-serif);text-decoration:none;cursor:pointer;transition:background-color var(--dur-feedback,150ms);background:var(--color-button-fill,#4f7a24);color:var(--color-button-text,#fff);box-shadow:var(--button-shadow, inset 0 -2px 1px #3b5e17)}.ds-primary:hover{background:var(--color-button-fill-hover,#436a1e)}.ds-primary:focus-visible{outline:2px solid var(--color-focus,#4f7a24);outline-offset:2px;}"
+    },
+    {
+      "name": "Ghost action",
+      "kind": "button",
+      "refersTo": "action-ghost",
+      "description": "Secondary kit action with a neutral tile surface and faint inset edge.",
+      "html": "<a class=\"ds-ghost\" href=\"#\">Gateway docs</a>",
+      "css": ".ds-ghost{display:inline-flex;align-items:center;justify-content:center;height:var(--button-height,44px);padding:0 var(--button-padding-x,20px);border:0;border-radius:var(--radius-button,10px);font:500 15px/20px var(--font-sans,Geist,system-ui,sans-serif);text-decoration:none;cursor:pointer;transition:background-color var(--dur-feedback,150ms);background:var(--color-tile,rgba(214,219,211,.2));color:var(--color-text,#30382c);border:1px solid var(--color-tile-line,rgba(64,76,66,.1));box-shadow:var(--button-ghost-shadow,inset 0 -1px 2px rgba(48,56,44,.2))}.ds-ghost:hover{background:var(--color-tile-hover,rgba(214,219,211,.4))}.ds-ghost:focus-visible{outline:2px solid var(--color-focus,#4f7a24);outline-offset:2px;}"
+    },
+    {
+      "name": "Navigation button",
+      "kind": "button",
+      "refersTo": "navigation-button",
+      "description": "Previous/next, theme and fullscreen control with a consistent SVG icon.",
+      "html": "<button class=\"ds-nav\" aria-label=\"Next slide\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m10 6 6 6-6 6M16 12H4\"/></svg></button>",
+      "css": ".ds-nav{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:8px;border:0;border-radius:var(--radius-control,5px);background:transparent;color:var(--color-text,#30382c);cursor:pointer}.ds-nav:hover{background:var(--color-tile-hover,rgba(214,219,211,.4))}.ds-nav:focus-visible{outline:2px solid var(--color-focus,#4f7a24);outline-offset:2px;outline-offset:4px}.ds-nav:disabled{opacity:.35;cursor:default}"
+    },
+    {
+      "name": "Source trigger",
+      "kind": "button",
+      "description": "Quiet underlined access to each slide’s evidence.",
+      "html": "<button class=\"ds-source\">Sources</button>",
+      "css": ".ds-source{min-height:40px;border:0;padding:8px 0;background:transparent;color:var(--color-green-text,#4f7a24);font:400 12px/16px var(--font-sans,Geist,system-ui,sans-serif);text-decoration:underline;text-underline-offset:3px;cursor:pointer}.ds-source:hover{text-decoration-thickness:2px}.ds-source:focus-visible{outline:2px solid var(--color-focus,#4f7a24);outline-offset:2px;outline-offset:4px}"
+    },
+    {
+      "name": "Evidence surface",
+      "kind": "custom",
+      "refersTo": "source-card",
+      "description": "Solid rail popover with linked source metadata and qualifications.",
+      "html": "<section class=\"ds-evidence\"><h2>Sources<span>Trust and verification.</span></h2><a href=\"#\">Model verification</a><p>Supporting product documentation and claim qualifications.</p></section>",
+      "css": ".ds-evidence{width:min(780px,100%);padding:32px;border-radius:var(--radius-popover,6px);background:var(--color-rail,#fff);color:var(--color-text,#30382c);font:400 16px/24px var(--font-sans,Geist,system-ui,sans-serif)}.ds-evidence h2{font:var(--type-section-title,400 48px/46px \"Geist Pixel Var\",Geist,sans-serif);font-variation-settings:\"ELSH\" var(--type-section-title-elsh,40);letter-spacing:var(--type-section-title-tracking,-2px);margin:0 0 24px}.ds-evidence h2 span{display:block;color:var(--color-text-grey,#929292)}.ds-evidence a{color:var(--color-green-text,#4f7a24);font-weight:500;text-underline-offset:3px}.ds-evidence a:hover{text-decoration-thickness:2px}.ds-evidence a:focus-visible{outline:2px solid var(--color-focus,#4f7a24);outline-offset:2px;}.ds-evidence p{color:var(--color-text-body,#56656f);margin:8px 0 0}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Friendly and technical",
+    "overview": "This document applies to the Antseed vision presentation in this directory. The published Antseed v1 guide, snapshotted in `brand/AGENTS.md` and `brand/DESIGN.md`, establishes the identity; `brand/tokens.css` and `brand/components.css` supply its numeric and component rules. The user-approved compliance pass supersedes the previous warm-paper palette, acid action buttons and uniform ELSH 11 headings. Parent CRM and neobank artifact documents do not govern this deck.\n\nClean structure carries the technical story. Approved watercolor landscapes and round dots supply its friendly half. The presentation remains quiet and readable while preserving the official logos, separate day/night paintings, source evidence and qualifications.",
+    "keyCharacteristics": [
+      "White paper rails and dot-matrix margins by day, distinct charcoal page and rail at night.",
+      "Two-tone Geist Pixel titles above plain Geist prose.",
+      "Approved watercolor pairs and original monochrome logos.",
+      "Flat narrative rows, accessible controls and a secondary evidence dialog."
+    ],
+    "rules": [
+      {
+        "name": "The Color Role Rule",
+        "body": "Action green fills the primary button in both themes. Night green text uses its separate text token. Acid belongs to light effects and night dot-ants, never the primary CTA.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Tone Rule",
+        "body": "The cover uses the H1 pixel shape and gray second line without a final period. Section titles use the section pixel shape, a gray second half and a final period.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Rail Rule",
+        "body": "The dot matrix belongs in the margins. Content and the logo sit on the rail, with dotted rail outlines.",
+        "section": "layout"
+      },
+      {
+        "name": "The Paired Painting Rule",
+        "body": "Day and night use separate approved paintings. A theme change reveals the new painting from the sky downward; it does not recolor the day image with a filter.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do use the official color, type, radius and component tokens before adding local values.",
+      "Do keep words readable independently of artwork and source evidence reachable from each slide.",
+      "Do use the original logo files and approved day/night painting pairs without stretching or recoloring them.",
+      "Do place round peer dots on the 8px coordinate grid and keep the network composition free of a central hub.",
+      "Do retain keyboard navigation, focus return, inert inactive content and a readable reduced-motion still."
+    ],
+    "donts": [
+      "Don’t reinstate cream UI paper or acid primary action buttons.",
+      "Don’t use font weights outside 400 and 500 or apply negative tracking to ordinary prose and subheads.",
+      "Don’t turn sparse watercolor panels into dense illustrations or invent a new mascot.",
+      "Don’t add idle seed or dot loops, repeated text entrances or hidden running animations.",
+      "Don’t scale desktop text down as the mobile reading layout; stack the content instead."
+    ]
+  }
+}
