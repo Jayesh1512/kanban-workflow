@@ -43,7 +43,8 @@
         3
       ],
       "qualification": "60+ video and 35+ image models. Four USD price examples retained from the source: MiniMax H3, Veo 3.1 Fast, GPT Image 2 and ElevenLabs Turbo. Not live quotes; provider configuration and model availability vary.",
-      "takeaway": "For a 2am submission, choose video, image and voice models for every asset in the cut."
+      "takeaway": "For a 2am submission, choose video, image and voice models for every asset in the cut.",
+      "intro": "Antseed brings video, image and voice models together through one API key."
     },
     {
       "slide": 4,
@@ -113,7 +114,8 @@
     "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story.",
     "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The compatibility/capacity qualification is retained in source metadata.",
     "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger.",
-    "The model-access slide\u2019s takeaway and price/availability notes are removed at the user\u2019s request. Four selected source-price examples remain; historical pricing and availability qualifications remain in this source ledger."
+    "The model-access slide\u2019s takeaway and price/availability notes are removed at the user\u2019s request. Four selected source-price examples remain; historical pricing and availability qualifications remain in this source ledger.",
+    "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Render using Antseed and compare the result and bill, replacing the render-together sentence."
   ],
   "prices": [
     {

@@ -65,7 +65,8 @@
     "16px margins use the kit\u2019s 2px/8px round-dot matrix and rails; dark pages use local theme variables so system theme cannot recolor the light slides.",
     "Compact 34px/36px section titles and 46px/48px cover retained for PDF fidelity. Storyline labels are short non-link labels, not documentation-link eyebrows.",
     "User-requested visible stats-footer removal retained; attribution is in HTML/PDF metadata, the source ledger and this audit.",
-    "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface."
+    "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface.",
+    "Model-access intro sits at y192; cards move to y240 with their existing sizes and artwork. Mobile intro reflows above stacked cards."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",

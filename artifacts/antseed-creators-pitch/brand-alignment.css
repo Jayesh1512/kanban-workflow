@@ -79,3 +79,7 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 
 .dependency-statement{position:absolute;left:664px;top:456px;font:500 16px/24px Geist;color:var(--color-green-text)}
 @media screen and (max-width:760px){.dependency-statement{position:relative;inset:auto;margin-top:20px;font-size:16px;line-height:24px}}
+
+.model-intro{position:absolute;left:80px;top:192px;width:1120px;font:400 16px/24px Geist;color:var(--color-text-body)}
+.cards-offer .model-cards{top:240px}
+@media screen and (max-width:760px){.model-intro{position:relative;inset:auto;width:auto;margin:0 0 28px}.cards-offer .model-cards{top:auto}}

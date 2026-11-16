@@ -1,5 +1,5 @@
 {
-  "revision": "Removed the model-access takeaway and both pricing/availability notes while retaining all three model cards and selected prices.",
+  "revision": "Added one-line Antseed intro to model-access slide and revised the closing render-and-compare sentence.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -56,9 +56,10 @@
     "Slide 4 text and visual follow one request to failed Provider A, automatic retry through compatible Provider B, then response through the same endpoint. No multi-model fanout or progress bars remain.",
     "Exact Reduce dependency on 1 Provider statement present; requested illustrative-flow caption absent in both HTML and PDF.",
     "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent.",
-    "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained."
+    "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained.",
+    "Model-access Antseed intro present above cards; closing sentence uses Render using Antseed and compare the result and bill."
   ],
-  "visual_review": "Updated model-access page inspected in HTML/PDF and seven-page PDF contact sheet reviewed. Offline export reports no missing assets, failed fonts or browser errors.",
+  "visual_review": "Revised model-access and closing slides checked in HTML/PDF; focused responsive checks at 1280, 390 and 320px passed. Seven-page PDF contact sheet reviewed.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
