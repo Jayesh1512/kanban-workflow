@@ -106,7 +106,8 @@
     "Live stats replace the supplied historical snapshot; both the source display time and actual refresh time are shown.",
     "Closing action is Book a Call at https://calendly.com/ravi-antseed. Get your key, Gateway docs and the raw antseed.com link are removed from the closing slide. Gateway docs remains on the team-control slide.",
     "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user\u2019s request.",
-    "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing."
+    "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing.",
+    "At user request, the stats slide shows only the data-as-shown date. Refresh timestamp, CC BY attribution and metric-methodology lines remain in source metadata, not on the slide; the orphaned asterisk is removed."
   ],
   "prices": [
     {
