@@ -45,13 +45,13 @@
     },
     {
       "slide": 4,
-      "label": "One provider fails.Find another route.",
+      "label": "A provider drops. Your request reroutes.",
       "outside": false,
       "textOverflow": true
     },
     {
       "slide": 4,
-      "label": "Find another route.",
+      "label": "Your request reroutes.",
       "outside": false,
       "textOverflow": true
     },
@@ -152,15 +152,15 @@
       "slide": 4,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nOne provider fails.\nFind another route.\n\nThe submission cannot wait for one provider.\nReroute a failed request and keep the edit moving.\n\nDetect a failed provider request\n\nReroute to a compatible provider\n\nKeep the other model jobs running\n\nUse the same endpoint for the next attempt\n\nFailover requires a compatible, available provider.\nCapacity and provider limits still apply.\n\n01:48 · due at 02:00\n\nOne key\nVeo\n\nHero shot · rerouted\n\nKling\n\nAction\n\nWan\n\nB-roll\n\nSeedream\n\nThumbnail\n\nElevenLabs\n\nVoiceover\n\nExample · Veo: provider A failed → B rendering",
+      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour edit is due at 2am.\nA failed provider triggers another route for the same request.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nBring the response back into your edit\n\nFailover requires a compatible, available provider.\nCapacity and provider limits still apply.\n\n01:48\nSubmission due at 02:00\nYour request\n\nVeo · your hero shot\n\n↓\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n↓\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt · compatible provider\n\n↓\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nIllustrative flow · provider availability and limits apply",
       "findings": [
         {
-          "label": "One provider fails.Find another route.",
+          "label": "A provider drops. Your request reroutes.",
           "outside": false,
           "textOverflow": true
         },
         {
-          "label": "Find another route.",
+          "label": "Your request reroutes.",
           "outside": false,
           "textOverflow": true
         }

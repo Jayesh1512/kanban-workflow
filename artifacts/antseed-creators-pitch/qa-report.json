@@ -1,5 +1,5 @@
 {
-  "revision": "Full brand/PDF audit: kit tokens and components applied, round-dot matrix/rails corrected, fonts/figures/night styling verified, navigation focus and mobile targets fixed.",
+  "revision": "Slide 4 replaces the multi-model fanout with one matching request/failure/reroute/response flow.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -34,7 +34,7 @@
     ],
     "slide_checks": 56,
     "keyboard": "Home/End/arrows/Space on focused controls, boundaries and focus restoration passed",
-    "mobile_end_checks": "320px and 390px: workflow reroute caption, Gateway docs, stats and Book a Call accessible above controls.",
+    "mobile_end_checks": "320px and 390px: complete failover response, Gateway docs, stats and Book a Call accessible above controls.",
     "workflow_ant_coordinates": [
       1084,
       490,
@@ -52,9 +52,10 @@
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
     "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
-    "Exact green/body/night token colors, 11px card and 10px button radii, H1 punctuation, font weights and night character filters verified in computed styles."
+    "Exact green/body/night token colors, 11px card and 10px button radii, H1 punctuation, font weights and night character filters verified in computed styles.",
+    "Slide 4 text and visual follow one request to failed Provider A, automatic retry through compatible Provider B, then response through the same endpoint. No multi-model fanout or progress bars remain."
   ],
-  "visual_review": "Every final PDF page rendered and reviewed at full size, with contact sheet and corresponding HTML reviewed. Approved PDF masters compared at 1280\u00d7720. Desktop and mobile story pages reviewed.",
+  "visual_review": "All seven PDF pages rendered; updated slide 4 inspected at full size in HTML/PDF and at mobile widths. Eight-width/56-slide checks and component/navigation checks passed.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",

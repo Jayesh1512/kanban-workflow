@@ -47,7 +47,7 @@
     },
     {
       "slide": 4,
-      "headline": "One provider fails. Find another route.",
+      "headline": "A provider drops. Your request reroutes.",
       "outline_section": [
         4,
         5
@@ -56,8 +56,8 @@
         2,
         4
       ],
-      "qualification": "Illustrative 01:48 workspace with submission due at 02:00, not measured live rendering progress. Provider A/B are conceptual routes for the same Veo hero-shot request. Failover requires a compatible, available provider; limits still apply.",
-      "takeaway": "Before the 2am submission, reroute a failed request to a compatible provider while other jobs continue."
+      "qualification": "Illustrative 01:48 example, due at 02:00. Provider A and B are conceptual routes for one Veo request, not measured traffic. Compatible provider availability, capacity and limits apply.",
+      "takeaway": "The same model/prompt request moves from failed Provider A to compatible Provider B; the response returns through the same endpoint before the deadline in this illustrative example."
     },
     {
       "slide": 5,
@@ -102,14 +102,15 @@
     "Cover uses a general product title; the following Problem and Solution pages carry the concrete pain points and 2am deadline scenario.",
     "Slides 3\u20135 share one scenario: submission due at 2am. The requirements are model access, compatible-provider rerouting and one-key access through Antseed Gateway.",
     "Three illustrated model cards retain four historical source-pitch price examples and the user-approved 35+ image-model label.",
-    "Slide 4 replaces the watercolor master with native dark framing, icons and the unchanged model-usage chart. The original laptop ant is retained at x1084/y490 with height164. No watercolor appears in mobile mode either.",
+    "Slide 4 replaces the watercolor master with native dark framing, icons and a matching single-request failover flow. The original laptop ant is retained at x1084/y490 with height164. No watercolor appears in mobile mode either.",
     "Live stats replace the supplied historical snapshot; both the source display time and actual refresh time are shown.",
     "Closing action is Book a Call at https://calendly.com/ravi-antseed. Get your key, Gateway docs and the raw antseed.com link are removed from the closing slide. Gateway docs remains on the team-control slide.",
     "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user\u2019s request.",
     "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing.",
     "At user request, the stats slide shows only the data-as-shown date. Refresh timestamp, CC BY attribution and metric-methodology lines remain in source metadata, not on the slide; the orphaned asterisk is removed.",
     "Storyline eyebrows are exactly Problem, Solution or Action. The first content slide uses a descriptive headline instead of repeating Problem. Network stats supports Solution; the final Action slide retains three concrete actions.",
-    "Brand audit corrects token colors, round-dot rails, button components, radii, cover punctuation/tracking, night ant lighting and figure shape. Content, models, prices, dates, 2am example and three closing actions remain approved."
+    "Brand audit corrects token colors, round-dot rails, button components, radii, cover punctuation/tracking, night ant lighting and figure shape. Content, models, prices, dates, 2am example and three closing actions remain approved.",
+    "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story."
   ],
   "prices": [
     {

@@ -2,7 +2,7 @@
 
 Checked 16 November 2026 against the live [agent guide](https://antseed-home.vercel.app/brand/AGENTS.md), [building blocks](https://antseed-home.vercel.app/brand/#blocks), DESIGN.md, tokens.json, tokens.css, components.css and assets.json. Guide version: v1, 12 November 2026. Reference: the supplied **Antseed - Creators Pitch.pdf**, seven pages, 960 × 540pt, plus its native PPTX and font bundle.
 
-The presentation serves the **friendly** half: creator language, watercolor scenes and the supplied round ants. The technical half remains visible through selectable pricing, the request/reroute example, Gateway access and dated network figures.
+The presentation serves the **friendly** half: creator language, watercolor scenes and the supplied round ants. The technical half remains visible through selectable pricing, the single-request failover example, Gateway access and dated network figures.
 
 The visual system is aligned. The PDF's compact type scale and compositions are retained. This is an edited seven-slide deck, not a pixel-for-pixel copy of the old wording. Explicit user choices below remain exceptions to literal guide/template defaults.
 
@@ -30,7 +30,7 @@ The visual system is aligned. The PDF's compact type scale and compositions are 
 | 6 | Exact action/night colors; acid restrictions | Token colors verified in computed styles. No acid text on light. |
 | 7 | Round dots at 8px pitch; dotted, never dashed | Margin/rail/section dot strips use the kit's radial-gradient pattern. The reference's local layout geometry is retained. |
 | 8 | Dither/LED effects only as restrained code effects | No dither wallpaper or generated pixel art. No extra effect is needed in this static deck. |
-| 9 | No central network hub | No Antseed server or network hub is drawn. The chart depicts a creator's local workflow/key access to independent jobs, not network topology. |
+| 9 | No central network hub | No Antseed server or network hub is drawn. The diagram depicts one request failing at Provider A and rerouting to compatible Provider B, not network topology. |
 | 10 | Sparse watercolor and clear copy area | Supplied PDF artwork retained; native text stays separate. Original composite source illustrations are reused without generating new scenery/mascots. |
 | 11 | Approved round mascot, correct meaning | Source mascots retained; no new pose, caste, sunglasses or token imagery introduced. |
 | 12 | Proper night paintings and character lighting | Authored night illustration retained; separate cutouts receive brightness(.84) saturate(.83) contrast(1.12). This deck has authored day/night chapters, not a full alternate-theme version. |
@@ -47,7 +47,7 @@ The visual system is aligned. The PDF's compact type scale and compositions are 
 | Cover | Requested vision-deck meadow cover, current general title and original logo/ants. |
 | Problem | Reference page 1 split illustration, measured 34/36px section type and 80px left rail. Four approved bottlenecks and new headline. |
 | Model access | Reference page 2's three illustrated Video/Image/Voice cards. Taller cards carry four selected historic rates; 35+ image models retained. |
-| Provider rerouting | Reference page 4's dark technical treatment, icons and laptop ant. Watercolor removed as requested. The native chart is explicitly an example, due at 02:00. |
+| Provider rerouting | Reference page 4's dark technical treatment, icons and laptop ant. Watercolor removed as requested. The native four-node failover flow is explicitly an example, due at 02:00. |
 | One-key access | Reference page 6's three-column / team-strip composition, with requested Gateway copy and button. |
 | Network figures | User-supplied stats composition, native figures and approved 16 November snapshot. |
 | Action | Reference page 7's three actions and seed-carrying ant crop. Requested small rewards card and single Book a Call button. |

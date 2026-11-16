@@ -47,7 +47,7 @@
     "vision-deck centered meadow home",
     "Problem / four creator bottlenecks / watercolor panel",
     "three illustrated model-access cards / submission due at 2am",
-    "plain dark 01:48 workspace / failed-provider reroute / same laptop ant",
+    "plain dark single-request failover flow / failed Provider A to compatible Provider B / original laptop ant retained",
     "one-key Gateway access / team support / painted strip",
     "dark AntSeedStats four-figure snapshot / night meadow",
     "three-step demo CTA / small rewards card / single Book a Call button"
@@ -55,7 +55,6 @@
   "adaptations": [
     "Cover keeps the vision-deck meadow, typography and assets with a general creator-facing product title and short video/image/voice descriptor.",
     "Original illustrated catalog-card art is reused inside taller cards to make room for selected source prices.",
-    "A single 2am clock and shared API-key fanout replace the numbered request-flow terminal and standalone five-step workflow. Static progress bars illustrate active model jobs without claiming measured activity.",
     "Night source master and source font roles retained. Mobile reflows cards and the shared workspace.",
     "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot. The rewards card uses 15px Geist heading and no lead $ANTS figure to stay secondary.",
     "Story-stage eyebrows use only Problem, Solution and Action. Network evidence supports the solution; the closing Action page keeps its three steps.",
@@ -66,7 +65,7 @@
     "16px margins use the kit\u2019s 2px/8px round-dot matrix and rails; dark pages use local theme variables so system theme cannot recolor the light slides.",
     "Compact 34px/36px section titles and 46px/48px cover retained for PDF fidelity. Storyline labels are short non-link labels, not documentation-link eyebrows.",
     "User-requested visible stats-footer removal retained; attribution is in HTML/PDF metadata, the source ledger and this audit.",
-    "The single creator-key fanout is an illustrative local workflow, not Antseed network topology or a Gateway product capture."
+    "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",

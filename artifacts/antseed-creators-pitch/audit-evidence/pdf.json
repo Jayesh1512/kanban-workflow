@@ -2,72 +2,59 @@
   "pages": [
     {
       "page": 1,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 100,
-      "links": []
+      "text_chars": 100
     },
     {
       "page": 2,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 380,
-      "links": []
+      "text_chars": 380
     },
     {
       "page": 3,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 606,
-      "links": []
+      "text_chars": 606
     },
     {
       "page": 4,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 547,
-      "links": []
+      "text_chars": 720
     },
     {
       "page": 5,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 473,
-      "links": [
-        "https://antseed.com/docs/gateway/"
-      ]
+      "text_chars": 473
     },
     {
       "page": 6,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 186,
-      "links": [
-        "https://antseedstats.com/"
-      ]
+      "text_chars": 186
     },
     {
       "page": 7,
-      "points": [
-        960.0,
-        540.0
+      "size": [
+        960,
+        540
       ],
-      "selectable_text_chars": 473,
-      "links": [
-        "https://calendly.com/ravi-antseed"
-      ]
+      "text_chars": 473
     }
   ],
   "fonts": [
@@ -79,5 +66,12 @@
     "FAAAAA+GeistMono-Regular"
   ],
   "metadata_credit": true,
-  "source_pdf_sha256": "52aaa124891ec2259f6b23e70d68aaaaa5837cd9b67d4fbc132c6d1c9921c68d"
+  "source_pdf_sha256": "52aaa124891ec2259f6b23e70d68aaaaa5837cd9b67d4fbc132c6d1c9921c68d",
+  "slide4_flow_verified": [
+    "Your request",
+    "Provider A failed",
+    "Automatic reroute",
+    "Provider B retry",
+    "Back to your edit"
+  ]
 }

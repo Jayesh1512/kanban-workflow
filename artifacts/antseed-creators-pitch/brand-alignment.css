@@ -58,3 +58,21 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 }
 @media screen and (max-width:359px){.controls [data-fullscreen]{display:none}}
 @media print{.slide>.brand-paper{inset:16px}}
+
+/* One request follows the same failover story as the slide copy. */
+.failover-flow{position:absolute;left:664px;top:64px;width:552px;margin:0;color:var(--color-text)}
+.failover-flow figcaption{display:flex;align-items:baseline;gap:18px;padding:0 0 16px;font:12px/20px Mono;color:var(--color-text-small)}
+.failover-flow figcaption strong{font:400 18px/24px Mono;color:var(--color-text)}
+.route-flow{list-style:none;margin:0;padding:0 16px 0 0}
+.route-flow>li{position:relative;min-height:60px;padding:9px 18px;border:1px solid var(--color-tile-line);border-radius:var(--radius-window);background:var(--color-tile)}
+.route-flow>li:not(:last-child){margin-bottom:32px}
+.route-flow h3{font:500 16px/20px Geist;color:var(--color-text);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.route-flow p{font:400 13px/20px Geist;color:var(--color-text-small)}
+.route-state{font:400 12px/20px Mono;color:var(--color-text-small)}
+.route-flow .route-retry{border-color:var(--color-green-text)}
+.route-retry .route-state{color:var(--color-green-text)}
+.route-transition{position:absolute;left:24px;bottom:-29px;display:flex;align-items:center;gap:12px;height:24px;font:400 11px/20px Mono;color:var(--color-text-small)}
+.route-transition>span{font:400 22px/24px Geist;color:var(--color-text-small)}
+.reroute-transition,.reroute-transition>span{color:var(--color-green-text)}
+.route-example{margin:12px 0 0;font:400 11px/18px Geist;color:var(--color-text-small)}
+@media screen and (max-width:760px){.failover-flow{position:relative;inset:auto;width:auto;margin:28px 0 0}.failover-flow figcaption{gap:12px;flex-wrap:wrap;padding-bottom:16px}.failover-flow figcaption span{font-size:11px}.route-flow{padding:0}.route-flow>li{min-height:72px;padding:13px 14px}.route-flow h3{font-size:16px}.route-flow p{font-size:14px;line-height:21px;margin-top:3px}.route-example{font-size:12px;line-height:18px}}
