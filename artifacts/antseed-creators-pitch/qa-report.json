@@ -1,5 +1,5 @@
 {
-  "revision": "Removed requested three stats footer lines and orphaned asterisk; retained snapshot date and values.",
+  "revision": "Cover uses a general product title: One key. Every creative possibility.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -46,9 +46,9 @@
     "Stats retain four metric categories and retain the source snapshot date",
     "Problem, Solution, Proof and Next step labels present",
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
-    "Cover directly states the 2am deadline, exhausted credits, failed providers and tool switching.",
-    "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained."
+    "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
+    "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages."
   ],
-  "visual_review": "Stats page inspected in desktop/mobile HTML and rendered PDF. Seven-page PDF contact sheet reviewed; 28 offline viewport/navigation checks passed.",
+  "visual_review": "New general cover reviewed in desktop/mobile HTML and rendered PDF. Seven-page PDF contact sheet reviewed; 28 offline viewport/navigation checks passed.",
   "font_metric_warnings": 13
 }
