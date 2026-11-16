@@ -182,7 +182,7 @@
       "slide": 6,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nThe network,\nin numbers.\nModels\n942\nProviders, all time\n274\nTotal active users\n28,254\nTokens consumed\n905.05B\n\nData as shown: 16 November 2026 · 13:30 UTC\n\nView AntSeedStats\n↗\n06",
+      "text": "Network Stats\n\nThe network,\nin numbers.\nModels\n942\nProviders, all time\n274\nTotal active users\n28,254\nTokens consumed\n905.05B\n\nData as shown: 16 November 2026 · 13:30 UTC\n\nView AntSeedStats\n↗\n06",
       "findings": [
         {
           "label": "The network,in numbers.",
