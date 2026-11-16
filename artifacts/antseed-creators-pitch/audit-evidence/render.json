@@ -152,7 +152,7 @@
       "slide": 4,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour edit is due at 2am.\nA failed provider triggers another route for the same request.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nBring the response back into your edit\n\nFailover requires a compatible, available provider.\nCapacity and provider limits still apply.\n\n01:48\nSubmission due at 02:00\nYour request\n\nVeo · your hero shot\n\n↓\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n↓\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt · compatible provider\n\n↓\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nReduce dependency on 1 Provider",
+      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour edit is due at 2am.\nA failed provider triggers another route for the same request.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nBring the response back into your edit\n\n01:48\nSubmission due at 02:00\nYour request\n\nVeo · your hero shot\n\n↓\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n↓\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt · compatible provider\n\n↓\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nReduce dependency on 1 Provider",
       "findings": [
         {
           "label": "A provider drops. Your request reroutes.",

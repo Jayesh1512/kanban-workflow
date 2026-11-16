@@ -47,7 +47,7 @@ The visual system is aligned. The PDF's compact type scale and compositions are 
 | Cover | Requested vision-deck meadow cover, current general title and original logo/ants. |
 | Problem | Reference page 1 split illustration, measured 34/36px section type and 80px left rail. Four approved bottlenecks and new headline. |
 | Model access | Reference page 2's three illustrated Video/Image/Voice cards. Taller cards carry four selected historic rates; 35+ image models retained. |
-| Provider rerouting | Reference page 4's dark technical treatment, icons and laptop ant. Watercolor removed as requested. The native four-node failover flow is due at 02:00. The requested provider-dependency statement replaces the illustrative-flow caption. |
+| Provider rerouting | Reference page 4's dark technical treatment, icons and laptop ant. Watercolor removed as requested. The native four-node failover flow is due at 02:00. The requested provider-dependency statement replaces the illustrative-flow caption. The visible failover compatibility/capacity footnote is also removed per the user’s request; qualifications remain in the source ledger. |
 | One-key access | Reference page 6's three-column / team-strip composition, with requested Gateway copy and button. |
 | Network figures | User-supplied stats composition, native figures and approved 16 November snapshot. |
 | Action | Reference page 7's three actions and seed-carrying ant crop. Requested small rewards card and single Book a Call button. |

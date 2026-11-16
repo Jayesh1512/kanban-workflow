@@ -111,7 +111,8 @@
     "Storyline eyebrows are exactly Problem, Solution or Action. The first content slide uses a descriptive headline instead of repeating Problem. Network stats supports Solution; the final Action slide retains three concrete actions.",
     "Brand audit corrects token colors, round-dot rails, button components, radii, cover punctuation/tracking, night ant lighting and figure shape. Content, models, prices, dates, 2am example and three closing actions remain approved.",
     "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story.",
-    "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The existing compatibility/capacity qualification remains on the left."
+    "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The compatibility/capacity qualification is retained in source metadata.",
+    "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger."
   ],
   "prices": [
     {
