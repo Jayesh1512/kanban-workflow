@@ -76,3 +76,6 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 .reroute-transition,.reroute-transition>span{color:var(--color-green-text)}
 .route-example{margin:12px 0 0;font:400 11px/18px Geist;color:var(--color-text-small)}
 @media screen and (max-width:760px){.failover-flow{position:relative;inset:auto;width:auto;margin:28px 0 0}.failover-flow figcaption{gap:12px;flex-wrap:wrap;padding-bottom:16px}.failover-flow figcaption span{font-size:11px}.route-flow{padding:0}.route-flow>li{min-height:72px;padding:13px 14px}.route-flow h3{font-size:16px}.route-flow p{font-size:14px;line-height:21px;margin-top:3px}.route-example{font-size:12px;line-height:18px}}
+
+.dependency-statement{position:absolute;left:664px;top:456px;font:500 16px/24px Geist;color:var(--color-green-text)}
+@media screen and (max-width:760px){.dependency-statement{position:relative;inset:auto;margin-top:20px;font-size:16px;line-height:24px}}

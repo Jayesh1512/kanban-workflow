@@ -57,7 +57,7 @@
         4
       ],
       "qualification": "Illustrative 01:48 example, due at 02:00. Provider A and B are conceptual routes for one Veo request, not measured traffic. Compatible provider availability, capacity and limits apply.",
-      "takeaway": "The same model/prompt request moves from failed Provider A to compatible Provider B; the response returns through the same endpoint before the deadline in this illustrative example."
+      "takeaway": "Reduce dependency on 1 Provider. The same model/prompt request moves from failed Provider A to compatible Provider B and returns through the same endpoint."
     },
     {
       "slide": 5,
@@ -110,7 +110,8 @@
     "At user request, the stats slide shows only the data-as-shown date. Refresh timestamp, CC BY attribution and metric-methodology lines remain in source metadata, not on the slide; the orphaned asterisk is removed.",
     "Storyline eyebrows are exactly Problem, Solution or Action. The first content slide uses a descriptive headline instead of repeating Problem. Network stats supports Solution; the final Action slide retains three concrete actions.",
     "Brand audit corrects token colors, round-dot rails, button components, radii, cover punctuation/tracking, night ant lighting and figure shape. Content, models, prices, dates, 2am example and three closing actions remain approved.",
-    "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story."
+    "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story.",
+    "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The existing compatibility/capacity qualification remains on the left."
   ],
   "prices": [
     {

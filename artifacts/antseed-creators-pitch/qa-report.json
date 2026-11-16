@@ -1,5 +1,5 @@
 {
-  "revision": "Slide 4 replaces the multi-model fanout with one matching request/failure/reroute/response flow.",
+  "revision": "Slide 4 adds the exact provider-dependency statement and removes the illustrative-flow caption.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -53,9 +53,10 @@
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
     "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
     "Exact green/body/night token colors, 11px card and 10px button radii, H1 punctuation, font weights and night character filters verified in computed styles.",
-    "Slide 4 text and visual follow one request to failed Provider A, automatic retry through compatible Provider B, then response through the same endpoint. No multi-model fanout or progress bars remain."
+    "Slide 4 text and visual follow one request to failed Provider A, automatic retry through compatible Provider B, then response through the same endpoint. No multi-model fanout or progress bars remain.",
+    "Exact Reduce dependency on 1 Provider statement present; requested illustrative-flow caption absent in both HTML and PDF."
   ],
-  "visual_review": "All seven PDF pages rendered; updated slide 4 inspected at full size in HTML/PDF and at mobile widths. Eight-width/56-slide checks and component/navigation checks passed.",
+  "visual_review": "Updated slide 4 inspected in desktop/mobile HTML and PDF; seven-page contact sheet reviewed. 56 viewport checks and component/navigation checks passed.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
