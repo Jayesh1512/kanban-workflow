@@ -1,0 +1,179 @@
+{
+  "brief": {
+    "audience": "Top creator with a team, daily output and deadline pressure",
+    "arc": "Tension → Shift → Reward → Close",
+    "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
+    "source_reference": "Antseed - Creators Pitch.pdf / .pptx",
+    "date": "2026-11-16",
+    "slide_count": 7
+  },
+  "slides": [
+    {
+      "slide": 1,
+      "headline": "Your limit is not your talent.",
+      "outline_section": 1,
+      "reference_pages": [
+        1
+      ],
+      "qualification": null
+    },
+    {
+      "slide": 2,
+      "headline": "Problem",
+      "outline_section": [
+        1,
+        2
+      ],
+      "reference_pages": [
+        1,
+        4
+      ],
+      "qualification": null
+    },
+    {
+      "slide": 3,
+      "headline": "Every model. Room to iterate.",
+      "outline_section": [
+        3,
+        6
+      ],
+      "reference_pages": [
+        2,
+        3
+      ],
+      "qualification": "60+ video and 35+ image models. Four USD price examples retained from the source: MiniMax H3, Veo 3.1 Fast, GPT Image 2 and ElevenLabs Turbo. Not live quotes; provider configuration and model availability vary."
+    },
+    {
+      "slide": 4,
+      "headline": "One key. Mix any model.",
+      "outline_section": [
+        4,
+        5
+      ],
+      "reference_pages": [
+        2,
+        4
+      ],
+      "qualification": "A conceptual shared workspace, not measured live rendering progress. Provider failover depends on compatible availability; limits still apply."
+    },
+    {
+      "slide": 5,
+      "headline": "Your team. One bill. Total control.",
+      "outline_section": 7,
+      "reference_pages": [
+        4
+      ],
+      "qualification": "Antseed Gateway manages per-editor/project keys, budgets, caps and usage. Gateway docs button links to the existing official Gateway documentation."
+    },
+    {
+      "slide": 6,
+      "headline": "The network, in numbers.",
+      "source": "User-supplied AntSeedStats screenshot, image_d4761c13-d453-4ed1-8926-e1effb7ef44d",
+      "snapshot_date": "2026-11-13",
+      "metrics": {
+        "Models": "920",
+        "Providers, all time": "269",
+        "Total active users": "24,610",
+        "Tokens consumed": "825.8B"
+      },
+      "qualification": "Historical snapshot supplied by the user, not a fresh data fetch. Active-user window is unspecified. AntSeedStats attribution and CC BY 4.0 retained."
+    },
+    {
+      "slide": 7,
+      "headline": "Your shot. Live. Compare the result and bill.",
+      "outline_section": [
+        8,
+        9
+      ],
+      "reference_pages": [
+        5,
+        6,
+        7
+      ],
+      "qualification": "Live-shot invitation and three next steps stay primary. A small rewards card mentions eligible usage, referrals and agreed launch/featured support, subject to program terms and eligibility."
+    }
+  ],
+  "editorial_decisions": [
+    "Added an Antseed creator home slide based on the live vision-deck cover.",
+    "Problem is the title of the first content slide. Multiple subscriptions, bills and logins replace Eight. A single-line Antseed description is included.",
+    "The model offer returns to three illustrated Video/Image/Voice cards. Four price examples are shown; the full eight-row table is intentionally omitted at the user’s request.",
+    "The mixed-model workflow joins the 2am technical slide. One shared key fans out to five unnumbered model lanes with aligned progress bars; no sequential arrows, step numbers or simultaneous/parallel claim. The slide page numeral is also omitted.",
+    "Deck remains seven slides after adding the cover and combining the workflow.",
+    "35+ image models retained from the user correction.",
+    "All PDF, offline HTML, source ZIP and Vercel exports are regenerated together.",
+    "The team-operations slide explicitly attributes its controls to Antseed Gateway and adds a Gateway docs button.",
+    "AntSeedStats is the second-last slide, showing the four supplied historical values and the 13 November 2026 snapshot date. No current retrieval date or fresh live values are claimed.",
+    "The standalone rewards slide is replaced by the stats page; rewards move into a modest supporting card on the final live-shot/next-action slide. The deck remains seven slides."
+  ],
+  "prices": [
+    {
+      "model": "Wan 3.0",
+      "rate": "$0.045",
+      "unit": "/s"
+    },
+    {
+      "model": "Kling V3 Pro",
+      "rate": "$0.068",
+      "unit": "/s"
+    },
+    {
+      "model": "Veo 3.1 Fast",
+      "rate": "$0.061",
+      "unit": "/s"
+    },
+    {
+      "model": "Seedance 2.5",
+      "rate": "from $0.047",
+      "unit": "/s"
+    },
+    {
+      "model": "MiniMax H3",
+      "rate": "$0.011",
+      "unit": "/s"
+    },
+    {
+      "model": "GPT Image 2",
+      "rate": "$0.003",
+      "unit": "/image"
+    },
+    {
+      "model": "Nano Banana Pro",
+      "rate": "$0.027",
+      "unit": "/image"
+    },
+    {
+      "model": "ElevenLabs Turbo",
+      "rate": "$31.25",
+      "unit": "/1M chars"
+    }
+  ],
+  "displayed_prices": [
+    {
+      "model": "Veo 3.1 Fast",
+      "rate": "$0.061",
+      "unit": "/s"
+    },
+    {
+      "model": "MiniMax H3",
+      "rate": "$0.011",
+      "unit": "/s"
+    },
+    {
+      "model": "GPT Image 2",
+      "rate": "$0.003",
+      "unit": "/image"
+    },
+    {
+      "model": "ElevenLabs Turbo",
+      "rate": "$31.25",
+      "unit": "/1M chars"
+    }
+  ],
+  "gateway_documentation": {
+    "url": "https://antseed.com/docs/gateway/",
+    "title": "Gateway and console | Antseed",
+    "verified_date": "2026-11-16",
+    "supports": "Per-person/app keys, per-request budgets and routing policies, and usage/spend views in the Gateway Console."
+  },
+  "stats_screenshot_sha256": "4607b5d06e6216a2258ac00873f8a9ed6f33b802c2ac2efcc4a784a847788ae5"
+}

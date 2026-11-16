@@ -1,0 +1,100 @@
+{
+  "authority": "Existing Antseed Creators Pitch PDF/PPTX and brand font bundle; visual adaptation for revised 7-slide content.",
+  "canvas": [
+    1280,
+    720
+  ],
+  "pdf_points": [
+    960,
+    540
+  ],
+  "fonts": {
+    "heading": "AntseedGeistPixelGrid-Regular.ttf / 34px / 36px",
+    "item_heading": "AntseedGeistPixelRound-Regular.ttf / 24px / 32px",
+    "body": "Geist-Regular.ttf / 16px",
+    "label": "Geist-Regular.ttf / 13px",
+    "mono": "GeistMono-Regular.ttf",
+    "cover": "GeistPixel-VariableFont_ELSH.ttf, ELSH 11"
+  },
+  "colors": {
+    "primary": "#30382c",
+    "secondary": "#929292",
+    "green": "#507929",
+    "muted": "#66746b"
+  },
+  "measurements": {
+    "outer_frame": 16,
+    "left_rail": 80,
+    "right_rail": 1200,
+    "source_panel": [
+      714.67,
+      40,
+      525.33,
+      640
+    ]
+  },
+  "assets": "Unchanged text-free illustrations extracted from native supplied PPTX, re-encoded WebP. Native text overlays; no source text flattened.",
+  "masters": [
+    "vision-deck centered meadow home",
+    "Problem / four creator bottlenecks / watercolor panel",
+    "three illustrated Video Image Voice cards with selected rates",
+    "shared 2am night workspace / five model lanes",
+    "three-column studio operations / Gateway line and CTA / painted strip",
+    "dark AntSeedStats four-figure snapshot / night meadow",
+    "three-step live-shot close / small supporting rewards card"
+  ],
+  "adaptations": [
+    "Creator cover copy follows the existing thesis; geometry and current assets match the live vision cover.",
+    "Original illustrated catalog-card art is reused inside taller cards to make room for selected source prices.",
+    "A single 2am clock and shared API-key fanout replace the numbered request-flow terminal and standalone five-step workflow. Static progress bars illustrate active model jobs without claiming measured activity.",
+    "Night source master and source font roles retained. Mobile reflows cards and the shared workspace.",
+    "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot. The rewards card uses 15px Geist heading and no lead $ANTS figure to stay secondary."
+  ],
+  "cover_reference": {
+    "url": "https://antseed-vision-deck.vercel.app",
+    "art_inset": 16,
+    "logo": [
+      32,
+      32,
+      112,
+      56
+    ],
+    "copy_top": 86,
+    "heading": "46px / 48px, ELSH 11, -.04em tracking, .82 opacity",
+    "mascots": {
+      "phone": [
+        448,
+        526,
+        104,
+        158
+      ],
+      "carrier": [
+        648,
+        482,
+        116,
+        196
+      ]
+    },
+    "assets": "Unchanged current live reference meadow, phone/carrier mascots and lockup."
+  },
+  "stats_reference": {
+    "source": "image_d4761c13-d453-4ed1-8926-e1effb7ef44d",
+    "board": [
+      1280,
+      720
+    ],
+    "left_art": [
+      18,
+      22,
+      552,
+      656
+    ],
+    "copy": [
+      628,
+      132,
+      572
+    ],
+    "metrics": "Native 2\u00d72 figures, 36px Pixel values, dotted top rules",
+    "snapshot_date": "2026-11-13"
+  }
+}
