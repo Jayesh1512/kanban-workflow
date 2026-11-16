@@ -89,3 +89,5 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 .failover-flow figcaption strong{font:500 18px/24px Geist}.failover-flow figcaption>span{font:400 13px/20px Geist}
 .icon-lock{--icon:url(assets/pixel-lock.svg)}
 @media screen and (max-width:760px){.close-call .network-claim{position:relative;inset:auto;width:auto;margin:0;font-size:18px;line-height:27px}.failover-flow figcaption{gap:6px 16px}}
+
+.close-call h2 span{display:inline}

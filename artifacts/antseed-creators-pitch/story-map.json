@@ -86,7 +86,7 @@
     },
     {
       "slide": 7,
-      "headline": "Your shot. Live. Book a call.",
+      "headline": "Your shot. Live.",
       "outline_section": [
         8,
         9
@@ -116,7 +116,8 @@
     "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger.",
     "The model-access slide\u2019s takeaway and price/availability notes are removed at the user\u2019s request. Four selected source-price examples remain; historical pricing and availability qualifications remain in this source ledger.",
     "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Render using Antseed and compare the result and bill, replacing the render-together sentence.",
-    "Removed closing demo intro and promoted the provider-network sentence to 18px/500. Added lower-price language to the model intro. Slide 4 replaces clock readings with deadline pressure and adds the narrowly scoped privacy statement, Antseed does not store your prompts."
+    "Removed closing demo intro and promoted the provider-network sentence to 18px/500. Added lower-price language to the model intro. Slide 4 replaces clock readings with deadline pressure and adds the narrowly scoped privacy statement, Antseed does not store your prompts.",
+    "Removed Book a call from the closing title; the title is Your shot. Live., with the existing Book a Call button retained."
   ],
   "prices": [
     {
