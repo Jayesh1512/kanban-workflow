@@ -44,7 +44,7 @@
       ],
       "qualification": "60+ video and 35+ image models. Four USD price examples retained from the source: MiniMax H3, Veo 3.1 Fast, GPT Image 2 and ElevenLabs Turbo. Not live quotes; provider configuration and model availability vary.",
       "takeaway": "For a 2am submission, choose video, image and voice models for every asset in the cut.",
-      "intro": "Antseed brings video, image and voice models together through one API key."
+      "intro": "Antseed brings video, image and voice models together through one API key at lower prices."
     },
     {
       "slide": 4,
@@ -57,8 +57,8 @@
         2,
         4
       ],
-      "qualification": "Illustrative 01:48 example, due at 02:00. Provider A and B are conceptual routes for one Veo request, not measured traffic. Compatible provider availability, capacity and limits apply.",
-      "takeaway": "Reduce dependency on 1 Provider. The same model/prompt request moves from failed Provider A to compatible Provider B and returns through the same endpoint."
+      "qualification": "Illustrative single-request failover scenario. Compatible-provider availability, capacity and limits apply. Privacy statement concerns Antseed storage, not independent providers or gateway operators.",
+      "takeaway": "When a deadline is close and the hero shot is missing, reroute the same failed request to another compatible provider. Antseed does not centrally store prompts."
     },
     {
       "slide": 5,
@@ -115,7 +115,8 @@
     "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The compatibility/capacity qualification is retained in source metadata.",
     "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger.",
     "The model-access slide\u2019s takeaway and price/availability notes are removed at the user\u2019s request. Four selected source-price examples remain; historical pricing and availability qualifications remain in this source ledger.",
-    "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Render using Antseed and compare the result and bill, replacing the render-together sentence."
+    "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Render using Antseed and compare the result and bill, replacing the render-together sentence.",
+    "Removed closing demo intro and promoted the provider-network sentence to 18px/500. Added lower-price language to the model intro. Slide 4 replaces clock readings with deadline pressure and adds the narrowly scoped privacy statement, Antseed does not store your prompts."
   ],
   "prices": [
     {
@@ -216,5 +217,17 @@
       ],
       "stage": "Action"
     }
-  ]
+  ],
+  "claim_sources": {
+    "lower_prices": {
+      "url": "https://antseed.com/",
+      "verified_date": "2026-11-16",
+      "supports": "Official product one-liner explicitly offers models at lower prices; no percentage or universal best-price guarantee added."
+    },
+    "prompt_storage": {
+      "url": "https://antseed.com/privacy-policy/",
+      "verified_date": "2026-11-16",
+      "supports": "No Antseed server holds prompts, chats, files or keys. Data stays on the device or user-operated gateway; the chosen provider sees its request."
+    }
+  }
 }

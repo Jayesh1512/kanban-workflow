@@ -83,3 +83,9 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 .model-intro{position:absolute;left:80px;top:192px;width:1120px;font:400 16px/24px Geist;color:var(--color-text-body)}
 .cards-offer .model-cards{top:240px}
 @media screen and (max-width:760px){.model-intro{position:relative;inset:auto;width:auto;margin:0 0 28px}.cards-offer .model-cards{top:auto}}
+
+/* Deadline pressure and privacy, with one clear closing claim. */
+.close-call .network-claim{top:208px;width:1100px;font:500 18px/27px Geist;color:var(--color-text)}
+.failover-flow figcaption strong{font:500 18px/24px Geist}.failover-flow figcaption>span{font:400 13px/20px Geist}
+.icon-lock{--icon:url(assets/pixel-lock.svg)}
+@media screen and (max-width:760px){.close-call .network-claim{position:relative;inset:auto;width:auto;margin:0;font-size:18px;line-height:27px}.failover-flow figcaption{gap:6px 16px}}

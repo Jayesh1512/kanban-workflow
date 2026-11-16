@@ -134,7 +134,7 @@
       "slide": 3,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nThe cut needs more\nthan one model.\n\nAntseed brings video, image and voice models together through one API key.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n03",
+      "text": "Solution\n\nThe cut needs more\nthan one model.\n\nAntseed brings video, image and voice models together through one API key at lower prices.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n03",
       "findings": [
         {
           "label": "The cut needs morethan one model.",
@@ -152,7 +152,7 @@
       "slide": 4,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour edit is due at 2am.\nA failed provider triggers another route for the same request.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nBring the response back into your edit\n\n01:48\nSubmission due at 02:00\nYour request\n\nVeo · your hero shot\n\n↓\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n↓\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt · compatible provider\n\n↓\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nReduce dependency on 1 Provider",
+      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour 2am deadline is close. The hero shot is missing.\nAntseed reroutes a failed request so you can keep editing.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nPrivacy: Antseed does not store your prompts\n\nMinutes to deliver.\nNo time to restart.\nYour request\n\nVeo · your hero shot\n\n↓\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n↓\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt · compatible provider\n\n↓\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nReduce dependency on 1 Provider",
       "findings": [
         {
           "label": "A provider drops. Your request reroutes.",
@@ -206,7 +206,7 @@
       "slide": 7,
       "width": 1280,
       "height": 720,
-      "text": "Action\n\nYour shot. Live.\nBook a call.\n\nBring a shot from your next project. Render using Antseed and compare the result and bill.\n\nBuilt on Antseed’s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nRender using Antseed\n\nSee the output.\nCompare the usage bill.\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nCreator rewards\n\nEligible usage earns $ANTS; referrals can add rewards.\n\nBook a Call\n07",
+      "text": "Action\n\nYour shot. Live.\nBook a call.\n\nBuilt on Antseed’s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nRender using Antseed\n\nSee the output.\nCompare the usage bill.\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nCreator rewards\n\nEligible usage earns $ANTS; referrals can add rewards.\n\nBook a Call\n07",
       "findings": [
         {
           "label": "Your shot. Live.Book a call.",

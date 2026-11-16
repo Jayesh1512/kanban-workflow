@@ -66,7 +66,8 @@
     "Compact 34px/36px section titles and 46px/48px cover retained for PDF fidelity. Storyline labels are short non-link labels, not documentation-link eyebrows.",
     "User-requested visible stats-footer removal retained; attribution is in HTML/PDF metadata, the source ledger and this audit.",
     "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface.",
-    "Model-access intro sits at y192; cards move to y240 with their existing sizes and artwork. Mobile intro reflows above stacked cards."
+    "Model-access intro sits at y192; cards move to y240 with their existing sizes and artwork. Mobile intro reflows above stacked cards.",
+    "Closing provider-network claim replaces the removed demo intro, using 18px/27px Geist 500 at y208. Slide 4 diagram header describes deadline pressure in plain language rather than clock readings; a lock icon marks the privacy feature."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",

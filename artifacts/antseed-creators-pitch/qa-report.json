@@ -1,5 +1,5 @@
 {
-  "revision": "Added one-line Antseed intro to model-access slide and revised the closing render-and-compare sentence.",
+  "revision": "Closing intro removed/network statement emphasized; model intro mentions lower prices; failover framed as deadline pressure with a source-verified privacy point.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -57,9 +57,10 @@
     "Exact Reduce dependency on 1 Provider statement present; requested illustrative-flow caption absent in both HTML and PDF.",
     "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent.",
     "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained.",
-    "Model-access Antseed intro present above cards; closing sentence uses Render using Antseed and compare the result and bill."
+    "Model-access Antseed intro present above cards; closing sentence uses Render using Antseed and compare the result and bill.",
+    "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim."
   ],
-  "visual_review": "Revised model-access and closing slides checked in HTML/PDF; focused responsive checks at 1280, 390 and 320px passed. Seven-page PDF contact sheet reviewed.",
+  "visual_review": "Slides 3, 4 and 7 inspected in desktop/mobile HTML and final PDF. Nine focused checks at 1280, 390 and 320px passed. Seven-page PDF contact sheet reviewed.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
