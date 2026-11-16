@@ -1,5 +1,5 @@
 {
-  "revision": "Cover uses a general product title: One key. Every creative possibility.",
+  "revision": "Storyline labels simplified to Problem, Solution, Action; the Problem page now has a descriptive two-line headline.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -44,11 +44,11 @@
     "No Antseed one-line description on the Problem slide",
     "No watercolor image or mobile watercolor pseudo-element on slide 4",
     "Stats retain four metric categories and retain the source snapshot date",
-    "Problem, Solution, Proof and Next step labels present",
+    "Only Problem, Solution and Action storyline labels present",
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
     "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages."
   ],
-  "visual_review": "New general cover reviewed in desktop/mobile HTML and rendered PDF. Seven-page PDF contact sheet reviewed; 28 offline viewport/navigation checks passed.",
-  "font_metric_warnings": 13
+  "visual_review": "Problem headline and all simplified labels inspected in HTML and rendered PDF. Seven-page PDF contact sheet reviewed; 28 offline viewport/navigation checks passed.",
+  "font_metric_warnings": 14
 }

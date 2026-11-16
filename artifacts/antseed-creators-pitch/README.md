@@ -1,14 +1,14 @@
 # Antseed for creators
 
-Seven-slide pitch with a clear Problem → Solution → Proof → CTA arc.
+Seven-slide pitch with a clear Problem → Solution → Action arc.
 
 1. Introduction: One key. Every creative possibility. Video, image and voice models for creators.
-2. Problem: capacity, subscriptions, team access and integrations.
+2. Problem: Your ideas move fast. Your tools make you wait — capacity, subscriptions, team access and integrations.
 3. Due at 2am: access to multiple models for the hero shot, b-roll, thumbnail and voiceover — three illustrated cards with selected source prices.
 4. Due at 2am: reroute a failed provider request while other jobs continue. The plain dark 01:48 workspace shows a 02:00 submission deadline; the laptop ant is retained.
 5. Due at 2am: simple access through one Antseed Gateway key and endpoint, with per-editor access, shared billing and a docs button.
-6. Proof: current AntSeedStats snapshot.
-7. CTA: bring a shot, render it together, put it to work — Book a Call. Rewards are a small supporting card.
+6. Solution: current AntSeedStats network snapshot.
+7. Action: bring a shot, render it together, put it to work — Book a Call. Rewards are a small supporting card.
 
 [Live deck](https://antseed-creators-pitch.vercel.app/) · [Book a Call](https://calendly.com/ravi-antseed)
 

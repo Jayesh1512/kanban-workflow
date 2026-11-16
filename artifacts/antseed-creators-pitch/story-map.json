@@ -1,7 +1,7 @@
 {
   "brief": {
     "audience": "Top creator with a team, daily output and deadline pressure",
-    "arc": "Problem \u2192 Solution \u2192 Proof \u2192 CTA",
+    "arc": "Problem \u2192 Solution \u2192 Action",
     "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
     "source_reference": "Antseed - Creators Pitch.pdf / .pptx",
     "date": "2026-11-16",
@@ -20,7 +20,7 @@
     },
     {
       "slide": 2,
-      "headline": "Problem",
+      "headline": "Your ideas move fast. Your tools make you wait.",
       "outline_section": [
         1,
         2
@@ -107,7 +107,8 @@
     "Closing action is Book a Call at https://calendly.com/ravi-antseed. Get your key, Gateway docs and the raw antseed.com link are removed from the closing slide. Gateway docs remains on the team-control slide.",
     "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user\u2019s request.",
     "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing.",
-    "At user request, the stats slide shows only the data-as-shown date. Refresh timestamp, CC BY attribution and metric-methodology lines remain in source metadata, not on the slide; the orphaned asterisk is removed."
+    "At user request, the stats slide shows only the data-as-shown date. Refresh timestamp, CC BY attribution and metric-methodology lines remain in source metadata, not on the slide; the orphaned asterisk is removed.",
+    "Storyline eyebrows are exactly Problem, Solution or Action. The first content slide uses a descriptive headline instead of repeating Problem. Network stats supports Solution; the final Action slide retains three concrete actions."
   ],
   "prices": [
     {
@@ -197,21 +198,16 @@
       "slides": [
         3,
         4,
-        5
+        5,
+        6
       ],
       "stage": "Solution"
     },
     {
       "slides": [
-        6
-      ],
-      "stage": "Proof"
-    },
-    {
-      "slides": [
         7
       ],
-      "stage": "CTA"
+      "stage": "Action"
     }
   ]
 }

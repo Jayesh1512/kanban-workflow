@@ -2,7 +2,7 @@
 
 ## Creators pitch
 
-Seven slides with a clear **Problem → Solution → Proof → CTA** storyline. The cover introduces Antseed with “One key. Every creative possibility.” and a video/image/voice descriptor. The three solution pages follow one submission due at **2am**: access multiple models for each asset, reroute a failed provider request while other jobs continue, and connect through one Antseed Gateway key. The plain dark workspace shows 01:48 with a 02:00 deadline. Current AntSeedStats and a demo invitation with one **Book a Call** button close the story. Rewards remain a small supporting card.
+Seven slides with a clear **Problem → Solution → Action** storyline. The cover introduces Antseed with “One key. Every creative possibility.” and a video/image/voice descriptor. Storyline labels use only Problem, Solution and Action. The Problem page headline is “Your ideas move fast. Your tools make you wait.” The three core solution pages follow one submission due at **2am**: access multiple models for each asset, reroute a failed provider request while other jobs continue, and connect through one Antseed Gateway key. The plain dark workspace shows 01:48 with a 02:00 deadline. Current AntSeedStats and a demo invitation with one **Book a Call** button close the story. Rewards remain a small supporting card.
 
 - [Live presentation](https://antseed-creators-pitch.vercel.app/)
 - [Offline HTML](Antseed-Creators-Pitch-Updated.html)
