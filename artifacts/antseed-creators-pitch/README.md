@@ -2,7 +2,7 @@
 
 Seven-slide pitch with a clear Problem → Solution → Proof → CTA arc.
 
-1. Introduction: your limit is not your talent.
+1. Introduction: your deadline is 2am; AI tools hold up the work through credits, provider failures and tool switching.
 2. Problem: capacity, subscriptions, team access and integrations.
 3. Due at 2am: access to multiple models for the hero shot, b-roll, thumbnail and voiceover — three illustrated cards with selected source prices.
 4. Due at 2am: reroute a failed provider request while other jobs continue. The plain dark 01:48 workspace shows a 02:00 submission deadline; the laptop ant is retained.

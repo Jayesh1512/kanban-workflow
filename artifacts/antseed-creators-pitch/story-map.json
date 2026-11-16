@@ -10,12 +10,13 @@
   "slides": [
     {
       "slide": 1,
-      "headline": "Your limit is not your talent.",
+      "headline": "Your deadline is 2am. Your AI tools are holding you up.",
       "outline_section": 1,
       "reference_pages": [
         1
       ],
-      "qualification": null
+      "qualification": null,
+      "takeaway": "Open with the deadline and concrete bottlenecks: credits, provider failure and tool switching."
     },
     {
       "slide": 2,
@@ -98,7 +99,7 @@
     }
   ],
   "editorial_decisions": [
-    "Cover retains the talent thesis; the Problem slide contains only bottlenecks, with its Antseed description removed.",
+    "Cover states the 2am deadline and AI-tool bottlenecks directly. The Problem slide expands them before the three deadline-led solution slides.",
     "Slides 3\u20135 share one scenario: submission due at 2am. The requirements are model access, compatible-provider rerouting and one-key access through Antseed Gateway.",
     "Three illustrated model cards retain four historical source-pitch price examples and the user-approved 35+ image-model label.",
     "Slide 4 replaces the watercolor master with native dark framing, icons and the unchanged model-usage chart. The original laptop ant is retained at x1084/y490 with height164. No watercolor appears in mobile mode either.",

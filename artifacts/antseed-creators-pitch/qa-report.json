@@ -1,5 +1,5 @@
 {
-  "revision": "Three solution slides reframed around a 2am submission: multiple models, compatible-provider rerouting and one-key Gateway access.",
+  "revision": "Cover now states the 2am deadline and AI-tool bottlenecks; the three solution pages retain the connected deadline story.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -45,8 +45,9 @@
     "No watercolor image or mobile watercolor pseudo-element on slide 4",
     "Stats retain four metric categories and include actual source/read dates",
     "Problem, Solution, Proof and Next step labels present",
-    "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed."
+    "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
+    "Cover directly states the 2am deadline, exhausted credits, failed providers and tool switching."
   ],
-  "visual_review": "All seven PDF pages rendered and contact sheet reviewed. Revised solution slides reviewed at full size; desktop and mobile HTML reviewed. Offline 28-slide viewport checks and keyboard navigation passed.",
+  "visual_review": "Seven-page PDF rerendered and reviewed; revised cover reviewed at full-size desktop and mobile, with 28 offline viewport/navigation checks passing.",
   "font_metric_warnings": 13
 }
