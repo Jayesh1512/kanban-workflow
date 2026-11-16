@@ -121,7 +121,8 @@
     "Stats-slide storyline label changed from Solution to Network Stats at the user\u2019s request.",
     "The Gateway overview card explicitly reads One bill for the entire team.",
     "Shortened the Gateway overview-card heading to One team. One bill. to align with its neighboring cards.",
-    "Closing storyline label changed from Action to Your Turn at the user\u2019s request."
+    "Closing storyline label changed from Action to Your Turn at the user\u2019s request.",
+    "Model slide title rewritten from The cut needs more than one model to The whole cut. Every model. so the two-tone lines break on sentence boundaries; the definition line is reused from the vision deck."
   ],
   "prices": [
     {

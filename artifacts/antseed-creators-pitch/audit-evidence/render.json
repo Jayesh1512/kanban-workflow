@@ -33,13 +33,13 @@
     },
     {
       "slide": 3,
-      "label": "The cut needs morethan one model.",
+      "label": "The whole cut.Every model.",
       "outside": false,
       "textOverflow": true
     },
     {
       "slide": 3,
-      "label": "than one model.",
+      "label": "Every model.",
       "outside": false,
       "textOverflow": true
     },
@@ -82,6 +82,12 @@
     {
       "slide": 7,
       "label": "Your shot. Live.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 7,
+      "label": "Live.",
       "outside": false,
       "textOverflow": true
     }
@@ -128,15 +134,15 @@
       "slide": 3,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nThe cut needs more\nthan one model.\n\nAntseed brings video, image and voice models together through one API key at lower prices.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n03",
+      "text": "Solution\n\nThe whole cut.\nEvery model.\n\nAntseed connects your apps and agents to AI services through a peer-to-peer network.\nOne key for video, image and voice models, at lower prices.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n03",
       "findings": [
         {
-          "label": "The cut needs morethan one model.",
+          "label": "The whole cut.Every model.",
           "outside": false,
           "textOverflow": true
         },
         {
-          "label": "than one model.",
+          "label": "Every model.",
           "outside": false,
           "textOverflow": true
         }
@@ -182,7 +188,7 @@
       "slide": 6,
       "width": 1280,
       "height": 720,
-      "text": "Network Stats\n\nThe network,\nin numbers.\nModels\n942\nProviders, all time\n274\nTotal active users\n28,254\nTokens consumed\n905.05B\n\nData as shown: 16 November 2026 · 13:30 UTC\n\nView AntSeedStats\n↗\n06",
+      "text": "Network Stats\n\nThe network,\nin numbers.\nModels\n942\nProviders, all time\n274\nTotal active users\n28,254\nTokens consumed\n905.05B\n\nSource: AntSeedStats · CC BY 4.0 · 16 November 2026 · 13:30 UTC\n\nView AntSeedStats\n↗\n06",
       "findings": [
         {
           "label": "The network,in numbers.",
@@ -200,10 +206,15 @@
       "slide": 7,
       "width": 1280,
       "height": 720,
-      "text": "Your Turn\n\nYour shot. Live.\n\nBuilt on Antseed’s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nRender using Antseed\n\nSee the output.\nCompare the usage bill.\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nCreator rewards\n\nEligible usage earns $ANTS; referrals can add rewards.\n\nBook a Call\n07",
+      "text": "Your turn\n\nYour shot.\nLive.\n\nBuilt on Antseed’s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nRender using Antseed\n\nSee the output.\nCompare the usage bill.\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nCreator rewards\n\nEligible usage earns $ANTS; referrals can add rewards.\n\nBook a call\n07",
       "findings": [
         {
           "label": "Your shot. Live.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "Live.",
           "outside": false,
           "textOverflow": true
         }
@@ -234,7 +245,7 @@
     {
       "family": "Round",
       "weight": "normal",
-      "status": "loaded"
+      "status": "unloaded"
     },
     {
       "family": "Mono",
@@ -243,6 +254,11 @@
     },
     {
       "family": "CoverPixel",
+      "weight": "normal",
+      "status": "loaded"
+    },
+    {
+      "family": "PixelVar",
       "weight": "normal",
       "status": "loaded"
     }

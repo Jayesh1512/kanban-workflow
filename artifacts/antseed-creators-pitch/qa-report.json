@@ -1,5 +1,5 @@
 {
-  "revision": "Gateway card shortened to One team. One bill.; closing label changed to Your Turn.",
+  "revision": "Slide 3 headline rewritten as The whole cut. Every model.; Antseed definition from the vision deck added above the model cards.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -57,14 +57,14 @@
     "Exact Reduce dependency on 1 Provider statement present; requested illustrative-flow caption absent in both HTML and PDF.",
     "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent.",
     "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained.",
-    "Model-access Antseed intro present above cards; closing sentence uses Render using Antseed and compare the result and bill.",
     "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim.",
     "Closing title is Your shot. Live.; Book a call title line absent, booking CTA and URL retained.",
     "Stats page label is Network Stats; snapshot values and date retained.",
     "Gateway overview card reads One bill for the entire team; source font width fits the desktop column.",
-    "Gateway card heading shortened to One team. One bill.; last-slide label reads Your Turn."
+    "Gateway card heading shortened to One team. One bill.; last-slide label reads Your Turn.",
+    "Model slide now leads with the vision-deck definition: Antseed connects apps and agents to AI services through a peer-to-peer network; a second line keeps one key and lower prices; slide title reads The whole cut. Every model."
   ],
-  "visual_review": "Revised Gateway and closing slides inspected in HTML/PDF; seven-page PDF contact sheet reviewed. Offline renderer reports no missing assets, font failures or browser errors.",
+  "visual_review": "Slide 3 re-checked at 1280x720 and mobile widths; the two-line title, two-line definition and three model cards sit clear of each other. Seven-page PDF contact sheet reviewed.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
