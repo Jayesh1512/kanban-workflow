@@ -1,5 +1,5 @@
 {
-  "authority": "Existing Antseed Creators Pitch PDF/PPTX and brand font bundle; visual adaptation for revised 7-slide content.",
+  "authority": "Current Antseed brand kit v1 (12 November 2026), checked 16 November 2026; measured Creators Pitch PDF/PPTX compositions and explicit user overrides.",
   "canvas": [
     1280,
     720
@@ -14,13 +14,21 @@
     "body": "Geist-Regular.ttf / 16px",
     "label": "Geist-Regular.ttf / 13px",
     "mono": "GeistMono-Regular.ttf",
-    "cover": "GeistPixel-VariableFont_ELSH.ttf, ELSH 11"
+    "cover": "GeistPixel-VariableFont_ELSH.ttf, ELSH 11",
+    "story_label": "Geist Pixel Round (ELSH20), 14px/24px; non-link PDF story label",
+    "figure": "Geist Pixel Round (ELSH20), 36px/44px, tabular"
   },
   "colors": {
     "primary": "#30382c",
     "secondary": "#929292",
-    "green": "#507929",
-    "muted": "#66746b"
+    "green": "#4f7a24",
+    "muted": "#66746b",
+    "body": "#56656f",
+    "night_text": "#eceee9",
+    "night_secondary": "#9ba49e",
+    "night_green": "#98c463",
+    "night_page": "#0f1312",
+    "night_rail": "#181d1b"
   },
   "measurements": {
     "outer_frame": 16,
@@ -31,7 +39,8 @@
       40,
       525.33,
       640
-    ]
+    ],
+    "dot_pitch": 8
   },
   "assets": "Unchanged text-free illustrations extracted from native supplied PPTX, re-encoded WebP. Native text overlays; no source text flattened.",
   "masters": [
@@ -52,7 +61,12 @@
     "Story-stage eyebrows use only Problem, Solution and Action. Network evidence supports the solution; the closing Action page keeps its three steps.",
     "Slide 4 uses native dark framing and an unchanged transparent ant asset instead of a watercolor background.",
     "The closing illustration is clipped independently of its old master so removed buttons do not leave empty baked backgrounds.",
-    "All three solution pages share a 2am submission deadline. The workflow shows 01:48 and an illustrative Provider A-to-B reroute; cards and Gateway keep their reference compositions."
+    "All three solution pages share a 2am submission deadline. The workflow shows 01:48 and an illustrative Provider A-to-B reroute; cards and Gateway keep their reference compositions.",
+    "Current kit tokens/components are bundled. Only the font URL in tokens.css is rebased for offline packaging.",
+    "16px margins use the kit\u2019s 2px/8px round-dot matrix and rails; dark pages use local theme variables so system theme cannot recolor the light slides.",
+    "Compact 34px/36px section titles and 46px/48px cover retained for PDF fidelity. Storyline labels are short non-link labels, not documentation-link eyebrows.",
+    "User-requested visible stats-footer removal retained; attribution is in HTML/PDF metadata, the source ledger and this audit.",
+    "The single creator-key fanout is an illustrative local workflow, not Antseed network topology or a Gateway product capture."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",

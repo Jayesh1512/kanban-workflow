@@ -1,0 +1,261 @@
+{
+  "source": "Antseed-Creators-Pitch-Updated.html",
+  "board": [
+    1280,
+    720
+  ],
+  "offline": true,
+  "errors": [],
+  "warnings": [
+    {
+      "slide": 1,
+      "label": "One key Every creative possibility",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 1,
+      "label": "Every creative possibility",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 2,
+      "label": "Your ideas move fast. Your tools make you wait.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 2,
+      "label": "Your tools make you wait.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 3,
+      "label": "The cut needs morethan one model.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 3,
+      "label": "than one model.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 4,
+      "label": "One provider fails.Find another route.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 4,
+      "label": "Find another route.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 5,
+      "label": "One key for the cut.Less setup. More time.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 5,
+      "label": "Less setup. More time.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 6,
+      "label": "The network,in numbers.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 6,
+      "label": "in numbers.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 7,
+      "label": "Your shot. Live.Book a call.",
+      "outside": false,
+      "textOverflow": true
+    },
+    {
+      "slide": 7,
+      "label": "Book a call.",
+      "outside": false,
+      "textOverflow": true
+    }
+  ],
+  "requests": [],
+  "slides": [
+    {
+      "slide": 1,
+      "width": 1280,
+      "height": 720,
+      "text": "Antseed for creators\n\nOne key\nEvery creative possibility\n\nVideo, image and voice models for creators.",
+      "findings": [
+        {
+          "label": "One key Every creative possibility",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "Every creative possibility",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    },
+    {
+      "slide": 2,
+      "width": 1280,
+      "height": 720,
+      "text": "Problem\n\nYour ideas move fast.\nYour tools make you wait.\nYou are not out of ideas.\n\nCredits, fast hours and queue time run out first.\n\nMultiple subscriptions. Multiple bills.\n\nMultiple logins between the idea and the final cut.\n\nYour team shares logins.\n\nYou see the cost after the work is done.\n\nA new model breaks the pipeline.\n\nAnother integration to rebuild before you can use it.\n\n02",
+      "findings": [
+        {
+          "label": "Your ideas move fast. Your tools make you wait.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "Your tools make you wait.",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    },
+    {
+      "slide": 3,
+      "width": 1280,
+      "height": 720,
+      "text": "Solution\n\nThe cut needs more\nthan one model.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n\nHero shot. B-roll. Thumbnail. Voiceover. Choose the model each needs.\n\nSource-pitch price examples in USD, not live quotes. Rates vary by provider and configuration.\nSame-day model access depends on provider listings and availability.\n\n03",
+      "findings": [
+        {
+          "label": "The cut needs morethan one model.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "than one model.",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    },
+    {
+      "slide": 4,
+      "width": 1280,
+      "height": 720,
+      "text": "Solution\n\nOne provider fails.\nFind another route.\n\nThe submission cannot wait for one provider.\nReroute a failed request and keep the edit moving.\n\nDetect a failed provider request\n\nReroute to a compatible provider\n\nKeep the other model jobs running\n\nUse the same endpoint for the next attempt\n\nFailover requires a compatible, available provider.\nCapacity and provider limits still apply.\n\n01:48 · due at 02:00\n\nOne key\nVeo\n\nHero shot · rerouted\n\nKling\n\nAction\n\nWan\n\nB-roll\n\nSeedream\n\nThumbnail\n\nElevenLabs\n\nVoiceover\n\nExample · Veo: provider A failed → B rendering",
+      "findings": [
+        {
+          "label": "One provider fails.Find another route.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "Find another route.",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    },
+    {
+      "slide": 5,
+      "width": 1280,
+      "height": 720,
+      "text": "Solution\n\nOne key for the cut.\nLess setup. More time.\n\nConnect once through the Antseed Gateway. Access video, image and voice models from one endpoint.\n\nConnect your workflow\n\nOne workflow key\n\nUse models across providers.\nKeep one integration for the whole cut.\n\nBring in the team\n\nAccess per editor\n\nIssue individual keys when needed.\nSet a budget for each editor.\n\nKeep the overview\n\nOne shared bill\n\nSee usage and spend together.\nKeep your choice of providers.\n\nGateway docs\n↗\n05",
+      "findings": [
+        {
+          "label": "One key for the cut.Less setup. More time.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "Less setup. More time.",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    },
+    {
+      "slide": 6,
+      "width": 1280,
+      "height": 720,
+      "text": "Solution\n\nThe network,\nin numbers.\nModels\n942\nProviders, all time\n274\nTotal active users\n28,254\nTokens consumed\n905.05B\n\nData as shown: 16 November 2026 · 13:30 UTC\n\nView AntSeedStats\n↗\n06",
+      "findings": [
+        {
+          "label": "The network,in numbers.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "in numbers.",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    },
+    {
+      "slide": 7,
+      "width": 1280,
+      "height": 720,
+      "text": "Action\n\nYour shot. Live.\nBook a call.\n\nBring a shot from your next project. We’ll render it together and compare the result and bill.\n\nBuilt on Antseed’s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nRender it with us\n\nSee the output.\nCompare the usage bill.\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nCreator rewards\n\nEligible usage earns $ANTS; referrals can add rewards.\n\nBook a Call\n07",
+      "findings": [
+        {
+          "label": "Your shot. Live.Book a call.",
+          "outside": false,
+          "textOverflow": true
+        },
+        {
+          "label": "Book a call.",
+          "outside": false,
+          "textOverflow": true
+        }
+      ]
+    }
+  ],
+  "fonts": [
+    {
+      "family": "Geist Pixel Var",
+      "weight": "400",
+      "status": "unloaded"
+    },
+    {
+      "family": "Geist",
+      "weight": "normal",
+      "status": "loaded"
+    },
+    {
+      "family": "Geist",
+      "weight": "500",
+      "status": "loaded"
+    },
+    {
+      "family": "Pixel",
+      "weight": "normal",
+      "status": "loaded"
+    },
+    {
+      "family": "Round",
+      "weight": "normal",
+      "status": "loaded"
+    },
+    {
+      "family": "Mono",
+      "weight": "normal",
+      "status": "loaded"
+    },
+    {
+      "family": "CoverPixel",
+      "weight": "normal",
+      "status": "loaded"
+    }
+  ]
+}

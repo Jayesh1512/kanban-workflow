@@ -1,5 +1,5 @@
 {
-  "revision": "Storyline labels simplified to Problem, Solution, Action; the Problem page now has a descriptive two-line headline.",
+  "revision": "Full brand/PDF audit: kit tokens and components applied, round-dot matrix/rails corrected, fonts/figures/night styling verified, navigation focus and mobile targets fixed.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -23,14 +23,18 @@
   "missing_assets_or_console_errors": [],
   "browser_checks": {
     "widths": [
-      1280,
+      1920,
       1366,
+      1280,
+      820,
+      760,
       390,
-      356
+      356,
+      320
     ],
-    "slide_checks": 28,
-    "keyboard": "Home, End, arrows and boundaries passed",
-    "mobile_end_checks": "Gateway, stats and booking links accessible above navigation.",
+    "slide_checks": 56,
+    "keyboard": "Home/End/arrows/Space on focused controls, boundaries and focus restoration passed",
+    "mobile_end_checks": "320px and 390px: workflow reroute caption, Gateway docs, stats and Book a Call accessible above controls.",
     "workflow_ant_coordinates": [
       1084,
       490,
@@ -47,8 +51,24 @@
     "Only Problem, Solution and Action storyline labels present",
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
-    "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages."
+    "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
+    "Exact green/body/night token colors, 11px card and 10px button radii, H1 punctuation, font weights and night character filters verified in computed styles."
   ],
-  "visual_review": "Problem headline and all simplified labels inspected in HTML and rendered PDF. Seven-page PDF contact sheet reviewed; 28 offline viewport/navigation checks passed.",
-  "font_metric_warnings": 14
+  "visual_review": "Every final PDF page rendered and reviewed at full size, with contact sheet and corresponding HTML reviewed. Approved PDF masters compared at 1280\u00d7720. Desktop and mobile story pages reviewed.",
+  "font_metric_warnings": 14,
+  "brand_review": {
+    "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
+    "version": "v1, 12 November 2026",
+    "checked_at": "2026-11-16T14:06:32Z",
+    "half": "Friendly, with technical precision in prices, workflow and network figures",
+    "reference": "Antseed - Creators Pitch.pdf",
+    "checklist_lines": 17,
+    "intentional_adaptations": [
+      "Compact reference type scale instead of website title sizes",
+      "Non-link Problem/Solution/Action labels instead of documentation eyebrows",
+      "User-requested plain workflow with unchanged ant position",
+      "Visible stats credit removed by explicit user request; credit retained in metadata/source",
+      "Authored day/night chapters; no whole-deck alternate theme claimed"
+    ]
+  }
 }

@@ -1,0 +1,83 @@
+{
+  "pages": [
+    {
+      "page": 1,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 100,
+      "links": []
+    },
+    {
+      "page": 2,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 380,
+      "links": []
+    },
+    {
+      "page": 3,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 606,
+      "links": []
+    },
+    {
+      "page": 4,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 547,
+      "links": []
+    },
+    {
+      "page": 5,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 473,
+      "links": [
+        "https://antseed.com/docs/gateway/"
+      ]
+    },
+    {
+      "page": 6,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 186,
+      "links": [
+        "https://antseedstats.com/"
+      ]
+    },
+    {
+      "page": 7,
+      "points": [
+        960.0,
+        540.0
+      ],
+      "selectable_text_chars": 473,
+      "links": [
+        "https://calendly.com/ravi-antseed"
+      ]
+    }
+  ],
+  "fonts": [
+    "",
+    "AAAAAA+Geist-Regular",
+    "CAAAAA+AntseedGeistPixelRound-Regular",
+    "DAAAAA+AntseedGeistPixelGrid-Regular",
+    "EAAAAA+Geist-Medium",
+    "FAAAAA+GeistMono-Regular"
+  ],
+  "metadata_credit": true,
+  "source_pdf_sha256": "52aaa124891ec2259f6b23e70d68aaaaa5837cd9b67d4fbc132c6d1c9921c68d"
+}

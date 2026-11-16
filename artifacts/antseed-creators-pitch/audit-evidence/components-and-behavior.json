@@ -1,0 +1,78 @@
+{
+  "contract": {
+    "slides": 7,
+    "labels": [
+      "Problem",
+      "Solution",
+      "Solution",
+      "Solution",
+      "Solution",
+      "Action"
+    ],
+    "coverStops": false,
+    "sectionStops": true,
+    "colors": {
+      "button": "rgb(79, 122, 36)",
+      "body": "rgb(86, 101, 111)",
+      "nightTitle": "rgb(155, 164, 158)",
+      "nightRail": "rgb(24, 29, 27)",
+      "nightGreen": "rgb(152, 196, 99)"
+    },
+    "nightFilters": [
+      "brightness(0.84) saturate(0.83) contrast(1.12)",
+      "brightness(0.84) saturate(0.83) contrast(1.12)"
+    ],
+    "figures": "Round, Geist, system-ui, sans-serif",
+    "cardRadius": "11px",
+    "buttonRadius": "10px",
+    "dotPitch": "8px 8px, auto",
+    "fonts": [
+      {
+        "family": "Geist Pixel Var",
+        "status": "unloaded"
+      },
+      {
+        "family": "Geist",
+        "status": "loaded"
+      },
+      {
+        "family": "Geist",
+        "status": "unloaded"
+      },
+      {
+        "family": "Pixel",
+        "status": "unloaded"
+      },
+      {
+        "family": "Round",
+        "status": "unloaded"
+      },
+      {
+        "family": "Mono",
+        "status": "loaded"
+      },
+      {
+        "family": "CoverPixel",
+        "status": "loaded"
+      }
+    ],
+    "fontWeights": [
+      "400",
+      "500"
+    ],
+    "links": [
+      "https://antseed.com/docs/gateway/",
+      "https://antseedstats.com/",
+      "https://calendly.com/ravi-antseed"
+    ],
+    "footer": "Data as shown: 16 November 2026 · 13:30 UTC",
+    "sourceMeta": "AntSeedStats data: CC BY 4.0. Read 16 November 2026 at 13:30 UTC. Roles may overlap; tokens include paid and free usage.",
+    "transparentAnt": true,
+    "closeActions": 3,
+    "nightPaintingRemoved": true,
+    "inlinedStyles": true
+  },
+  "requests": [],
+  "keyboard": "Space/Home/arrows/focus restoration passed",
+  "mobileEndAccess": "320 and 390px passed"
+}
