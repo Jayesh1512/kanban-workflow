@@ -1,5 +1,5 @@
 {
-  "revision": "Slide 3 headline rewritten as The whole cut. Every model.; Antseed definition from the vision deck added above the model cards.",
+  "revision": "Brand-compliance pass: Solid eyebrow/title/card patterns, sentence-case Your turn and Book a call, two-tone closing title, visible AntSeedStats credit.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -48,7 +48,7 @@
     "No Antseed one-line description on the Problem slide",
     "No watercolor image or mobile watercolor pseudo-element on slide 4",
     "Stats retain four metric categories and retain the source snapshot date",
-    "Problem, Solution, Network Stats and Your Turn labels match the user\u2019s latest instructions",
+    "Problem, Solution, Network Stats and Your turn labels match the guide, Solid reference and user\u2019s latest instructions",
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
     "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
@@ -58,26 +58,30 @@
     "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent.",
     "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained.",
     "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim.",
-    "Closing title is Your shot. Live.; Book a call title line absent, booking CTA and URL retained.",
+    "Closing title is Your shot. Live.; both tones render, the booking CTA says Book a call and the URL is retained.",
     "Stats page label is Network Stats; snapshot values and date retained.",
     "Gateway overview card reads One bill for the entire team; source font width fits the desktop column.",
-    "Gateway card heading shortened to One team. One bill.; last-slide label reads Your Turn.",
-    "Model slide now leads with the vision-deck definition: Antseed connects apps and agents to AI services through a peer-to-peer network; a second line keeps one key and lower prices; slide title reads The whole cut. Every model."
+    "Gateway card heading shortened to One team. One bill.; last-slide label reads Your turn.",
+    "Model slide now leads with the vision-deck definition: Antseed connects apps and agents to AI services through a peer-to-peer network; a second line keeps one key and lower prices; slide title reads The whole cut. Every model.",
+    "Stats slide visibly credits AntSeedStats under CC BY 4.0 with the read date and time.",
+    "Eyebrow labels use Geist 13/18 in the secondary text tone with the kit green dot; section titles use the Pixel ELSH40 axis and -.04em tracking.",
+    "Page numbers use Geist tabular figures; card titles use the Pixel ELSH20 axis; closing steps use the solid card pattern from the Solid reference.",
+    "Closing title is two-tone and ends with a period; the filled CTA is the only primary button on the closing slide."
   ],
-  "visual_review": "Slide 3 re-checked at 1280x720 and mobile widths; the two-line title, two-line definition and three model cards sit clear of each other. Seven-page PDF contact sheet reviewed.",
+  "visual_review": "Revised deck inspected as seven rendered PDF pages and at eight browser widths. Closing cards, eyebrow labels, title tones, page numbers and the visible stats credit were checked in HTML and PDF; the offline renderer reports no missing assets, font failures or browser errors.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
     "version": "v1, 12 November 2026",
-    "checked_at": "2026-11-16T14:06:32Z",
+    "checked_at": "2026-11-16T16:00:00Z",
     "half": "Friendly, with technical precision in prices, workflow and network figures",
-    "reference": "Antseed - Creators Pitch.pdf",
+    "reference": "Antseed - AI agents for neobanks (Solid case study).pdf, 15 pages; Antseed - Creators Pitch.pdf, 7 pages",
     "checklist_lines": 17,
     "intentional_adaptations": [
-      "Compact reference type scale instead of website title sizes",
-      "Non-link Problem/Solution/Action labels instead of documentation eyebrows",
+      "Compact 34/36 reference type scale instead of website title sizes",
+      "Non-link Problem, Solution and Network Stats labels instead of documentation eyebrows",
       "User-requested plain workflow with unchanged ant position",
-      "Visible stats credit removed by explicit user request; credit retained in metadata/source",
+      "Creator-specific copy retained inside the Solid reference's card, eyebrow and type system",
       "Authored day/night chapters; no whole-deck alternate theme claimed"
     ]
   }

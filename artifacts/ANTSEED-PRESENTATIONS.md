@@ -2,16 +2,16 @@
 
 ## Creators pitch
 
-Seven slides with a clear **Problem → Solution → Action** storyline. The cover introduces Antseed with “One key. Every creative possibility.” and a video/image/voice descriptor. Storyline labels use only Problem, Solution and Action. The Problem page headline is “Your ideas move fast. Your tools make you wait.” The three core solution pages follow one submission due at **2am**: access multiple models for each asset, reroute the same failed request from Provider A to compatible Provider B and return its response, and connect through one Antseed Gateway key. The plain dark workspace shows 01:48 with a 02:00 deadline. Current AntSeedStats and a demo invitation with one **Book a Call** button close the story. Rewards remain a small supporting card.
+Seven slides with a clear **Problem → Solution → Your turn** storyline. The cover introduces Antseed with “One key. Every creative possibility.” and a video/image/voice descriptor. Storyline labels use only Problem, Solution, Network Stats and Your turn. The Problem page headline is “Your ideas move fast. Your tools make you wait.” The three core solution pages follow one submission due at **2am**: access multiple models for each asset, reroute the same failed request from Provider A to compatible Provider B and return its response, and connect through one Antseed Gateway key. The plain dark workspace shows 01:48 with a 02:00 deadline. Current AntSeedStats and a demo invitation with one **Book a call** button close the story. Rewards remain a small supporting card.
 
 - [Live presentation](https://antseed-creators-pitch.vercel.app/)
 - [Offline HTML](Antseed-Creators-Pitch-Updated.html)
 - [PDF](Antseed-Creators-Pitch-Updated.pdf)
 - [Editable source](antseed-creators-pitch/)
 - [Source ZIP](Antseed-Creators-Pitch-Updated-source.zip)
-- [Book a Call](https://calendly.com/ravi-antseed)
+- [Book a call](https://calendly.com/ravi-antseed)
 
-Open the source `index.html` locally; no build step is required. Fonts, artwork, source outline, story/design maps, current kit tokens/components and QA evidence are bundled. `package.py` rebuilds the standalone HTML and source ZIP. The [brand/PDF audit](antseed-creators-pitch/brand-audit.md) records the 17-point checklist, eight-width checks and preserved user overrides.
+Open the source `index.html` locally; no build step is required. Fonts, artwork, source outline, story/design maps, current kit tokens/components and QA evidence are bundled. `package.py` rebuilds the standalone HTML and source ZIP. The [brand/PDF audit](antseed-creators-pitch/brand-audit.md) records the 17-point checklist, eight-width checks, the Solid case-study reference pass and preserved user overrides. The final compliance pass aligns shared components to the supplied Solid PDF: gray Geist eyebrows with a green dot, ELSH40 section titles, ELSH20 card titles, tabular Geist page numbers, closing cards, sentence-case Your turn and Book a call, and a visible AntSeedStats CC BY credit.
 
 Stats refreshed **16 November 2026, 19:00 IST**, from AntSeedStats at its displayed 13:30 UTC update: **942 models, 274 lifetime settling providers, 28,254 total participants, 905.05B tokens**. Role counts may overlap; tokens include paid and free usage. Source metadata and the lifetime-provider API cross-check are in [stats-refresh.json](antseed-creators-pitch/stats-refresh.json). Attribution: AntSeedStats · CC BY 4.0. The four model-price examples retain their historical source-pitch framing.
 

@@ -6,7 +6,7 @@
         960,
         540
       ],
-      "text_chars": 100
+      "text_chars": 99
     },
     {
       "page": 2,
@@ -14,7 +14,7 @@
         960,
         540
       ],
-      "text_chars": 380
+      "text_chars": 377
     },
     {
       "page": 3,
@@ -22,7 +22,7 @@
         960,
         540
       ],
-      "text_chars": 606
+      "text_chars": 509
     },
     {
       "page": 4,
@@ -30,7 +30,7 @@
         960,
         540
       ],
-      "text_chars": 720
+      "text_chars": 640
     },
     {
       "page": 5,
@@ -38,7 +38,7 @@
         960,
         540
       ],
-      "text_chars": 473
+      "text_chars": 474
     },
     {
       "page": 6,
@@ -46,7 +46,7 @@
         960,
         540
       ],
-      "text_chars": 186
+      "text_chars": 210
     },
     {
       "page": 7,
@@ -54,7 +54,7 @@
         960,
         540
       ],
-      "text_chars": 473
+      "text_chars": 370
     }
   ],
   "fonts": [
@@ -73,5 +73,17 @@
     "Automatic reroute",
     "Provider B retry",
     "Back to your edit"
-  ]
+  ],
+  "page_count": 7,
+  "final_pdf_sha256": "6eb60b471cb7d945cd0f35046396cf0c37a900f93c110686c498a01e406bce57",
+  "metadata": {
+    "/Producer": "Antseed / Chromium PDF renderer",
+    "/Title": "Antseed for creators",
+    "/Author": "Antseed",
+    "/Subject": "AntSeedStats data: CC BY 4.0; read 16 November 2026, 13:30 UTC. Source: https://antseedstats.com/. Roles may overlap; tokens include paid and free usage. Historical source-pitch price examples. Brand reference: Antseed - AI agents for neobanks (Solid case study).pdf.",
+    "/Keywords": "Antseed, creators, video, image, voice, brand-audited, Solid reference, AntSeedStats CC BY 4.0",
+    "/Creator": "Antseed"
+  },
+  "stats_credit_visible": true,
+  "closing_cards_verified": true
 }

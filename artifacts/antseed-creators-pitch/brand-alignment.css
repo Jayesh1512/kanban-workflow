@@ -100,4 +100,4 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 .close-grid p{font:400 15px/22px Geist;color:var(--color-text-body)}
 .close-call .closing-reward-card{top:466px;padding:14px 16px;border:0;box-shadow:inset 0 0 0 1px var(--color-tile-line);background:var(--color-tile)}
 .close-call .close-actions{top:600px}
-@media screen and (max-width:760px){.close-grid li{height:auto;min-height:150px;padding:44px 18px 18px}.close-call .closing-reward-card{top:auto}.close-call .close-actions{top:auto}}
+@media screen and (max-width:760px){.close-with-rewards .close-grid{top:auto}.close-grid li{height:auto;min-height:150px;padding:44px 18px 18px}.close-call .closing-reward-card{top:auto}.close-call .close-actions{top:auto}}

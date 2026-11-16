@@ -3,9 +3,10 @@
     "audience": "Top creator with a team, daily output and deadline pressure",
     "arc": "Problem \u2192 Solution \u2192 Action",
     "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
-    "source_reference": "Antseed - Creators Pitch.pdf / .pptx",
+    "source_reference": "Antseed - Creators Pitch.pdf / .pptx; Antseed - AI agents for neobanks (Solid case study).pdf (shared brand-compliant layout reference)",
     "date": "2026-11-16",
-    "slide_count": 7
+    "slide_count": 7,
+    "brand_reference": "AGENTS.md v1 (12 November 2026) and the supplied Solid case-study PDF; tokens.css wins numeric conflicts"
   },
   "slides": [
     {
@@ -121,8 +122,11 @@
     "Stats-slide storyline label changed from Solution to Network Stats at the user\u2019s request.",
     "The Gateway overview card explicitly reads One bill for the entire team.",
     "Shortened the Gateway overview-card heading to One team. One bill. to align with its neighboring cards.",
-    "Closing storyline label changed from Action to Your Turn at the user\u2019s request.",
-    "Model slide title rewritten from The cut needs more than one model to The whole cut. Every model. so the two-tone lines break on sentence boundaries; the definition line is reused from the vision deck."
+    "Model slide title rewritten from The cut needs more than one model to The whole cut. Every model. so the two-tone lines break on sentence boundaries; the definition line is reused from the vision deck.",
+    "Brand-compliance pass against AGENTS.md v1 and the Solid case-study PDF: eyebrows use Geist 13/18 gray with the green dot; section titles use the Pixel ELSH40 axis and -.04em tracking; card titles use ELSH20; page numbers use Geist tabular figures; the closing steps use the Solid card pattern.",
+    "Closing storyline label is sentence-case Your turn and the CTA is Book a call, matching the Solid reference and the guide's sentence-case rule.",
+    "The closing title renders in two tones, Your shot. dark and Live. gray, fixing the single-tone regression.",
+    "The visible stats line reads Source: AntSeedStats \u00b7 CC BY 4.0 \u00b7 16 November 2026 \u00b7 13:30 UTC, satisfying the brand credit requirement without restoring the removed footer block."
   ],
   "prices": [
     {
@@ -221,7 +225,7 @@
       "slides": [
         7
       ],
-      "stage": "Action"
+      "stage": "Your turn"
     }
   ],
   "claim_sources": {

@@ -1,5 +1,5 @@
 {
-  "authority": "Current Antseed brand kit v1 (12 November 2026), checked 16 November 2026; measured Creators Pitch PDF/PPTX compositions and explicit user overrides.",
+  "authority": "Current Antseed brand kit v1 (12 November 2026) plus the supplied 15-page Solid case-study PDF, checked 16 November 2026; measured Creators Pitch PDF/PPTX compositions and explicit user overrides.",
   "canvas": [
     1280,
     720
@@ -10,13 +10,15 @@
   ],
   "fonts": {
     "heading": "AntseedGeistPixelGrid-Regular.ttf / 34px / 36px",
-    "item_heading": "AntseedGeistPixelRound-Regular.ttf / 24px / 32px",
+    "item_heading": "Geist Pixel variable, ELSH20, 24px/28px",
     "body": "Geist-Regular.ttf / 16px",
     "label": "Geist-Regular.ttf / 13px",
     "mono": "GeistMono-Regular.ttf",
     "cover": "GeistPixel-VariableFont_ELSH.ttf, ELSH 11",
-    "story_label": "Geist Pixel Round (ELSH20), 14px/24px; non-link PDF story label",
-    "figure": "Geist Pixel Round (ELSH20), 36px/44px, tabular"
+    "story_label": "Geist 13px/18px, secondary text tone with the kit green dot",
+    "figure": "Geist Pixel variable, ELSH20, 36px/44px, tabular",
+    "section": "Geist Pixel variable, ELSH40, 34px/36px, -.04em",
+    "page_number": "Geist 12px/16px, tabular"
   },
   "colors": {
     "primary": "#30382c",
@@ -67,7 +69,10 @@
     "User-requested visible stats-footer removal retained; attribution is in HTML/PDF metadata, the source ledger and this audit.",
     "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface.",
     "Model-access intro sits at y192; cards move to y240 with their existing sizes and artwork. Mobile intro reflows above stacked cards.",
-    "Closing provider-network claim replaces the removed demo intro, using 18px/27px Geist 500 at y208. Slide 4 diagram header describes deadline pressure in plain language rather than clock readings; a lock icon marks the privacy feature."
+    "Closing provider-network claim replaces the removed demo intro, using 18px/27px Geist 500 at y208. Slide 4 diagram header describes deadline pressure in plain language rather than clock readings; a lock icon marks the privacy feature.",
+    "Solid reference shared components applied: gray Geist eyebrows with green dot, ELSH40 section titles, ELSH20 card titles, Geist page numbers.",
+    "Closing steps use the Solid page-14 card pattern; the label is Your turn and the CTA is Book a call.",
+    "The stats line now visibly credits AntSeedStats under CC BY 4.0 with the read date and time."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",
@@ -75,11 +80,11 @@
     "logo": [
       32,
       32,
-      112,
-      56
+      123,
+      59
     ],
-    "copy_top": 86,
-    "heading": "46px / 48px, ELSH 11, -.04em tracking, .82 opacity",
+    "copy_top": 80,
+    "heading": "46px / 50px, ELSH 11, -.08em tracking, .82 opacity",
     "mascots": {
       "phone": [
         448,
