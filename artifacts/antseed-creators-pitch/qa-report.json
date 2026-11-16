@@ -1,5 +1,5 @@
 {
-  "revision": "Brand-compliance pass: Solid eyebrow/title/card patterns, sentence-case Your turn and Book a call, two-tone closing title, visible AntSeedStats credit.",
+  "revision": "Approved creator cover: An AI studio, / behind every story. Supporting copy explains video, image and voice through one Antseed key.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -66,9 +66,10 @@
     "Stats slide visibly credits AntSeedStats under CC BY 4.0 with the read date and time.",
     "Eyebrow labels use Geist 13/18 in the secondary text tone with the kit green dot; section titles use the Pixel ELSH40 axis and -.04em tracking.",
     "Page numbers use Geist tabular figures; card titles use the Pixel ELSH20 axis; closing steps use the solid card pattern from the Solid reference.",
-    "Closing title is two-tone and ends with a period; the filled CTA is the only primary button on the closing slide."
+    "Closing title is two-tone and ends with a period; the filled CTA is the only primary button on the closing slide.",
+    "Slide 1 has the approved AI-studio headline and two-line supporting copy; HTML slides 2\u20137 and PDF text on pages 2\u20137 are unchanged."
   ],
-  "visual_review": "Revised deck inspected as seven rendered PDF pages and at eight browser widths. Closing cards, eyebrow labels, title tones, page numbers and the visible stats credit were checked in HTML and PDF; the offline renderer reports no missing assets, font failures or browser errors.",
+  "visual_review": "Approved cover inspected in desktop and phone screenshots and final PDF. Offline renderer: seven slides, no asset or console errors. Browser checks: 56 slide/viewport combinations across eight widths, navigation passed.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
@@ -84,5 +85,16 @@
       "Creator-specific copy retained inside the Solid reference's card, eyebrow and type system",
       "Authored day/night chapters; no whole-deck alternate theme claimed"
     ]
+  },
+  "cover_revision_checks": {
+    "offline_render_errors": 0,
+    "browser_errors": 0,
+    "slide_checks": 56,
+    "pdf_pages": 7,
+    "pdf_dimensions_points": [
+      960,
+      540
+    ],
+    "other_slides_unchanged": true
   }
 }

@@ -9,13 +9,13 @@
   "warnings": [
     {
       "slide": 1,
-      "label": "One key Every creative possibility",
+      "label": "An AI studio,behind every story.",
       "outside": false,
       "textOverflow": true
     },
     {
       "slide": 1,
-      "label": "Every creative possibility",
+      "label": "behind every story.",
       "outside": false,
       "textOverflow": true
     },
@@ -98,15 +98,15 @@
       "slide": 1,
       "width": 1280,
       "height": 720,
-      "text": "Antseed for creators\n\nOne key\nEvery creative possibility\n\nVideo, image and voice models for creators.",
+      "text": "Antseed for creators\n\nAn AI studio,\nbehind every story.\n\nCreate video, images and voice with leading AI models.\nAll through one Antseed key.",
       "findings": [
         {
-          "label": "One key Every creative possibility",
+          "label": "An AI studio,behind every story.",
           "outside": false,
           "textOverflow": true
         },
         {
-          "label": "Every creative possibility",
+          "label": "behind every story.",
           "outside": false,
           "textOverflow": true
         }
