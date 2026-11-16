@@ -22,3 +22,12 @@ Stats refreshed **16 November 2026, 19:00 IST**, from AntSeedStats at its displa
 Eight-slide version of the supplied Antseed/Solid partner case study: proposition, bank opportunity, partner offer, pricing, network and Gateway, historical network snapshot, Solid case study, and launch playbook. Exported from the approved shortened HTML with selectable text, embedded fonts and all eight pages.
 
 This neobank PDF retains its original historical pricing, stats and Solid-offer source framing and dates. Its draft testimonial was omitted because it was marked pending approval.
+
+## Neobank offering deck (HTML)
+
+Fourteen-slide partner-facing web deck for onchain neobanks: opportunity, three-move integration, bank case, network pricing with cashback, $ANTS rewards, how the network works, Gateway per-customer keys, network snapshot, Solid case study with its two public launch posts, the Solid playbook and a launch path. Built on the same standalone deck system as the vision deck (brand tokens/components/core/slides CSS, day/night themes, keyboard and touch navigation).
+
+- [Deck source](antseed-neobank-deck/) — open `index.html` locally; no build step
+- [Sources and verification](antseed-neobank-deck/SOURCES.md)
+
+Built 16 November 2026 from the detailed neobank case study (`neobank-detailed.pdf`) with the fact-check fixes applied: GPT-6.1 Sol naming, 920 models, the draft testimonial removed, cashback caps footnoted, verification and data-handling footnotes, and the −78% pricing label confirmed correct by geometry. Pricing examples and network stats are historical (AntSeedStats, read 13 Nov 2026) and labeled as such. $ANTS reward wording follows the supplied brief and awaits confirmation of program mechanics.

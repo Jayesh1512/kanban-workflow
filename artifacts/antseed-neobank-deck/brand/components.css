@@ -1,0 +1,215 @@
+/* Antseed components, v1, 12 Nov 2026. Made by AstraOS for Antseed.
+   The pieces of the homepage that travel to other assets, cleaned out of the site's sections.css and v6.css and written on the
+   readable tokens (tokens.css: load it first). The brand kit page renders on this file, so if the page looks right, this file is right.
+   Class prefix: ak- (Antseed kit). Modifiers: ak-btn--ghost. Every value is a token or the site's own number, with the site's selector
+   and line in the comment above it. Light and dark come from the tokens; nothing here needs a theme class except where noted.
+
+   What is here, in order:
+     ak-page, ak-rail, ak-outline       the chassis: dot matrix margins, the rail, dotted outlines
+     ak-h1, ak-title, ak-eyebrow, ak-sub, ak-lede, ak-body, ak-link, ak-mono     type roles
+     ak-head                            section head: eyebrow, two-tone title, sub
+     ak-actions, ak-btn, ak-btn--ghost  buttons: one filled per group, then ghosts
+     ak-pill                            announcement pill: one fact and a chevron
+     ak-panel                           a landscape panel with its day and night painting
+     ak-window, ak-window--smoked       glass window over a landscape; smoked green glass
+     ak-terminal                        the Gateway terminal on smoked glass
+     ak-card                            model price card
+     ak-figure                          a label over a pixel figure
+     ak-caption                         a name, then one line
+     ak-features, ak-icon               feature list with pixel icons
+     ak-theme                           the System / Light / Dark switch
+     ak-character                       a cut-out ant, with the night filter
+   Reduced motion: every transition here is off under prefers-reduced-motion. */
+
+/* ── chassis ─────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* the margins: Figma's "Trame", a 2px dot every 8px, one on the page's centre line and one on its top edge (sections.css:41-43, .s-page) */
+.ak-page { background: var(--dots-matrix), var(--color-page-bg); color: var(--color-text); font: var(--type-body); }
+/* the rail: the white column, its width a multiple of 16 so its edges land on the dots (sections.css:37, :45, :54) */
+.ak-rail { position: relative; width: var(--space-rail); margin-inline: auto; background: var(--color-rail); isolation: isolate; }
+@supports (width: round(down, 10px, 4px)) { .ak-rail { width: round(down, var(--space-rail), 16px); } }
+
+/* dotted outlines: an overlay 1px larger than the box, one strip of 2px round dots every 8px per side, the first on the corner;
+   each side switched on by setting --outline-top/-right/-bottom/-left to 2px (sections.css:56-66, --dt --dr --db --dl).
+   Dotted, never dashed. The rail draws top, right and left, under its content (sections.css:67-68).
+   The dot is drawn here from --color-dot, so a block that sets its own --color-dot (the terminal) gets its own dots. */
+.ak-outline, .ak-rail, .ak-terminal__bar, .ak-terminal__pane { position: relative; --outline-top: 0px; --outline-right: 0px; --outline-bottom: 0px; --outline-left: 0px; }
+.ak-outline::before, .ak-rail::before, .ak-terminal__bar::before, .ak-terminal__pane::before {
+  --d: radial-gradient(circle at 1px 1px, var(--color-dot) .85px, #0000 1.25px);
+  content: ""; position: absolute; inset: -1px; pointer-events: none;
+  background:
+    var(--d) 0 0 / 8px var(--outline-top) repeat-x,
+    var(--d) 100% 0 / var(--outline-right) 8px repeat-y,
+    var(--d) 0 100% / 8px var(--outline-bottom) repeat-x,
+    var(--d) 0 0 / var(--outline-left) 8px repeat-y;
+}
+.ak-rail { --outline-top: 2px; --outline-right: 2px; --outline-left: 2px; }
+.ak-rail::before { z-index: -1; }
+.ak-outline--top { --outline-top: 2px; }
+.ak-outline--right { --outline-right: 2px; }
+.ak-outline--bottom { --outline-bottom: 2px; }
+.ak-outline--left { --outline-left: 2px; }
+.ak-outline--all { --outline-top: 2px; --outline-right: 2px; --outline-bottom: 2px; --outline-left: 2px; }
+/* a section's padding: 120, 72 on phones (the token switches), the rail's inner margin at the sides (sections.css:69) */
+.ak-pad { padding: var(--space-section) var(--space-pad); }
+
+/* ── type roles ──────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* the H1: Geist Pixel ELSH 11, 90/93, -0.08em, two lines, the second in the H1 grey (#595959, as the site; not the section titles' lighter grey), opacity .82, no full stop (index.html:53, :97-99) */
+.ak-h1 { margin: 0; font: var(--type-h1); letter-spacing: var(--type-h1-tracking); font-variation-settings: "ELSH" var(--type-h1-elsh); color: var(--color-text); opacity: var(--type-h1-opacity); }
+.ak-h1 span { display: block; color: var(--color-h1-second); }
+/* the section title: Geist Pixel ELSH 40, 48/46, -2px; the second half grey; a full stop (sections.css:75, :78) */
+.ak-title { margin: 0; font: var(--type-section-title); letter-spacing: var(--type-section-title-tracking); font-variation-settings: "ELSH" var(--type-section-title-elsh); color: var(--color-text); }
+.ak-title span { color: var(--color-text-grey); }
+/* the eyebrow: Geist Pixel ELSH 20, green, then &nbsp;› whose chevron leans 3px on hover (sections.css:80-83; micro.css:16-17) */
+.ak-eyebrow { font: var(--type-eyebrow); font-variation-settings: "ELSH" var(--type-eyebrow-elsh); color: var(--color-green-text); text-decoration: none; }
+.ak-eyebrow .chev { display: inline-block; transition: transform .2s; }
+.ak-eyebrow:is(:hover, :focus-visible) .chev { transform: translateX(3px); }
+.ak-sub { margin: 0; font: var(--type-sub); color: var(--color-text-body); }
+.ak-lede { margin: 0; font: var(--type-lede); letter-spacing: var(--type-lede-tracking); color: var(--color-text); }
+.ak-lede .dim { color: var(--color-text-grey); }
+.ak-body { margin: 0; font: var(--type-body); color: var(--color-text); }
+/* a standalone link: Geist 500, green; → to the page and the docs, ↗ to other sites (sections.css:80) */
+.ak-link { font: var(--type-link); color: var(--color-green-text); text-decoration: none; }
+.ak-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ak-mono { font-family: var(--font-mono); }
+:where(.ak-page) :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── section head ────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* eyebrow, two-tone title, sub; a column, 20 apart, left aligned; the sub at most 780 (sections.css:84-85) */
+.ak-head { display: flex; flex-direction: column; gap: var(--space-head-gap); align-items: flex-start; }
+.ak-head .ak-sub { max-width: 780px; }
+.ak-head--center { align-items: center; text-align: center; }
+@media (max-width: 760px) { .ak-head .ak-sub { max-width: none; } }
+
+/* ── buttons ─────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* one filled green button per group, then ghosts; a row 12 × 20 apart (sections.css:90-97). At night the green keeps only its lip
+   and the ghost a faint dark one (sections.css:32-33): the shadows come themed from tokens.css */
+.ak-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-actions-row) var(--space-actions-column); }
+.ak-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--button-height); padding: 0 var(--button-padding-x);
+  border: 0; border-radius: var(--radius-button); background: var(--color-button-fill); color: var(--color-button-text); font: var(--type-button);
+  white-space: nowrap; text-decoration: none; cursor: pointer; box-shadow: var(--button-shadow); transition: background-color var(--dur-feedback); }
+.ak-btn:hover { background: var(--color-button-fill-hover); }
+.ak-btn--ghost { background: var(--color-tile); color: var(--color-text); border: 1px solid var(--color-tile-line); box-shadow: var(--button-ghost-shadow); }
+.ak-btn--ghost:hover { background: var(--color-tile-hover); }
+.ak-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+/* on a phone the buttons share a line, or each takes a whole one (sections.css:755-756) */
+@media (max-width: 760px) { .ak-actions--stretch { align-self: stretch; } .ak-actions--stretch .ak-btn { flex: 1 1 auto; } }
+
+/* ── announcement pill ───────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* one fact and a chevron: 24 high, padding 0 11, fully round (index.html:89-94). By day white, as on the live hero (index.html:273);
+   --acid for the acid pill of the hero's other versions (index.html:89-91), by day only; at night neutral glass, so the only green
+   is the button (index.html:315). The site sets it in Figtree; the kit in Geist */
+.ak-pill { display: inline-flex; align-items: center; gap: 2px; height: 24px; padding: 0 11px; border-radius: var(--radius-pill);
+  background: var(--glass-pill-background); box-shadow: var(--glass-pill-ring); backdrop-filter: var(--glass-pill-backdrop); -webkit-backdrop-filter: var(--glass-pill-backdrop);
+  color: var(--color-ink); font: var(--type-pill); text-decoration: none; white-space: nowrap; }
+.ak-pill b { font: inherit; }
+.ak-pill .chev { opacity: .5; }
+.ak-pill--acid { background: var(--glass-pill-acid-background); box-shadow: var(--glass-pill-acid-ring); backdrop-filter: var(--glass-pill-acid-backdrop); -webkit-backdrop-filter: var(--glass-pill-acid-backdrop); }
+:root[data-theme="dark"] .ak-pill { background: var(--glass-pill-night-background); box-shadow: var(--glass-pill-night-ring); backdrop-filter: var(--glass-pill-night-backdrop); -webkit-backdrop-filter: var(--glass-pill-night-backdrop); color: var(--color-text); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ak-pill { background: var(--glass-pill-night-background); box-shadow: var(--glass-pill-night-ring); backdrop-filter: var(--glass-pill-night-backdrop); -webkit-backdrop-filter: var(--glass-pill-night-backdrop); color: var(--color-text); } }
+
+/* ── landscape panel ─────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* a painting behind UI: set --paint-day and --paint-night to the two files of a pair (assets.json); the panel's own colour shows
+   until the painting loads; corners of a card (sections.css:107, :110, .wash) */
+.ak-panel { position: relative; overflow: hidden; isolation: isolate; border-radius: var(--radius-card);
+  background: var(--color-wash) var(--paint-day) center / cover no-repeat; }
+:root[data-theme="dark"] .ak-panel { background-image: var(--paint-night, var(--paint-day)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ak-panel { background-image: var(--paint-night, var(--paint-day)); } }
+.ak-panel--flush { border-radius: 0; }
+
+/* ── glass window ────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* by day the light window glass: 62 % white, a white half-pixel edge, a cool shadow, a 10px frost (v6.css:45-46); at night every
+   window over a landscape is the smoked green glass (v6.css:388-391). A window in a card: radius 8 */
+.ak-window { position: relative; overflow: hidden; border-radius: var(--radius-window); border: var(--glass-day-border); background: var(--glass-day-background);
+  box-shadow: var(--glass-day-shadow); backdrop-filter: var(--glass-day-backdrop); -webkit-backdrop-filter: var(--glass-day-backdrop); color: var(--color-ink); }
+.ak-window--smoked, :root[data-theme="dark"] .ak-window { border: var(--glass-smoked-border); background: var(--glass-smoked-background); box-shadow: var(--glass-smoked-shadow);
+  backdrop-filter: var(--glass-smoked-backdrop); -webkit-backdrop-filter: var(--glass-smoked-backdrop); color: var(--glass-smoked-strong); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ak-window { border: var(--glass-smoked-border); background: var(--glass-smoked-background); box-shadow: var(--glass-smoked-shadow);
+  backdrop-filter: var(--glass-smoked-backdrop); -webkit-backdrop-filter: var(--glass-smoked-backdrop); color: var(--glass-smoked-strong); } }
+/* the window pops in on its painting: from .9 and faded, with a slight overshoot (sections.css:116-117); add .is-in to play it */
+.ak-window--pop { opacity: 0; scale: .9; transition: opacity .55s ease-out, scale .9s var(--ease-window); }
+.ak-window--pop.is-in { opacity: 1; scale: 1; }
+
+/* ── the terminal ────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* the Gateway is a CLI, so a terminal: smoked green glass in both themes, a title bar with the window lights, panes split by a
+   dotted line, Geist Mono 11.475/20.06 (sections.css:248-270) */
+.ak-terminal { --color-dot: var(--glass-smoked-dot); position: relative; overflow: hidden; border-radius: var(--radius-window);
+  border: var(--glass-smoked-border); background: var(--glass-smoked-background); box-shadow: var(--glass-smoked-shadow);
+  backdrop-filter: var(--glass-smoked-backdrop); -webkit-backdrop-filter: var(--glass-smoked-backdrop);
+  font: var(--type-terminal); color: var(--glass-smoked-text); text-align: left; }
+.ak-terminal__bar { position: relative; display: flex; align-items: center; height: 34px; padding: 0 14px; background: var(--glass-smoked-bar); --outline-bottom: 2px; }
+.ak-terminal__lights { display: flex; gap: 6.8px; }
+.ak-terminal__lights i { width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; }
+.ak-terminal__lights i:nth-child(2) { background: #febc2e; }
+.ak-terminal__lights i:nth-child(3) { background: #28c840; }
+.ak-terminal__title { position: absolute; left: 50%; transform: translateX(-50%); font: var(--type-terminal-title); letter-spacing: var(--type-terminal-title-tracking); color: var(--glass-smoked-chrome); white-space: nowrap; }
+.ak-terminal__pane { position: relative; padding: 15.3px 22.1px 17px; }
+.ak-terminal__pane + .ak-terminal__pane { --outline-top: 2px; padding-top: 16.15px; }
+.ak-terminal__tag { position: absolute; right: 15px; top: 12px; font: var(--type-terminal-tag); letter-spacing: var(--type-terminal-tag-tracking); color: var(--glass-smoked-chrome); }
+.ak-terminal p { margin: 0; white-space: pre-wrap; }
+.ak-terminal b { font-weight: 400; color: var(--glass-smoked-prompt); }      /* the prompt, ~ $ */
+.ak-terminal .c { color: var(--glass-smoked-strong); }                         /* a command */
+.ak-terminal .u { color: var(--glass-smoked-url); }                            /* a URL */
+.ak-terminal .j { color: var(--glass-smoked-json); }                           /* JSON */
+.ak-terminal .cur { display: inline-block; width: 7px; height: 13px; vertical-align: -2px; background: var(--glass-smoked-cursor); animation: ak-blink 1.1s steps(1) infinite; }
+@keyframes ak-blink { 50% { opacity: 0; } }
+
+/* ── model price card ────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* square, 176 (152 on phones): the maker's mark top left in the text colour (or its colour mark), a saving top right, then the
+   name, its price (unit in small grey) and how many providers serve it (sections.css:160, :170-181). Set --mark: url(…svg) */
+.ak-card { --card: 176px; display: flex; flex-direction: column; width: var(--card); height: var(--card); padding: 18px; border-radius: var(--radius-card);
+  background: linear-gradient(var(--color-tile) 0 0), var(--color-rail); color: var(--color-text); }
+.ak-card__top { display: flex; align-items: flex-start; justify-content: space-between; }
+.ak-card__mark { width: 24px; height: 24px; background: var(--color-text); -webkit-mask: var(--mark) center / contain no-repeat; mask: var(--mark) center / contain no-repeat; }
+.ak-card__mark--color { background: var(--mark) center / contain no-repeat; -webkit-mask: none; mask: none; }
+.ak-card__saving { font: var(--type-mono-saving); font-style: normal; color: var(--color-green-text); }
+.ak-card__name { margin-top: auto; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font: var(--type-card-name); color: var(--color-text); }
+.ak-card__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 6px 0 0; }
+.ak-card__price { font: var(--type-mono-price); color: var(--color-text); white-space: nowrap; }
+.ak-card__price span { color: var(--color-text-small); }
+.ak-card__providers { display: inline-flex; align-items: center; gap: 4px; font: var(--type-small); font-variant-numeric: tabular-nums; color: var(--color-text-small); }
+.ak-card__providers i { width: 12px; height: 12px; align-self: center; background: currentColor; -webkit-mask: var(--nodes) center / contain no-repeat; mask: var(--nodes) center / contain no-repeat; }
+@media (max-width: 760px) { .ak-card { --card: 152px; padding: 14px; } }
+
+/* ── figure ──────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* a small grey label over a pixel figure, 14 apart; Geist Pixel ELSH 20, tabular (index.html:203-205). Read live, dated, credited */
+.ak-figure { display: flex; flex-direction: column; gap: 14px; margin: 0; }
+.ak-figure__label { margin: 0; font: var(--type-label); color: var(--color-text-small); }
+.ak-figure__value { font: var(--type-figure); font-variation-settings: "ELSH" var(--type-figure-elsh); font-variant-numeric: tabular-nums; color: var(--color-text); }
+.ak-figure--large .ak-figure__value { font: var(--type-figure-large); font-variation-settings: "ELSH" var(--type-figure-large-elsh); font-variant-numeric: tabular-nums; }
+
+/* ── caption ─────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* a name in the text colour, then one line in the body grey (sections.css:416-417) */
+.ak-caption { margin: 0; font: var(--type-body); color: var(--color-text-body); }
+.ak-caption b { font-weight: 500; color: var(--color-text); }
+
+/* ── feature list ────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* a line each, its pixel icon at 24 (each pixel a whole 2px) in the titles' grey, no tile; a dotted line between rows, starting
+   with the text (sections.css:236-244). Set --icon: url(…svg) on each .ak-icon */
+.ak-features { margin: 0; padding: 0; list-style: none; align-self: stretch; }
+.ak-features li { position: relative; display: flex; align-items: center; gap: var(--space-icon-gap); padding: var(--space-feature-row) 0; font: var(--type-body); color: var(--color-text);
+  --outline-top: 0px; --outline-right: 0px; --outline-bottom: 0px; --outline-left: 0px; }
+.ak-features li::before { content: ""; position: absolute; inset: -1px -1px -1px 35px; pointer-events: none;
+  background: radial-gradient(circle at 1px 1px, var(--color-dot) .85px, #0000 1.25px) 0 0 / 8px var(--outline-top) repeat-x; }
+.ak-features li + li { --outline-top: 2px; }
+.ak-icon { flex: none; width: var(--space-icon); height: var(--space-icon); background: var(--color-text-grey); -webkit-mask: var(--icon) center / 24px no-repeat; mask: var(--icon) center / 24px no-repeat; }
+
+/* ── theme switch ────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* three icon buttons, System, Light, Dark; the chosen one on a tile (sections.css:664-669) */
+.ak-theme { display: flex; gap: 2px; }
+.ak-theme button { all: unset; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: var(--color-text-small); cursor: pointer;
+  transition: color var(--dur-feedback), background-color var(--dur-feedback); }
+.ak-theme button:hover { color: var(--color-text); }
+.ak-theme button[aria-pressed="true"] { color: var(--color-text); background: var(--color-tile); box-shadow: inset 0 0 0 1px var(--color-tile-line); }
+.ak-theme button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.ak-theme svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── a cut-out ant ───────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/* every cut-out ant takes the night's light at night (index.html:198); never a costume change */
+.ak-character { transition: filter 1.2s ease; filter: var(--filter-character); }
+.ak-logo { filter: var(--filter-logo); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ak-eyebrow .chev, .ak-btn, .ak-theme button, .ak-character, .ak-window--pop { transition: none; }
+  .ak-window--pop { opacity: 1; scale: 1; }
+  .ak-terminal .cur { animation: none; }
+}
