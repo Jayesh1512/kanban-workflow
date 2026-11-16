@@ -1,5 +1,5 @@
 {
-  "revision": "Gateway overview-card heading updated to One bill for the entire team.",
+  "revision": "Gateway card shortened to One team. One bill.; closing label changed to Your Turn.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -48,7 +48,7 @@
     "No Antseed one-line description on the Problem slide",
     "No watercolor image or mobile watercolor pseudo-element on slide 4",
     "Stats retain four metric categories and retain the source snapshot date",
-    "Problem, Solution, Network Stats and Action labels match the user\u2019s latest instructions",
+    "Problem, Solution, Network Stats and Your Turn labels match the user\u2019s latest instructions",
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
     "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
@@ -61,9 +61,10 @@
     "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim.",
     "Closing title is Your shot. Live.; Book a call title line absent, booking CTA and URL retained.",
     "Stats page label is Network Stats; snapshot values and date retained.",
-    "Gateway overview card reads One bill for the entire team; source font width fits the desktop column."
+    "Gateway overview card reads One bill for the entire team; source font width fits the desktop column.",
+    "Gateway card heading shortened to One team. One bill.; last-slide label reads Your Turn."
   ],
-  "visual_review": "Updated Gateway slide inspected in HTML/PDF and seven-page PDF contact sheet reviewed. Offline renderer reports no missing assets, font failures or browser errors.",
+  "visual_review": "Revised Gateway and closing slides inspected in HTML/PDF; seven-page PDF contact sheet reviewed. Offline renderer reports no missing assets, font failures or browser errors.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",

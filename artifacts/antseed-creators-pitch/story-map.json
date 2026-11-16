@@ -119,7 +119,9 @@
     "Removed closing demo intro and promoted the provider-network sentence to 18px/500. Added lower-price language to the model intro. Slide 4 replaces clock readings with deadline pressure and adds the narrowly scoped privacy statement, Antseed does not store your prompts.",
     "Removed Book a call from the closing title; the title is Your shot. Live., with the existing Book a Call button retained.",
     "Stats-slide storyline label changed from Solution to Network Stats at the user\u2019s request.",
-    "The Gateway overview card explicitly reads One bill for the entire team."
+    "The Gateway overview card explicitly reads One bill for the entire team.",
+    "Shortened the Gateway overview-card heading to One team. One bill. to align with its neighboring cards.",
+    "Closing storyline label changed from Action to Your Turn at the user\u2019s request."
   ],
   "prices": [
     {
