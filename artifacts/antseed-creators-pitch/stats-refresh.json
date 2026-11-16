@@ -1,0 +1,52 @@
+{
+  "api_data_keys": [
+    "lifetime",
+    "windows",
+    "paid_usage_24h",
+    "generative_7d",
+    "modality_7d",
+    "epoch"
+  ],
+  "api_lifetime": {
+    "buyers": 1722,
+    "fees_micro": 15642143048,
+    "fees_usd": "15642.14",
+    "requests": 24388303,
+    "sellers": 274,
+    "settled_micro": 393217028660,
+    "settled_usd": "393217.03",
+    "settles": 755344,
+    "tokens_in": 581678000683,
+    "tokens_out": 27041374425
+  },
+  "api_meta": {
+    "as_of_block": 58223904,
+    "as_of_ts": 1794835209,
+    "docs": {
+      "endpoint": "https://antseedstats.com/developers#network.summary",
+      "glossary": "https://antseedstats.com/api/v1/glossary?page=home",
+      "page": "https://antseedstats.com/"
+    },
+    "endpoint": "network.summary",
+    "generated_at": 1794835847,
+    "indexer_lag_blocks": 3448,
+    "max_age_s": 45,
+    "sources": {
+      "epoch": "chain",
+      "lifetime": "chain",
+      "paid_usage_24h": "chain",
+      "windows": "chain"
+    },
+    "version": "v1"
+  },
+  "api_status": 200,
+  "display": {
+    "active_users": "28,254",
+    "models": "942",
+    "providers": "274",
+    "tokens": "905.05B"
+  },
+  "page_url": "https://antseedstats.com/?refresh=20261116",
+  "retrieved_at": "2026-11-16T13:30:47.978Z",
+  "source_updated": "13:30"
+}

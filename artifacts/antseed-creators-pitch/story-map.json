@@ -1,7 +1,7 @@
 {
   "brief": {
     "audience": "Top creator with a team, daily output and deadline pressure",
-    "arc": "Tension → Shift → Reward → Close",
+    "arc": "Problem → Solution → Proof → CTA",
     "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
     "source_reference": "Antseed - Creators Pitch.pdf / .pptx",
     "date": "2026-11-16",
@@ -32,7 +32,7 @@
     },
     {
       "slide": 3,
-      "headline": "Every model. Room to iterate.",
+      "headline": "One key. Every model. One bill.",
       "outline_section": [
         3,
         6
@@ -68,19 +68,20 @@
     {
       "slide": 6,
       "headline": "The network, in numbers.",
-      "source": "User-supplied AntSeedStats screenshot, image_d4761c13-d453-4ed1-8926-e1effb7ef44d",
-      "snapshot_date": "2026-11-13",
+      "source": "https://antseedstats.com/",
+      "retrieved_at": "2026-11-16T13:30:47.978Z",
+      "source_updated_utc": "13:30",
       "metrics": {
-        "Models": "920",
-        "Providers, all time": "269",
-        "Total active users": "24,610",
-        "Tokens consumed": "825.8B"
+        "Models": "942",
+        "Providers, all time": "274",
+        "Total active users": "28,254",
+        "Tokens consumed": "905.05B"
       },
-      "qualification": "Historical snapshot supplied by the user, not a fresh data fetch. Active-user window is unspecified. AntSeedStats attribution and CC BY 4.0 retained."
+      "qualification": "Latest displayed homepage snapshot at retrieval. Provider count matches lifetime.sellers in the public network-summary API. The participant count sums roles and may count one address more than once. Tokens include paid and free usage. CC BY 4.0 attribution retained."
     },
     {
       "slide": 7,
-      "headline": "Your shot. Live. Compare the result and bill.",
+      "headline": "Your shot. Live. Book a call.",
       "outline_section": [
         8,
         9
@@ -90,20 +91,18 @@
         6,
         7
       ],
-      "qualification": "Live-shot invitation and three next steps stay primary. A small rewards card mentions eligible usage, referrals and agreed launch/featured support, subject to program terms and eligibility."
+      "qualification": "Book a Call is the sole closing link, using the user-provided Ravi Calendly URL. The requested co-launch/placement and program-terms lines are removed. The small rewards card retains eligible usage and referrals only."
     }
   ],
   "editorial_decisions": [
-    "Added an Antseed creator home slide based on the live vision-deck cover.",
-    "Problem is the title of the first content slide. Multiple subscriptions, bills and logins replace Eight. A single-line Antseed description is included.",
-    "The model offer returns to three illustrated Video/Image/Voice cards. Four price examples are shown; the full eight-row table is intentionally omitted at the user’s request.",
-    "The mixed-model workflow joins the 2am technical slide. One shared key fans out to five unnumbered model lanes with aligned progress bars; no sequential arrows, step numbers or simultaneous/parallel claim. The slide page numeral is also omitted.",
-    "Deck remains seven slides after adding the cover and combining the workflow.",
-    "35+ image models retained from the user correction.",
-    "All PDF, offline HTML, source ZIP and Vercel exports are regenerated together.",
-    "The team-operations slide explicitly attributes its controls to Antseed Gateway and adds a Gateway docs button.",
-    "AntSeedStats is the second-last slide, showing the four supplied historical values and the 13 November 2026 snapshot date. No current retrieval date or fresh live values are claimed.",
-    "The standalone rewards slide is replaced by the stats page; rewards move into a modest supporting card on the final live-shot/next-action slide. The deck remains seven slides."
+    "Cover retains the talent thesis; the Problem slide contains only bottlenecks, with its Antseed description removed.",
+    "Solution slides explicitly connect one key/model access, the mixed-model workflow and Gateway team controls to the problems.",
+    "Three illustrated model cards retain four historical source-pitch price examples and the user-approved 35+ image-model label.",
+    "Slide 4 replaces the watercolor master with native dark framing, icons and the unchanged model-usage chart. The original laptop ant is retained at x1084/y490 with height164. No watercolor appears in mobile mode either.",
+    "Live stats replace the supplied historical snapshot; both the source display time and actual refresh time are shown.",
+    "Closing action is Book a Call at https://calendly.com/ravi-antseed. Get your key, Gateway docs and the raw antseed.com link are removed from the closing slide. Gateway docs remains on the team-control slide.",
+    "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user’s request.",
+    "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing."
   ],
   "prices": [
     {
@@ -175,5 +174,39 @@
     "verified_date": "2026-11-16",
     "supports": "Per-person/app keys, per-request budgets and routing policies, and usage/spend views in the Gateway Console."
   },
-  "stats_screenshot_sha256": "4607b5d06e6216a2258ac00873f8a9ed6f33b802c2ac2efcc4a784a847788ae5"
+  "stats_screenshot_sha256": "4607b5d06e6216a2258ac00873f8a9ed6f33b802c2ac2efcc4a784a847788ae5",
+  "narrative_stages": [
+    {
+      "slides": [
+        1
+      ],
+      "stage": "Introduction"
+    },
+    {
+      "slides": [
+        2
+      ],
+      "stage": "Problem"
+    },
+    {
+      "slides": [
+        3,
+        4,
+        5
+      ],
+      "stage": "Solution"
+    },
+    {
+      "slides": [
+        6
+      ],
+      "stage": "Proof"
+    },
+    {
+      "slides": [
+        7
+      ],
+      "stage": "CTA"
+    }
+  ]
 }

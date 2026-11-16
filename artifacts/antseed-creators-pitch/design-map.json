@@ -38,17 +38,20 @@
     "vision-deck centered meadow home",
     "Problem / four creator bottlenecks / watercolor panel",
     "three illustrated Video Image Voice cards with selected rates",
-    "shared 2am night workspace / five model lanes",
+    "plain dark solution workflow / same model chart / ant retained",
     "three-column studio operations / Gateway line and CTA / painted strip",
     "dark AntSeedStats four-figure snapshot / night meadow",
-    "three-step live-shot close / small supporting rewards card"
+    "three-step demo CTA / small rewards card / single Book a Call button"
   ],
   "adaptations": [
     "Creator cover copy follows the existing thesis; geometry and current assets match the live vision cover.",
     "Original illustrated catalog-card art is reused inside taller cards to make room for selected source prices.",
     "A single 2am clock and shared API-key fanout replace the numbered request-flow terminal and standalone five-step workflow. Static progress bars illustrate active model jobs without claiming measured activity.",
     "Night source master and source font roles retained. Mobile reflows cards and the shared workspace.",
-    "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot. The rewards card uses 15px Geist heading and no lead $ANTS figure to stay secondary."
+    "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot. The rewards card uses 15px Geist heading and no lead $ANTS figure to stay secondary.",
+    "Story-stage eyebrows make Problem, Solution, Proof and next-step CTA explicit.",
+    "Slide 4 uses native dark framing and an unchanged transparent ant asset instead of a watercolor background.",
+    "The closing illustration is clipped independently of its old master so removed buttons do not leave empty baked backgrounds."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",
@@ -78,7 +81,7 @@
     "assets": "Unchanged current live reference meadow, phone/carrier mascots and lockup."
   },
   "stats_reference": {
-    "source": "image_d4761c13-d453-4ed1-8926-e1effb7ef44d",
+    "source": "https://antseedstats.com/",
     "board": [
       1280,
       720
@@ -95,6 +98,7 @@
       572
     ],
     "metrics": "Native 2\u00d72 figures, 36px Pixel values, dotted top rules",
-    "snapshot_date": "2026-11-13"
+    "snapshot_date": "2026-11-16",
+    "retrieved_at": "2026-11-16T13:30:47.978Z"
   }
 }

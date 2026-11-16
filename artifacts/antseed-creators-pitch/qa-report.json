@@ -1,5 +1,5 @@
 {
-  "revision": "Gateway explanation/button, supplied AntSeedStats snapshot second last, and rewards reduced to a small card on the close.",
+  "revision": "Clear Problem/Solution/Proof/CTA flow, fresh AntSeedStats, plain slide 4 with original ant and chart, single Book a Call closing link, requested copy removed.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -7,29 +7,20 @@
     540
   ],
   "selectable_text_all_pages": true,
-  "fonts": [
-    "AAAAAA+Geist-Regular",
-    "CAAAAA+AntseedGeistPixelGrid-Regular",
-    "DAAAAA+Geist-Medium",
-    "EAAAAA+GeistMono-Regular",
-    "FAAAAA+AntseedGeistPixelRound-Regular"
-  ],
+  "stats_capture": {
+    "retrieved_at": "2026-11-16T13:30:47.978Z",
+    "source_updated_utc": "13:30",
+    "display": {
+      "active_users": "28,254",
+      "models": "942",
+      "providers": "274",
+      "tokens": "905.05B"
+    },
+    "provider_cross_check": 274,
+    "source_url": "https://antseedstats.com/"
+  },
   "offline_http_requests": [],
   "missing_assets_or_console_errors": [],
-  "stats": {
-    "Models": "920",
-    "Providers, all time": "269",
-    "Total active users": "24,610",
-    "Tokens consumed": "825.8B",
-    "snapshot_date": "2026-11-13",
-    "source": "User-supplied image; values deliberately preserved, not refreshed from the live site."
-  },
-  "gateway_link": {
-    "url": "https://antseed.com/docs/gateway/",
-    "browser_title": "Gateway and console | Antseed",
-    "verified": "Loads in shared browser; official documentation also read to confirm keys, budgets and usage controls.",
-    "pdf_link": "Verified native PDF URI annotation."
-  },
   "browser_checks": {
     "widths": [
       1280,
@@ -38,10 +29,23 @@
       356
     ],
     "slide_checks": 28,
-    "keyboard": "Home/End, arrows and boundaries passed",
-    "active_slide_semantics": "One non-inert slide throughout",
-    "mobile_end_checks": "Gateway button, stats link and closing reward card remain visible above navigation."
+    "keyboard": "Home, End, arrows and boundaries passed",
+    "mobile_end_checks": "Gateway, stats and booking links accessible above navigation.",
+    "workflow_ant_coordinates": [
+      1084,
+      490,
+      164
+    ],
+    "sole_close_link": "https://calendly.com/ravi-antseed",
+    "calendly_title_verified": "Calendly - Ravi Agrawal"
   },
-  "visual_review": "All slide render/contact views and revised slides at full size reviewed. Every actual PDF page rendered; three revised pages reviewed in PDF.",
-  "bounds_warnings": "13 known heading font-metric warnings; no text clipping or elements outside the board."
+  "content_checks": [
+    "No co-launch/placement/program-terms text in the rendered presentation",
+    "No Antseed one-line description on the Problem slide",
+    "No watercolor image or mobile watercolor pseudo-element on slide 4",
+    "Stats retain four metric categories and include actual source/read dates",
+    "Problem, Solution, Proof and Next step labels present"
+  ],
+  "visual_review": "Seven-slide contact sheet and all changed full-size HTML/PDF views reviewed. Mobile workflow header and CTA reviewed.",
+  "font_metric_warnings": 13
 }
