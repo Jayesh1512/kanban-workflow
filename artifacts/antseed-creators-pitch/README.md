@@ -4,9 +4,9 @@ Seven-slide pitch with a clear Problem → Solution → Proof → CTA arc.
 
 1. Introduction: your limit is not your talent.
 2. Problem: capacity, subscriptions, team access and integrations.
-3. Solution: one key, every model, one bill — three illustrated cards with selected source prices.
-4. Solution: mixed-model workflow on a plain dark 2am workspace; the laptop ant is retained.
-5. Solution: team keys, budgets and usage through Antseed Gateway, with a docs button.
+3. Due at 2am: access to multiple models for the hero shot, b-roll, thumbnail and voiceover — three illustrated cards with selected source prices.
+4. Due at 2am: reroute a failed provider request while other jobs continue. The plain dark 01:48 workspace shows a 02:00 submission deadline; the laptop ant is retained.
+5. Due at 2am: simple access through one Antseed Gateway key and endpoint, with per-editor access, shared billing and a docs button.
 6. Proof: current AntSeedStats snapshot.
 7. CTA: bring a shot, render it together, put it to work — Book a Call. Rewards are a small supporting card.
 

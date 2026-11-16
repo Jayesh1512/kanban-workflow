@@ -2,7 +2,7 @@
 
 ## Creators pitch
 
-Seven slides with a clear **Problem → Solution → Proof → CTA** storyline: creator bottlenecks, one API key/model access, the plain dark 2am workflow, Gateway team controls, current AntSeedStats, and a demo invitation with one **Book a Call** button. Rewards remain a small supporting card.
+Seven slides with a clear **Problem → Solution → Proof → CTA** storyline. The three solution pages follow one submission due at **2am**: access multiple models for each asset, reroute a failed provider request while other jobs continue, and connect through one Antseed Gateway key. The plain dark workspace shows 01:48 with a 02:00 deadline. Current AntSeedStats and a demo invitation with one **Book a Call** button close the story. Rewards remain a small supporting card.
 
 - [Live presentation](https://antseed-creators-pitch.vercel.app/)
 - [Offline HTML](Antseed-Creators-Pitch-Updated.html)

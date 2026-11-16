@@ -1,7 +1,7 @@
 {
   "brief": {
     "audience": "Top creator with a team, daily output and deadline pressure",
-    "arc": "Problem → Solution → Proof → CTA",
+    "arc": "Problem \u2192 Solution \u2192 Proof \u2192 CTA",
     "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
     "source_reference": "Antseed - Creators Pitch.pdf / .pptx",
     "date": "2026-11-16",
@@ -32,7 +32,7 @@
     },
     {
       "slide": 3,
-      "headline": "One key. Every model. One bill.",
+      "headline": "The cut needs more than one model.",
       "outline_section": [
         3,
         6
@@ -41,11 +41,12 @@
         2,
         3
       ],
-      "qualification": "60+ video and 35+ image models. Four USD price examples retained from the source: MiniMax H3, Veo 3.1 Fast, GPT Image 2 and ElevenLabs Turbo. Not live quotes; provider configuration and model availability vary."
+      "qualification": "60+ video and 35+ image models. Four USD price examples retained from the source: MiniMax H3, Veo 3.1 Fast, GPT Image 2 and ElevenLabs Turbo. Not live quotes; provider configuration and model availability vary.",
+      "takeaway": "For a 2am submission, choose video, image and voice models for every asset in the cut."
     },
     {
       "slide": 4,
-      "headline": "One key. Mix any model.",
+      "headline": "One provider fails. Find another route.",
       "outline_section": [
         4,
         5
@@ -54,16 +55,18 @@
         2,
         4
       ],
-      "qualification": "A conceptual shared workspace, not measured live rendering progress. Provider failover depends on compatible availability; limits still apply."
+      "qualification": "Illustrative 01:48 workspace with submission due at 02:00, not measured live rendering progress. Provider A/B are conceptual routes for the same Veo hero-shot request. Failover requires a compatible, available provider; limits still apply.",
+      "takeaway": "Before the 2am submission, reroute a failed request to a compatible provider while other jobs continue."
     },
     {
       "slide": 5,
-      "headline": "Your team. One bill. Total control.",
+      "headline": "One key for the cut. Less setup. More time.",
       "outline_section": 7,
       "reference_pages": [
         4
       ],
-      "qualification": "Antseed Gateway manages per-editor/project keys, budgets, caps and usage. Gateway docs button links to the existing official Gateway documentation."
+      "qualification": "Antseed Gateway manages per-editor/project keys, budgets, caps and usage. Gateway docs button links to the existing official Gateway documentation.",
+      "takeaway": "Use one Gateway workflow key and endpoint across models; per-editor access and shared billing support the team."
     },
     {
       "slide": 6,
@@ -96,12 +99,12 @@
   ],
   "editorial_decisions": [
     "Cover retains the talent thesis; the Problem slide contains only bottlenecks, with its Antseed description removed.",
-    "Solution slides explicitly connect one key/model access, the mixed-model workflow and Gateway team controls to the problems.",
+    "Slides 3\u20135 share one scenario: submission due at 2am. The requirements are model access, compatible-provider rerouting and one-key access through Antseed Gateway.",
     "Three illustrated model cards retain four historical source-pitch price examples and the user-approved 35+ image-model label.",
     "Slide 4 replaces the watercolor master with native dark framing, icons and the unchanged model-usage chart. The original laptop ant is retained at x1084/y490 with height164. No watercolor appears in mobile mode either.",
     "Live stats replace the supplied historical snapshot; both the source display time and actual refresh time are shown.",
     "Closing action is Book a Call at https://calendly.com/ravi-antseed. Get your key, Gateway docs and the raw antseed.com link are removed from the closing slide. Gateway docs remains on the team-control slide.",
-    "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user’s request.",
+    "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user\u2019s request.",
     "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing."
   ],
   "prices": [

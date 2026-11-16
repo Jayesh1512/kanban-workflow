@@ -1,5 +1,5 @@
 {
-  "revision": "Clear Problem/Solution/Proof/CTA flow, fresh AntSeedStats, plain slide 4 with original ant and chart, single Book a Call closing link, requested copy removed.",
+  "revision": "Three solution slides reframed around a 2am submission: multiple models, compatible-provider rerouting and one-key Gateway access.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -44,8 +44,9 @@
     "No Antseed one-line description on the Problem slide",
     "No watercolor image or mobile watercolor pseudo-element on slide 4",
     "Stats retain four metric categories and include actual source/read dates",
-    "Problem, Solution, Proof and Next step labels present"
+    "Problem, Solution, Proof and Next step labels present",
+    "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed."
   ],
-  "visual_review": "Seven-slide contact sheet and all changed full-size HTML/PDF views reviewed. Mobile workflow header and CTA reviewed.",
+  "visual_review": "All seven PDF pages rendered and contact sheet reviewed. Revised solution slides reviewed at full size; desktop and mobile HTML reviewed. Offline 28-slide viewport checks and keyboard navigation passed.",
   "font_metric_warnings": 13
 }

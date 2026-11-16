@@ -32,3 +32,7 @@
 .workflow-plain .topic:before{content:'';position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:#507929}
 
 @media screen and (max-width:760px){.workflow-plain .workspace-clock{left:70px;top:12px}}
+
+/* The same 2am submission connects all three solution pages. */
+.workspace-reroute{position:absolute;left:20px;right:20px;bottom:12px;font:11px/16px Mono;color:#becdb0;border-top:1px dotted #526548;padding-top:8px}.workspace-reroute span{color:#e9eee5}.night-workflow .night-jobs article:first-child p{color:#d3e6b9}
+@media screen and (max-width:760px){.workspace-reroute{left:14px;right:14px;bottom:12px;font-size:10px;line-height:15px}.night-workspace{height:383px}.night-jobs article:first-child p{max-width:104px}.night-jobs article:first-child{height:54px}}
