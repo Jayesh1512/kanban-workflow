@@ -112,7 +112,8 @@
     "Brand audit corrects token colors, round-dot rails, button components, radii, cover punctuation/tracking, night ant lighting and figure shape. Content, models, prices, dates, 2am example and three closing actions remain approved.",
     "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story.",
     "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The compatibility/capacity qualification is retained in source metadata.",
-    "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger."
+    "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger.",
+    "The model-access slide\u2019s takeaway and price/availability notes are removed at the user\u2019s request. Four selected source-price examples remain; historical pricing and availability qualifications remain in this source ledger."
   ],
   "prices": [
     {

@@ -1,5 +1,5 @@
 {
-  "revision": "Slide 4 keeps the provider-dependency statement and removes the illustrative-flow caption plus both failover footnote lines.",
+  "revision": "Removed the model-access takeaway and both pricing/availability notes while retaining all three model cards and selected prices.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -55,9 +55,10 @@
     "Exact green/body/night token colors, 11px card and 10px button radii, H1 punctuation, font weights and night character filters verified in computed styles.",
     "Slide 4 text and visual follow one request to failed Provider A, automatic retry through compatible Provider B, then response through the same endpoint. No multi-model fanout or progress bars remain.",
     "Exact Reduce dependency on 1 Provider statement present; requested illustrative-flow caption absent in both HTML and PDF.",
-    "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent."
+    "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent.",
+    "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained."
   ],
-  "visual_review": "Updated slide 4 inspected in desktop/mobile HTML and PDF; seven-page contact sheet reviewed. 56 viewport checks and component/navigation checks passed.",
+  "visual_review": "Updated model-access page inspected in HTML/PDF and seven-page PDF contact sheet reviewed. Offline export reports no missing assets, failed fonts or browser errors.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",

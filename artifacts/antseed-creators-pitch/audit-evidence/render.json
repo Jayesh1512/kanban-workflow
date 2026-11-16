@@ -134,7 +134,7 @@
       "slide": 3,
       "width": 1280,
       "height": 720,
-      "text": "Solution\n\nThe cut needs more\nthan one model.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n\nHero shot. B-roll. Thumbnail. Voiceover. Choose the model each needs.\n\nSource-pitch price examples in USD, not live quotes. Rates vary by provider and configuration.\nSame-day model access depends on provider listings and availability.\n\n03",
+      "text": "Solution\n\nThe cut needs more\nthan one model.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n03",
       "findings": [
         {
           "label": "The cut needs morethan one model.",
