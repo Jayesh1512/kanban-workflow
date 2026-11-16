@@ -1,5 +1,5 @@
 {
-  "revision": "Stats-slide label changed from Solution to Network Stats.",
+  "revision": "Gateway overview-card heading updated to One bill for the entire team.",
   "date": "2026-11-16",
   "slides": 7,
   "pdf_points": [
@@ -60,9 +60,10 @@
     "Model-access Antseed intro present above cards; closing sentence uses Render using Antseed and compare the result and bill.",
     "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim.",
     "Closing title is Your shot. Live.; Book a call title line absent, booking CTA and URL retained.",
-    "Stats page label is Network Stats; snapshot values and date retained."
+    "Stats page label is Network Stats; snapshot values and date retained.",
+    "Gateway overview card reads One bill for the entire team; source font width fits the desktop column."
   ],
-  "visual_review": "Updated stats slide inspected in HTML/PDF; seven-page PDF contact sheet reviewed. Offline renderer found no missing assets, font failures or browser errors.",
+  "visual_review": "Updated Gateway slide inspected in HTML/PDF and seven-page PDF contact sheet reviewed. Offline renderer reports no missing assets, font failures or browser errors.",
   "font_metric_warnings": 14,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",

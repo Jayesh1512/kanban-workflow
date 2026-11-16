@@ -118,7 +118,8 @@
     "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Render using Antseed and compare the result and bill, replacing the render-together sentence.",
     "Removed closing demo intro and promoted the provider-network sentence to 18px/500. Added lower-price language to the model intro. Slide 4 replaces clock readings with deadline pressure and adds the narrowly scoped privacy statement, Antseed does not store your prompts.",
     "Removed Book a call from the closing title; the title is Your shot. Live., with the existing Book a Call button retained.",
-    "Stats-slide storyline label changed from Solution to Network Stats at the user\u2019s request."
+    "Stats-slide storyline label changed from Solution to Network Stats at the user\u2019s request.",
+    "The Gateway overview card explicitly reads One bill for the entire team."
   ],
   "prices": [
     {
