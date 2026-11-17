@@ -1,0 +1,13 @@
+{
+  "source_commit": "49f424f1da21ec28a64758cbdc6cec0e5aa7ba90",
+  "slides": 13,
+  "offline_render_errors": 0,
+  "offline_render_warnings": 0,
+  "pdf_pages": 13,
+  "copy": "User-authored changes preserved.",
+  "changes": [
+    "900+ model counts",
+    "User-updated pricing percentage"
+  ],
+  "html_sha256": "03b3debed8c1aa4fa98d115642f3dc30e86876e62679735c308a745b9d973080"
+}
