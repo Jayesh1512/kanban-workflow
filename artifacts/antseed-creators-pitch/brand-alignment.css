@@ -47,7 +47,7 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 .job-progress{background:var(--glass-smoked-dot)}.job-progress:before{background:var(--color-green-text)}
 .workspace-lines path{stroke:var(--color-green-text)}.workspace-lines g{fill:var(--color-green-text)}
 .workflow-icon{width:24px;height:24px;opacity:1;filter:none}
-.icon-blocks{--icon:url(assets/pixel-blocks.svg)}.icon-sliders-horizontal{--icon:url(assets/pixel-sliders-horizontal.svg)}.icon-analytics{--icon:url(assets/pixel-analytics.svg)}.icon-plug{--icon:url(assets/pixel-plug.svg)}
+.icon-blocks{--icon:url(assets/pixel-blocks.svg);-webkit-mask-image:url(assets/pixel-blocks.svg);mask-image:url(assets/pixel-blocks.svg)}.icon-sliders-horizontal{--icon:url(assets/pixel-sliders-horizontal.svg);-webkit-mask-image:url(assets/pixel-sliders-horizontal.svg);mask-image:url(assets/pixel-sliders-horizontal.svg)}.icon-analytics{--icon:url(assets/pixel-analytics.svg);-webkit-mask-image:url(assets/pixel-analytics.svg);mask-image:url(assets/pixel-analytics.svg)}.icon-plug{--icon:url(assets/pixel-plug.svg);-webkit-mask-image:url(assets/pixel-plug.svg);mask-image:url(assets/pixel-plug.svg)}
 .workflow-plain .workflow-ant,.stats-ant{filter:var(--filter-character)}
 .controls .dots{gap:0}.controls .dots button{position:relative;width:24px;height:24px;background:transparent;border:0;border-radius:var(--radius-control)}
 .controls .dots button:after{content:'';position:absolute;left:9px;top:9px;width:6px;height:6px;border-radius:50%;background:#cad2c3}
@@ -84,20 +84,37 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
 @media screen and (max-width:760px){.dependency-statement{position:relative;inset:auto;margin-top:20px;font-size:16px;line-height:24px}}
 
 .model-intro{position:absolute;left:80px;top:194px;width:1090px;font:400 15.5px/23px Geist;color:var(--color-text-body)}
-.cards-offer .model-cards{top:262px}
-@media screen and (max-width:760px){.model-intro{position:relative;inset:auto;width:auto;margin:0 0 28px}.cards-offer .model-cards{top:auto}}
+.cards-offer .model-cards{top:250px}.cards-offer .model-card{height:360px}.cards-offer .model-card-art{height:140px}.cards-site-button{position:absolute;left:80px;top:618px}
+@media screen and (max-width:760px){.model-intro{position:relative;inset:auto;width:auto;margin:0 0 28px}.cards-offer .model-cards{top:auto}.cards-offer .model-card{height:388px}.cards-offer .model-card-art{height:160px}.cards-site-button{position:relative;inset:auto;margin-top:24px}}
 
 /* Deadline pressure and privacy, with one clear closing claim. */
 .close-call .network-claim{top:208px;width:1100px;font:500 18px/27px Geist;color:var(--color-text)}
 .failover-flow figcaption strong{font:500 18px/24px Geist}.failover-flow figcaption>span{font:400 13px/20px Geist}
-.icon-lock{--icon:url(assets/pixel-lock.svg)}
+.icon-lock{--icon:url(assets/pixel-lock.svg);-webkit-mask-image:url(assets/pixel-lock.svg);mask-image:url(assets/pixel-lock.svg)}
 @media screen and (max-width:760px){.close-call .network-claim{position:relative;inset:auto;width:auto;margin:0;font-size:18px;line-height:27px}.failover-flow figcaption{gap:6px 16px}}
 
 .close-call h2 span{display:block;color:var(--color-text-grey)}
-.close-with-rewards .close-grid{top:270px;gap:24px}
+.close-pilot .close-grid{top:270px;gap:24px}
 .close-grid li{position:relative;height:168px;padding:44px 18px 16px;border:0;border-radius:var(--radius-card);background:var(--color-tile);box-shadow:inset 0 0 0 1px var(--color-tile-line)}
 .close-grid h3{font:500 16px/24px Geist;margin:0 0 10px}
 .close-grid p{font:400 15px/22px Geist;color:var(--color-text-body)}
-.close-call .closing-reward-card{top:466px;padding:14px 16px;border:0;box-shadow:inset 0 0 0 1px var(--color-tile-line);background:var(--color-tile)}
-.close-call .close-actions{top:600px}
-@media screen and (max-width:760px){.close-with-rewards .close-grid{top:auto}.close-grid li{height:auto;min-height:150px;padding:44px 18px 18px}.close-call .closing-reward-card{top:auto}.close-call .close-actions{top:auto}}
+.close-call .close-actions{top:520px}
+@media screen and (max-width:760px){.close-pilot .close-grid{top:auto}.close-grid li{height:auto;min-height:150px;padding:44px 18px 18px}.close-call .close-actions{top:auto}}
+
+/* Value Prop: a Solid-style benefit grid with six creator outcomes. */
+.benefits h2 span{display:block}
+.benefits-lede{position:absolute;left:80px;top:196px;width:760px;font:400 16px/24px Geist;color:var(--color-text-body)}
+.benefits-art{position:absolute;right:60px;top:44px;height:190px;width:auto;filter:var(--filter-character)}
+.benefit-grid{position:absolute;left:80px;right:80px;top:244px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px 42px;margin:0;padding:0;list-style:none}
+.benefit-grid li{min-height:142px;padding-top:16px;border-top:0;background:var(--dots-outline) 0 0/8px 2px repeat-x}
+.benefit-icon{display:block;width:24px;height:24px;margin-bottom:16px;background:var(--color-green-text);-webkit-mask:var(--icon) center/24px no-repeat;mask:var(--icon) center/24px no-repeat}
+.benefit-coin{display:block;width:27px;height:30px;margin:-2px 0 14px -2px;object-fit:contain}
+.benefit-grid h3{font:500 18px/24px Geist;margin:0 0 8px}
+.benefit-grid p{max-width:330px;font:400 15px/22px Geist;color:var(--color-text-body)}
+@media screen and (max-width:760px){
+ .benefits-lede{position:relative;inset:auto;width:auto;margin:0 0 24px}
+ .benefits-art{position:relative;inset:auto;display:block;height:128px;margin:0 4px 24px auto}
+ .benefit-grid{position:relative;inset:auto;grid-template-columns:1fr;gap:22px}
+ .benefit-grid li{min-height:0;padding-top:18px}
+ .benefit-grid p{max-width:none}
+}

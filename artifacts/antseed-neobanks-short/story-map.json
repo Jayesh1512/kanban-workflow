@@ -1,0 +1,159 @@
+{
+  "source_pdf": "Antseed - AI agents for neobanks (Solid case study).pdf",
+  "source_sha256": "10a18fae5b0e02856a896d0821cc00bcffe5b727c396bdb227b268bf2bfad1d1",
+  "source_pages": 15,
+  "output_slides": 8,
+  "snapshot_date": "2026-11-13",
+  "created_at": "2026-11-16",
+  "source_of_claims": "User-supplied PDF, with the Solid launch date, six-model list, Opus retail price and cashback caps cross-checked against solid.xyz/post/ai-agents-antseed on 2026-11-17. Network metrics and other offer details retain the source snapshot.",
+  "coverage": [
+    {
+      "slide": 1,
+      "title": "AI agents, inside your neobank",
+      "pdf_pages": [
+        1,
+        15
+      ],
+      "story": "One API key, network pricing and payment from the balance already in the neobank."
+    },
+    {
+      "slide": 2,
+      "title": "The opportunity",
+      "pdf_pages": [
+        2,
+        4
+      ],
+      "story": "Existing AI spend leaves the app; agents create daily use. Cashback, tiers, provider choice, agent readiness and conditional usage rewards support the bank offer."
+    },
+    {
+      "slide": 3,
+      "title": "The partner offer",
+      "pdf_pages": [
+        3,
+        6
+      ],
+      "story": "Antseed model access, network prices, bank-selected rewards. Eligible usage can earn Antseed Points; each Thursday, Points determine a share of weekly ANTS rewards, which partners may keep, pass on or split under program terms."
+    },
+    {
+      "slide": 4,
+      "title": "Pricing",
+      "pdf_pages": [
+        5
+      ],
+      "story": "Claude Opus network-median price for a healthy paid listing and 50% partner cashback; all three other price examples retained. Solid retail price and caps disclosed. Discounts calculated from displayed USD-per-million-input-token prices."
+    },
+    {
+      "slide": 5,
+      "title": "The network and gateway",
+      "pdf_pages": [
+        7,
+        8
+      ],
+      "story": "Mainline DHT discovery, direct routing, per-use payment, provider failover and signed responses/model checks. Gateway endpoint, per-customer/agent keys, budgets, access and per-key usage support rewards."
+    },
+    {
+      "slide": 6,
+      "title": "Network snapshot",
+      "pdf_pages": [
+        9
+      ],
+      "story": "The four network metrics retain the source snapshot of 13 November 2026 with AntSeedStats CC BY 4.0 attribution."
+    },
+    {
+      "slide": 7,
+      "title": "The Solid case study",
+      "pdf_pages": [
+        10,
+        11
+      ],
+      "story": "8 November launch and 12 November follow-up. Rewards tab, 50% cashback for everyone, six top models on one key, 20% Ultra/10% Prime AI subscription cashback, stacking and zero monthly fees as quoted in the brief."
+    },
+    {
+      "slide": 8,
+      "title": "Your launch",
+      "pdf_pages": [
+        13,
+        14,
+        15
+      ],
+      "story": "Solid playbook: reward placement, clear offer and tiers. Four-step intro, sandbox, in-app integration and co-launch plan; invitation to make AI a reason to open the app."
+    }
+  ],
+  "editorial_decisions": [
+    {
+      "pdf_page": 12,
+      "decision": "The testimonial is explicitly marked draft, pending Mark Smargon approval. It is not reproduced as an approved quote; its retention thesis is already covered by slides 1, 2 and 8."
+    },
+    {
+      "pdf_page": 7,
+      "decision": "Lowest-listing promotional price cards omitted as redundant, rather than conflated with the median healthy paid-listing pricing methodology used on page 5."
+    },
+    {
+      "pdf_page": 10,
+      "decision": "Solid\u2019s 6% APY and Visa acceptance describe the broader app, rather than the AI offer. The short version identifies Solid as a stablecoin money app. These secondary context details do not become a current financial claim."
+    }
+  ],
+  "pricing_math": {
+    "Claude Opus 5.5": {
+      "list": 4,
+      "network": 1.68,
+      "cashback_rate": 0.5,
+      "effective": 0.84,
+      "below_list_pct": 79,
+      "network_label": "network median for a healthy paid listing",
+      "solid_retail": 0.21,
+      "solid_retail_after_cashback": 0.105,
+      "solid_caps_usd_month": {
+        "Core": 50,
+        "Prime": 100,
+        "Ultra": 200
+      }
+    },
+    "Kimi K3": {
+      "list": 3.75,
+      "effective": 0.72,
+      "below_list_pct_rounded": 81
+    },
+    "DeepSeek V4.1 Flash": {
+      "list": 0.3,
+      "effective": 0.014,
+      "below_list_pct_rounded": 95
+    },
+    "GPT-6.1 Sol": {
+      "list": 2,
+      "solid_retail": 0.089,
+      "effective": 0.0445,
+      "below_list_pct_rounded": 98,
+      "source": "Solid launch table dated 4 November 2026"
+    }
+  },
+  "limitations": [
+    "Prices and network figures are the PDF snapshot, not today\u2019s values.",
+    "Solid offers and launch statements are historical, as represented in the supplied brief; launch date, six-model list, Opus retail price and cashback caps were publicly cross-checked.",
+    "Reward eligibility, token value, cashback funding and final program terms require partner agreement. No fixed investment return is asserted.",
+    "Signed provenance and model verification do not establish cryptographic model identity for every response.",
+    "Prompt and answer retention can differ by upstream provider."
+  ],
+  "reward_model": "Eligible paid buyer usage earns Points; variable share of weekly ANTS rewards under public program terms. No fixed conversion or guaranteed bank revenue.",
+  "factual_review_2026_11_17": {
+    "solid_source": "https://solid.xyz/post/ai-agents-antseed",
+    "points_source": "https://antseedpoints.com/",
+    "pricing": "Historical median examples distinguished from Solid retail. GPT-6.1 Sol corrected to 2.00 / 0.089 / 0.0445 per million input tokens; 98% rounded savings.",
+    "caps_monthly_usd": {
+      "Core": 50,
+      "Prime": 100,
+      "Ultra": 200
+    },
+    "model_list": [
+      "Claude Opus 5.5",
+      "Claude Sonnet 5.5",
+      "GPT-6.1 Sol",
+      "DeepSeek V4.1 Flash",
+      "Kimi K3",
+      "GLM 5.3"
+    ],
+    "points": "Eligible paid usage; variable weekly share, no fixed conversion or guaranteed bank revenue.",
+    "data_handling": "Selected providers process requests; Solid stores billing counts, not prompts or answers; provider practices vary.",
+    "stats": "Trailing + added; historical read dates retained."
+  }
+}

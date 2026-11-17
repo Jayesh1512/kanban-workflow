@@ -1,0 +1,556 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-16T08:02:03.390103Z",
+  "title": "Design System: Antseed Neobank Partner Deck",
+  "extensions": {
+    "colorMeta": {
+      "green": {
+        "role": "primary",
+        "displayName": "Forest Green",
+        "tonalRamp": [
+          "oklch(15% 0.12483 132.24)",
+          "oklch(26% 0.12483 132.24)",
+          "oklch(38% 0.12483 132.24)",
+          "oklch(49% 0.12483 132.24)",
+          "oklch(61% 0.12483 132.24)",
+          "oklch(72% 0.12483 132.24)",
+          "oklch(84% 0.12483 132.24)",
+          "oklch(95% 0.12483 132.24)"
+        ]
+      },
+      "green-text-night": {
+        "role": "primary",
+        "displayName": "Night Leaf Green",
+        "tonalRamp": [
+          "oklch(15% 0.13504 129.24)",
+          "oklch(26% 0.13504 129.24)",
+          "oklch(38% 0.13504 129.24)",
+          "oklch(49% 0.13504 129.24)",
+          "oklch(61% 0.13504 129.24)",
+          "oklch(72% 0.13504 129.24)",
+          "oklch(84% 0.13504 129.24)",
+          "oklch(95% 0.13504 129.24)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "White Rail",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26% 0.00000 89.88)",
+          "oklch(38% 0.00000 89.88)",
+          "oklch(49% 0.00000 89.88)",
+          "oklch(61% 0.00000 89.88)",
+          "oklch(72% 0.00000 89.88)",
+          "oklch(84% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Near-White Page",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26% 0.00000 89.88)",
+          "oklch(38% 0.00000 89.88)",
+          "oklch(49% 0.00000 89.88)",
+          "oklch(61% 0.00000 89.88)",
+          "oklch(72% 0.00000 89.88)",
+          "oklch(84% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Night Page",
+        "tonalRamp": [
+          "oklch(15% 0.00660 178.79)",
+          "oklch(26% 0.00660 178.79)",
+          "oklch(38% 0.00660 178.79)",
+          "oklch(49% 0.00660 178.79)",
+          "oklch(61% 0.00660 178.79)",
+          "oklch(72% 0.00660 178.79)",
+          "oklch(84% 0.00660 178.79)",
+          "oklch(95% 0.00660 178.79)"
+        ]
+      },
+      "night-surface": {
+        "role": "neutral",
+        "displayName": "Dark Rail",
+        "tonalRamp": [
+          "oklch(15% 0.00839 169.51)",
+          "oklch(26% 0.00839 169.51)",
+          "oklch(38% 0.00839 169.51)",
+          "oklch(49% 0.00839 169.51)",
+          "oklch(61% 0.00839 169.51)",
+          "oklch(72% 0.00839 169.51)",
+          "oklch(84% 0.00839 169.51)",
+          "oklch(95% 0.00839 169.51)"
+        ]
+      },
+      "smoked-glass": {
+        "role": "neutral",
+        "displayName": "Smoked Green Glass",
+        "tonalRamp": [
+          "oklch(15% 0.03200 159.43 / 0.64)",
+          "oklch(26% 0.03200 159.43 / 0.64)",
+          "oklch(38% 0.03200 159.43 / 0.64)",
+          "oklch(49% 0.03200 159.43 / 0.64)",
+          "oklch(61% 0.03200 159.43 / 0.64)",
+          "oklch(72% 0.03200 159.43 / 0.64)",
+          "oklch(84% 0.03200 159.43 / 0.64)",
+          "oklch(95% 0.03200 159.43 / 0.64)"
+        ]
+      },
+      "green-hover-light": {
+        "role": "neutral",
+        "displayName": "Green Hover Light",
+        "tonalRamp": [
+          "oklch(15% 0.11363 132.68)",
+          "oklch(26% 0.11363 132.68)",
+          "oklch(38% 0.11363 132.68)",
+          "oklch(49% 0.11363 132.68)",
+          "oklch(61% 0.11363 132.68)",
+          "oklch(72% 0.11363 132.68)",
+          "oklch(84% 0.11363 132.68)",
+          "oklch(95% 0.11363 132.68)"
+        ]
+      },
+      "green-hover-dark": {
+        "role": "neutral",
+        "displayName": "Green Hover Dark",
+        "tonalRamp": [
+          "oklch(15% 0.13503 132.00)",
+          "oklch(26% 0.13503 132.00)",
+          "oklch(38% 0.13503 132.00)",
+          "oklch(49% 0.13503 132.00)",
+          "oklch(61% 0.13503 132.00)",
+          "oklch(72% 0.13503 132.00)",
+          "oklch(84% 0.13503 132.00)",
+          "oklch(95% 0.13503 132.00)"
+        ]
+      },
+      "green-lip": {
+        "role": "neutral",
+        "displayName": "Green Lip",
+        "tonalRamp": [
+          "oklch(15% 0.10636 132.24)",
+          "oklch(26% 0.10636 132.24)",
+          "oklch(38% 0.10636 132.24)",
+          "oklch(49% 0.10636 132.24)",
+          "oklch(61% 0.10636 132.24)",
+          "oklch(72% 0.10636 132.24)",
+          "oklch(84% 0.10636 132.24)",
+          "oklch(95% 0.10636 132.24)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15% 0.02735 160.77)",
+          "oklch(26% 0.02735 160.77)",
+          "oklch(38% 0.02735 160.77)",
+          "oklch(49% 0.02735 160.77)",
+          "oklch(61% 0.02735 160.77)",
+          "oklch(72% 0.02735 160.77)",
+          "oklch(84% 0.02735 160.77)",
+          "oklch(95% 0.02735 160.77)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15% 0.02333 135.20)",
+          "oklch(26% 0.02333 135.20)",
+          "oklch(38% 0.02333 135.20)",
+          "oklch(49% 0.02333 135.20)",
+          "oklch(61% 0.02333 135.20)",
+          "oklch(72% 0.02333 135.20)",
+          "oklch(84% 0.02333 135.20)",
+          "oklch(95% 0.02333 135.20)"
+        ]
+      },
+      "text-grey": {
+        "role": "neutral",
+        "displayName": "Text Grey",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26% 0.00000 89.88)",
+          "oklch(38% 0.00000 89.88)",
+          "oklch(49% 0.00000 89.88)",
+          "oklch(61% 0.00000 89.88)",
+          "oklch(72% 0.00000 89.88)",
+          "oklch(84% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "h1-second": {
+        "role": "neutral",
+        "displayName": "H1 Second",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26% 0.00000 89.88)",
+          "oklch(38% 0.00000 89.88)",
+          "oklch(49% 0.00000 89.88)",
+          "oklch(61% 0.00000 89.88)",
+          "oklch(72% 0.00000 89.88)",
+          "oklch(84% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "text-body": {
+        "role": "neutral",
+        "displayName": "Text Body",
+        "tonalRamp": [
+          "oklch(15% 0.02432 237.19)",
+          "oklch(26% 0.02432 237.19)",
+          "oklch(38% 0.02432 237.19)",
+          "oklch(49% 0.02432 237.19)",
+          "oklch(61% 0.02432 237.19)",
+          "oklch(72% 0.02432 237.19)",
+          "oklch(84% 0.02432 237.19)",
+          "oklch(95% 0.02432 237.19)"
+        ]
+      },
+      "text-small": {
+        "role": "neutral",
+        "displayName": "Text Small",
+        "tonalRamp": [
+          "oklch(15% 0.02173 157.42)",
+          "oklch(26% 0.02173 157.42)",
+          "oklch(38% 0.02173 157.42)",
+          "oklch(49% 0.02173 157.42)",
+          "oklch(61% 0.02173 157.42)",
+          "oklch(72% 0.02173 157.42)",
+          "oklch(84% 0.02173 157.42)",
+          "oklch(95% 0.02173 157.42)"
+        ]
+      },
+      "text-night": {
+        "role": "neutral",
+        "displayName": "Text Night",
+        "tonalRamp": [
+          "oklch(15% 0.00697 124.45)",
+          "oklch(26% 0.00697 124.45)",
+          "oklch(38% 0.00697 124.45)",
+          "oklch(49% 0.00697 124.45)",
+          "oklch(61% 0.00697 124.45)",
+          "oklch(72% 0.00697 124.45)",
+          "oklch(84% 0.00697 124.45)",
+          "oklch(95% 0.00697 124.45)"
+        ]
+      },
+      "text-muted-night": {
+        "role": "neutral",
+        "displayName": "Text Muted Night",
+        "tonalRamp": [
+          "oklch(15% 0.01334 156.88)",
+          "oklch(26% 0.01334 156.88)",
+          "oklch(38% 0.01334 156.88)",
+          "oklch(49% 0.01334 156.88)",
+          "oklch(61% 0.01334 156.88)",
+          "oklch(72% 0.01334 156.88)",
+          "oklch(84% 0.01334 156.88)",
+          "oklch(95% 0.01334 156.88)"
+        ]
+      },
+      "dot": {
+        "role": "neutral",
+        "displayName": "Dot",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26% 0.00000 89.88)",
+          "oklch(38% 0.00000 89.88)",
+          "oklch(49% 0.00000 89.88)",
+          "oklch(61% 0.00000 89.88)",
+          "oklch(72% 0.00000 89.88)",
+          "oklch(84% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "dot-night": {
+        "role": "neutral",
+        "displayName": "Dot Night",
+        "tonalRamp": [
+          "oklch(15% 0.00941 164.47)",
+          "oklch(26% 0.00941 164.47)",
+          "oklch(38% 0.00941 164.47)",
+          "oklch(49% 0.00941 164.47)",
+          "oklch(61% 0.00941 164.47)",
+          "oklch(72% 0.00941 164.47)",
+          "oklch(84% 0.00941 164.47)",
+          "oklch(95% 0.00941 164.47)"
+        ]
+      },
+      "tile": {
+        "role": "neutral",
+        "displayName": "Tile",
+        "tonalRamp": [
+          "oklch(15% 0.01207 133.39 / 0.2)",
+          "oklch(26% 0.01207 133.39 / 0.2)",
+          "oklch(38% 0.01207 133.39 / 0.2)",
+          "oklch(49% 0.01207 133.39 / 0.2)",
+          "oklch(61% 0.01207 133.39 / 0.2)",
+          "oklch(72% 0.01207 133.39 / 0.2)",
+          "oklch(84% 0.01207 133.39 / 0.2)",
+          "oklch(95% 0.01207 133.39 / 0.2)"
+        ]
+      },
+      "tile-night": {
+        "role": "neutral",
+        "displayName": "Tile Night",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88 / 0.06)",
+          "oklch(26% 0.00000 89.88 / 0.06)",
+          "oklch(38% 0.00000 89.88 / 0.06)",
+          "oklch(49% 0.00000 89.88 / 0.06)",
+          "oklch(61% 0.00000 89.88 / 0.06)",
+          "oklch(72% 0.00000 89.88 / 0.06)",
+          "oklch(84% 0.00000 89.88 / 0.06)",
+          "oklch(95% 0.00000 89.88 / 0.06)"
+        ]
+      },
+      "tile-line": {
+        "role": "neutral",
+        "displayName": "Tile Line",
+        "tonalRamp": [
+          "oklch(15% 0.02261 150.02 / 0.1)",
+          "oklch(26% 0.02261 150.02 / 0.1)",
+          "oklch(38% 0.02261 150.02 / 0.1)",
+          "oklch(49% 0.02261 150.02 / 0.1)",
+          "oklch(61% 0.02261 150.02 / 0.1)",
+          "oklch(72% 0.02261 150.02 / 0.1)",
+          "oklch(84% 0.02261 150.02 / 0.1)",
+          "oklch(95% 0.02261 150.02 / 0.1)"
+        ]
+      },
+      "tile-line-night": {
+        "role": "neutral",
+        "displayName": "Tile Line Night",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88 / 0.1)",
+          "oklch(26% 0.00000 89.88 / 0.1)",
+          "oklch(38% 0.00000 89.88 / 0.1)",
+          "oklch(49% 0.00000 89.88 / 0.1)",
+          "oklch(61% 0.00000 89.88 / 0.1)",
+          "oklch(72% 0.00000 89.88 / 0.1)",
+          "oklch(84% 0.00000 89.88 / 0.1)",
+          "oklch(95% 0.00000 89.88 / 0.1)"
+        ]
+      },
+      "smoked-strong": {
+        "role": "neutral",
+        "displayName": "Smoked Strong",
+        "tonalRamp": [
+          "oklch(15% 0.00994 155.09)",
+          "oklch(26% 0.00994 155.09)",
+          "oklch(38% 0.00994 155.09)",
+          "oklch(49% 0.00994 155.09)",
+          "oklch(61% 0.00994 155.09)",
+          "oklch(72% 0.00994 155.09)",
+          "oklch(84% 0.00994 155.09)",
+          "oklch(95% 0.00994 155.09)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Measured Cover Display",
+        "purpose": "Source cover title: ELSH 11 and 0.82 opacity."
+      },
+      "headline": {
+        "displayName": "Measured Section Heading",
+        "purpose": "Source section headings: ELSH 40 and two-tone lines."
+      },
+      "card-title": {
+        "displayName": "Offer Heading",
+        "purpose": "ELSH-20 pixel titles inside illustrated offer cards."
+      },
+      "figure": {
+        "displayName": "Network Figure",
+        "purpose": "Tabular ELSH-20 network snapshot numerals."
+      },
+      "figure-compact": {
+        "displayName": "Compact Figure",
+        "purpose": "Solid outcomes and numbered launch steps."
+      },
+      "terminal": {
+        "displayName": "Shared Terminal",
+        "purpose": "Source smoked-terminal mono body; wraps native code."
+      }
+    },
+    "shadows": [
+      {
+        "name": "button-light",
+        "value": "0 3.5px .5px 0 rgba(46, 74, 14, .1), inset 0 -.5px 0 0 rgba(200, 230, 170, .63), inset 0 -2px 1px 0 var(--color-green-lip)",
+        "purpose": "Shallow filled-action lip by day."
+      },
+      {
+        "name": "button-dark",
+        "value": "inset 0 -2px 1px 0 var(--color-green-lip)",
+        "purpose": "Filled-action lip at night."
+      },
+      {
+        "name": "pill-ring",
+        "value": "inset 0 0 0 1px #fff",
+        "purpose": "Day pill and control-tray ring."
+      },
+      {
+        "name": "pill-night-ring",
+        "value": "inset 0 0 0 .5px rgba(236, 238, 233, .16)",
+        "purpose": "Night pill and control-tray ring."
+      },
+      {
+        "name": "smoked-terminal",
+        "value": "0 12px 32px 0 rgba(8, 26, 14, .26), inset 0 .5px 0 0 rgba(190, 228, 170, .16)",
+        "purpose": "The shared Gateway terminal shadow over source night artwork."
+      }
+    ],
+    "motion": [
+      {
+        "name": "feedback",
+        "value": "150ms",
+        "purpose": "Filled-action background feedback."
+      },
+      {
+        "name": "theme-colors",
+        "value": "600ms ease-in-out",
+        "purpose": "User-triggered surface and text theme changes."
+      },
+      {
+        "name": "painting-sweep",
+        "value": "1200ms ease-in-out",
+        "purpose": "User-triggered paired-painting reveal; skipped for reduced motion, hidden documents and still captures."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-reflow",
+        "value": "760px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The filled green deck action, with a shallow lip and accessible focus.",
+      "html": "<a class=\"ds-button\" href=\"#\">Book a call</a>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border:0;border-radius:10px;background:var(--color-button-fill);color:var(--color-button-text);font:500 15px/20px var(--font-sans);text-decoration:none;white-space:nowrap;box-shadow:var(--button-shadow);transition:background-color 150ms}.ds-button:hover{background:var(--color-button-fill-hover)}.ds-button:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+    },
+    {
+      "name": "Presentation navigation",
+      "kind": "nav",
+      "description": "Icon controls, current-slide dot and a tabular mono count.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Presentation controls\"><button class=\"ds-control\" aria-label=\"Previous slide\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m14 6-6 6 6 6M8 12h12\"/></svg></button><button class=\"ds-dot\" aria-label=\"Slide 1\" aria-current=\"true\"></button><span class=\"ds-count\">1 / 8</span><button class=\"ds-control\" aria-label=\"Next slide\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m10 6 6 6-6 6M16 12H4\"/></svg></button></nav>",
+      "css": ".ds-nav{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;background:var(--color-rail);color:var(--color-text);box-shadow:var(--glass-pill-ring)}.ds-control{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:8px;border:0;border-radius:5px;background:transparent;color:inherit;cursor:pointer}.ds-control svg{width:20px;height:20px}.ds-control:hover{background:var(--color-tile-hover)}.ds-control:disabled{opacity:.35}.ds-count{font:400 12.5px/18px var(--font-mono);font-variant-numeric:tabular-nums;color:var(--color-text-small);min-width:48px;text-align:center}.ds-dot{position:relative;width:32px;height:40px;padding:0;border:0;background:transparent;cursor:pointer}.ds-dot:after{content:\"\";position:absolute;width:8px;height:8px;left:12px;top:16px;border-radius:50%;background:var(--color-green-text)}.ds-control:focus-visible,.ds-dot:focus-visible{outline:2px solid var(--color-focus);outline-offset:4px}"
+    },
+    {
+      "name": "Cover context pill",
+      "kind": "chip",
+      "refersTo": "cover-pill",
+      "description": "Short contextual label on the cover painting.",
+      "html": "<p class=\"ds-pill\">A partner brief for onchain neobanks</p>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:2px;height:24px;margin:0;padding:0 11px;border-radius:999px;background:var(--glass-pill-background);box-shadow:var(--glass-pill-ring);backdrop-filter:var(--glass-pill-backdrop);color:var(--color-ink);font:400 12px/16px var(--font-sans);white-space:nowrap}"
+    },
+    {
+      "name": "Pinned topic and pixel heading",
+      "kind": "custom",
+      "refersTo": "topic",
+      "description": "The approved source-template topic marker and measured two-tone section heading.",
+      "html": "<div class=\"ds-head\"><p class=\"ds-topic\">The partner offer</p><h2 class=\"ds-heading\">One key. Network prices. <span>Your reward.</span></h2></div>",
+      "css": ".ds-topic{display:flex;align-items:center;gap:8px;margin:0;font:400 13px/18px var(--font-sans);color:var(--color-text-small)}.ds-topic:before{content:\"\";width:6px;height:6px;border-radius:50%;background:var(--color-green);flex-shrink:0}.ds-heading{margin:14px 0 0;font:400 34px/36px var(--font-pixel);font-variation-settings:\"ELSH\" 40;letter-spacing:-.04em;color:var(--color-text)}.ds-heading span{color:var(--color-text-grey)}"
+    },
+    {
+      "name": "Offer card text and frame",
+      "kind": "card",
+      "refersTo": "offer-card",
+      "description": "The implemented offer-card frame and type; the full artifact adds its original ant and paired watercolor strip.",
+      "html": "<article class=\"ds-card\"><p class=\"ds-card-label\">Antseed brings</p><h3 class=\"ds-card-title\">One API key</h3><p class=\"ds-card-body\">Access to model families through a single API.</p></article>",
+      "css": ".ds-card{box-sizing:border-box;position:relative;width:339.2px;max-width:100%;height:302px;overflow:hidden;padding:20px 22px;border-radius:11px;background:var(--color-tile);border:0;box-shadow:inset 0 0 0 1px var(--color-tile-line)}.ds-card-label{margin:0;font:400 13px/18px var(--font-sans);color:var(--color-green-text)}.ds-card-title{margin:8px 0 0;font:400 24px/28px var(--font-pixel);font-variation-settings:\"ELSH\" 20;color:var(--color-text)}.ds-card-body{position:relative;z-index:2;margin:12px 0 0;max-width:230px;font:400 15px/22px var(--font-sans);color:var(--color-text-body)}"
+    },
+    {
+      "name": "Pixel metric",
+      "kind": "custom",
+      "description": "Dotted divider, subdued label and tabular ELSH-20 numeral.",
+      "html": "<div class=\"ds-figure\"><p class=\"ds-figure-label\">Models</p><p class=\"ds-figure-value\">920</p></div>",
+      "css": ".ds-figure{padding-top:8px;border-top:2px dotted color-mix(in srgb,var(--color-text) 25%,transparent)}.ds-figure-label{margin:0;font:400 13px/16px var(--font-sans);color:var(--color-text-small)}.ds-figure-value{margin:14px 0 0;font:400 32px/36px var(--font-pixel);font-variation-settings:\"ELSH\" 20;font-variant-numeric:tabular-nums;color:var(--color-text)}"
+    },
+    {
+      "name": "Native price bar",
+      "kind": "custom",
+      "description": "Editable source-price row with a native 32px track and right-aligned mono amount.",
+      "html": "<div class=\"ds-price\"><span>After 50% back</span><div class=\"ds-track\"><div class=\"ds-fill\"></div></div><strong>$0.84</strong></div>",
+      "css": ".ds-price{display:grid;grid-template-columns:150px 266px 88px;gap:16px;align-items:center;font:400 15px/22px var(--font-sans);color:var(--color-text)}.ds-track{height:32px;overflow:hidden;border-radius:5px;background:var(--color-tile);box-shadow:inset 0 0 0 1px var(--color-tile-line)}.ds-fill{height:100%;width:21%;border-radius:5px;background:var(--color-green)}.ds-price strong{font:400 16px/20px var(--font-mono);text-align:right;color:var(--color-green-text)}"
+    },
+    {
+      "name": "Model price card",
+      "kind": "card",
+      "refersTo": "model-card",
+      "description": "Native model name, discount and definition-list prices; the artifact adds an original extracted model mark.",
+      "html": "<article class=\"ds-model\"><span class=\"ds-saving\">−78%</span><h3>GPT-6 Astra</h3><dl><dt>List</dt><dd><s>$10.00</s></dd><dt>After 50% back</dt><dd>$2.23</dd></dl></article>",
+      "css": ".ds-model{box-sizing:border-box;display:flex;flex-direction:column;width:168px;height:150px;padding:16px;border:0;border-radius:11px;box-shadow:inset 0 0 0 1px var(--color-tile-line);background:var(--color-tile);color:var(--color-text)}.ds-saving{align-self:flex-end;font:400 18px/24px var(--font-mono);color:var(--color-green-text)}.ds-model h3{margin:auto 0 0;font:500 14px/20px var(--font-sans)}.ds-model dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 4px;margin:6px 0 0;font:400 12px/16px var(--font-sans);color:var(--color-text-small)}.ds-model dd{margin:0;white-space:nowrap;font:400 12.5px/16px var(--font-mono)}.ds-model dd:last-child{color:var(--color-green-text)}"
+    },
+    {
+      "name": "Smoked Gateway terminal",
+      "kind": "custom",
+      "description": "Source-terminal translucent smoke without backdrop blur, shared shadow, title bar, dotted pane dividers and native code; no idle cursor blink.",
+      "html": "<div class=\"ds-terminal\"><div class=\"ds-bar\"><div class=\"ds-lights\"><i></i><i></i><i></i></div><span class=\"ds-terminal-title\">antseed — zsh</span></div><div class=\"ds-pane\"><p><b>~ $ </b><span class=\"ds-command\">antseed gateway start</span></p><p>API-key gateway listening on <span class=\"ds-url\">http://127.0.0.1:8379/v1</span></p></div><div class=\"ds-pane\"><p><b>~ $ </b><span class=\"ds-command\">export ANTSEED_API_KEY=\"antseed_…\"</span></p></div></div>",
+      "css": ".ds-terminal{box-sizing:border-box;position:relative;width:552px;max-width:100%;overflow:hidden;border-radius:8px;border:var(--glass-smoked-border);background:var(--glass-smoked-background);box-shadow:var(--glass-smoked-shadow);backdrop-filter:none;-webkit-backdrop-filter:none;font:var(--type-terminal);color:var(--glass-smoked-text);text-align:left}.ds-bar{position:relative;display:flex;align-items:center;height:34px;padding:0 14px;background:var(--glass-smoked-bar);border-bottom:2px dotted var(--glass-smoked-dot)}.ds-lights{display:flex;gap:6.8px}.ds-lights i{width:10px;height:10px;border-radius:50%;background:#ff5f57}.ds-lights i:nth-child(2){background:#febc2e}.ds-lights i:nth-child(3){background:#28c840}.ds-terminal-title{position:absolute;left:50%;transform:translateX(-50%);font:var(--type-terminal-title);letter-spacing:.2px;color:var(--glass-smoked-chrome);white-space:nowrap}.ds-pane{padding:15.3px 22.1px 17px;overflow-wrap:anywhere}.ds-pane+.ds-pane{border-top:2px dotted var(--glass-smoked-dot);padding-top:16.15px}.ds-pane p{margin:0;white-space:pre-wrap}.ds-pane b{font-weight:400;color:var(--glass-smoked-prompt)}.ds-command{color:var(--glass-smoked-strong)}.ds-url{color:var(--glass-smoked-url)}"
+    },
+    {
+      "name": "Launch step card",
+      "kind": "card",
+      "refersTo": "launch-card",
+      "description": "One of four horizontal numbered source-master cards; stacks into content-height cards on phones.",
+      "html": "<article class=\"ds-step\"><span>1</span><h4>Intro call</h4><p>Choose models, the customer reward and how to allocate $ANTS rewards.</p></article>",
+      "css": ".ds-step{box-sizing:border-box;position:relative;width:268px;height:190px;padding:52px 18px 18px;border:0;border-radius:11px;box-shadow:inset 0 0 0 1px var(--color-tile-line);background:var(--color-tile);color:var(--color-text)}.ds-step>span{position:absolute;left:18px;top:16px;font:400 26px/30px var(--font-pixel);font-variation-settings:\"ELSH\" 20;color:var(--color-green-text)}.ds-step h4{margin:0;font:500 16px/24px var(--font-sans)}.ds-step p{margin:12px 0 0;font:400 15px/22px var(--font-sans);color:var(--color-text-body)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Antseed’s illustrated partner rail",
+    "overview": "The supplied Antseed PDF is the visual authority: a white or dark presentation rail inside dotted margins, measured pixel headlines, restrained Geist text, and original ant characters against watercolor landscapes. The visual tone is clear, light and approachable, with the authored technical chapters held in night colors.\n\nThis records the completed eight-slide condensation. Source measurements override the earlier intro-deck approximation. Pinned section topics, illustrated offer cards and compact merged-content rows are approved adaptations; claims and editorial decisions belong in story-map.json. The eight slides follow the PDF’s styles without claiming to reproduce all fifteen source pages pixel for pixel.",
+    "keyCharacteristics": [
+      "Measured source typography and a 16px paper frame",
+      "Two-tone variable pixel headings and Geist 400/500 text",
+      "Original PDF ants, paintings, extracted icons and model marks",
+      "Fixed dark technical chapters with optional global night",
+      "Editable native text and pricing, responsive reflow and quiet controls"
+    ],
+    "rules": [
+      {
+        "name": "The Technical Night Rule",
+        "body": "The Gateway and network snapshot retain the source dark rail, text and night artwork in either global theme.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Tone Heading Rule",
+        "body": "Keep the primary phrase in text ink and its companion phrase in the appropriate heading gray; retain the measured tracking and pixel variation for each role.",
+        "section": "typography"
+      },
+      {
+        "name": "The Still-at-Rest Rule",
+        "body": "Nothing animates while idle. Motion answers a control action and stops for reduced motion, hidden documents and still captures.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve the supplied PDF’s measured typography, paper frame, content gutter and component proportions.",
+      "Do preserve the approved pinned topics, illustrated offer cards and compact merged-content rows.",
+      "Do use original PDF ants, logos, paintings, extracted icons and model marks; keep the source Solid artwork intact.",
+      "Do keep pricing as editable native bars and model cards, with labels readable independently of color.",
+      "Do reflow the selected slide into a scrollable reading layout at the phone breakpoint.",
+      "Do retain visible focus, accessible control labels, the live slide count and inert inactive slides."
+    ],
+    "donts": [
+      "Don't reinstate superseded approximate type sizes, card dimensions or pricing-table layouts.",
+      "Don't add a Sources popup or footer-left slide descriptions.",
+      "Don't replace the fixed night artwork in technical chapters with day scenes.",
+      "Don't introduce idle character, cursor, dot or background animation.",
+      "Don't inherit unused shared-kit sizes as though they were the effective deck styles."
+    ]
+  }
+}

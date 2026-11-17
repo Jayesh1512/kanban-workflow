@@ -1,0 +1,139 @@
+{
+  "pages": [
+    {
+      "page": 1,
+      "text_chars": 188,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "AAAAAA+Geist-Regular",
+        "",
+        ""
+      ]
+    },
+    {
+      "page": 2,
+      "text_chars": 763,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium"
+      ]
+    },
+    {
+      "page": 3,
+      "text_chars": 629,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium",
+        "",
+        ""
+      ]
+    },
+    {
+      "page": 4,
+      "text_chars": 1077,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium",
+        "",
+        "GAAAAA+GeistMono-Regular"
+      ]
+    },
+    {
+      "page": 5,
+      "text_chars": 1064,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium",
+        "GAAAAA+GeistMono-Regular"
+      ]
+    },
+    {
+      "page": 6,
+      "text_chars": 308,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium",
+        "",
+        ""
+      ]
+    },
+    {
+      "page": 7,
+      "text_chars": 598,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium",
+        ""
+      ]
+    },
+    {
+      "page": 8,
+      "text_chars": 624,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "fonts": [
+        "AAAAAA+Geist-Regular",
+        "",
+        "",
+        "DAAAAA+Geist-Medium",
+        ""
+      ]
+    }
+  ],
+  "page_count": 8,
+  "metadata": {
+    "format": "PDF 1.4",
+    "title": "Antseed for neobanks - short",
+    "author": "Antseed",
+    "subject": "AntSeedStats: CC BY 4.0, read 13 November 2026. Growing metrics carry +; dated snapshots retained. Historical input-token pricing: network medians distinguished from Solid retail. Solid source: https://solid.xyz/post/ai-agents-antseed. Conditional Antseed Points: https://antseedpoints.com/.",
+    "keywords": "",
+    "creator": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "producer": "Skia/PDF m157",
+    "creationDate": "D:20261117114945+00'00'",
+    "modDate": "D:20261117114945+00'00'",
+    "trapped": "",
+    "encryption": null
+  }
+}

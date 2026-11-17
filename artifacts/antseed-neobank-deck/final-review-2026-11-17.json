@@ -1,0 +1,624 @@
+{
+  "date": "2026-11-17",
+  "scope": "Final factual review; original art, brand colors and compact PDF typography retained. Friendly illustrated story with technical pricing and provider detail.",
+  "slides": 14,
+  "responsive": {
+    "method": "T3 collaborative browser, same-origin iframe viewports at actual 320,390,1280 CSS px",
+    "checks": [
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 1,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 2,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 3,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 4,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 5,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 6,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 7,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 8,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 9,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 10,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 11,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 12,
+        "width": 320
+      },
+      {
+        "actualWidth": 320,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 13,
+        "width": 320
+      },
+      {
+        "actualWidth": 316,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 14,
+        "width": 320
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 1,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 2,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 3,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 4,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 5,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 6,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 7,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 8,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 9,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 10,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 11,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 12,
+        "width": 390
+      },
+      {
+        "actualWidth": 390,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 13,
+        "width": 390
+      },
+      {
+        "actualWidth": 386,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 14,
+        "width": 390
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 1,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 2,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 3,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 4,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 5,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 6,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 7,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 8,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 9,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 10,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 11,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 12,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 13,
+        "width": 1280
+      },
+      {
+        "actualWidth": 1280,
+        "deck": "flagship",
+        "documentOverflow": false,
+        "missing": 0,
+        "outside": [],
+        "slide": 14,
+        "width": 1280
+      }
+    ]
+  },
+  "pdf": {
+    "pages": [
+      {
+        "page": 1,
+        "text_chars": 188,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "AAAAAA+Geist-Regular",
+          "",
+          ""
+        ]
+      },
+      {
+        "page": 2,
+        "text_chars": 460,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium"
+        ]
+      },
+      {
+        "page": 3,
+        "text_chars": 560,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium",
+          "",
+          ""
+        ]
+      },
+      {
+        "page": 4,
+        "text_chars": 768,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium"
+        ]
+      },
+      {
+        "page": 5,
+        "text_chars": 945,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "page": 6,
+        "text_chars": 547,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium",
+          ""
+        ]
+      },
+      {
+        "page": 7,
+        "text_chars": 868,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium"
+        ]
+      },
+      {
+        "page": 8,
+        "text_chars": 390,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium"
+        ]
+      },
+      {
+        "page": 9,
+        "text_chars": 264,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "page": 10,
+        "text_chars": 538,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "page": 11,
+        "text_chars": 709,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium",
+          "",
+          ""
+        ]
+      },
+      {
+        "page": 12,
+        "text_chars": 397,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium",
+          ""
+        ]
+      },
+      {
+        "page": 13,
+        "text_chars": 387,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium"
+        ]
+      },
+      {
+        "page": 14,
+        "text_chars": 109,
+        "size": [
+          960.0,
+          540.0
+        ],
+        "fonts": [
+          "AAAAAA+Geist-Regular",
+          "",
+          "",
+          "DAAAAA+Geist-Medium"
+        ]
+      }
+    ],
+    "page_count": 14,
+    "metadata": {
+      "format": "PDF 1.4",
+      "title": "Antseed for neobanks - offering",
+      "author": "Antseed",
+      "subject": "AntSeedStats: CC BY 4.0, read 13 November 2026. Growing metrics carry +; dated snapshots retained. Historical input-token pricing: network medians distinguished from Solid retail. Solid source: https://solid.xyz/post/ai-agents-antseed. Conditional Antseed Points: https://antseedpoints.com/.",
+      "keywords": "",
+      "creator": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "producer": "Skia/PDF m157",
+      "creationDate": "D:20261117114947+00'00'",
+      "modDate": "D:20261117114947+00'00'",
+      "trapped": "",
+      "encryption": null
+    }
+  },
+  "content": [
+    "Growing metrics have trailing +; original snapshot dates retained.",
+    "Solid six-model list, Opus retail rates and monthly cashback caps verified.",
+    "GPT-6.1 Sol uses verified 2.00 list / 0.089 Solid / 0.0445 after cashback input-token prices; 98% rounded.",
+    "Network median pricing explicitly distinguished from Solid retail.",
+    "Eligible usage can earn Points; weekly rewards vary, no guaranteed bank revenue or fixed conversion.",
+    "Provider processing and data-practice variation disclosed; verification is evidence, not proof.",
+    "Unapproved draft testimonial absent."
+  ],
+  "visual_review": "All final PDF contact sheets and changed pricing, data-handling, benefits and stats pages inspected. Intentional closing-art crop contains no text.",
+  "navigation": "ArrowRight, Home, End handler checks pass; Book a call target verified.",
+  "limitations": [
+    "Network figures remain dated snapshots; + marks growing counts, not a fresh measurement.",
+    "Reference artwork and compact PDF type scale retained as approved adaptations."
+  ]
+}

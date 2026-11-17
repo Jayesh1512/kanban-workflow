@@ -185,7 +185,7 @@ img.logo-night{display:none}
 .logo-top{display:none}.opt dl div{grid-template-columns:1fr}
 }
 
-.card{height:316px}.cards3{height:316px}.card .art{height:46%}.card p.t{max-width:none}.card .ant{height:128px}
+.card{height:316px}.cards3{height:316px}.cards3--runin{height:362px}.card .art{height:46%}.card p.t{max-width:none}.card .ant{height:128px}
 .strip-wrap .ant--trio{right:70px;bottom:4px;height:150px}
 .trac-copy{top:92px}.fig-grid{margin-top:16px}.fig{padding:10px 0 6px;min-height:84px}.fig .v{font-size:30px;line-height:32px}
 .cover .logo-tile img{width:92px;height:auto}
@@ -212,3 +212,18 @@ img.logo-night{display:none}
 /* docs buttons on the last slide */
 .opt .docs{display:flex;gap:10px;margin-top:12px}
 .ak-btn--sm{height:34px;padding:0 14px;font-size:14px;line-height:20px}
+
+/* Keep closing actions and artwork inside narrow screens. */
+@media(max-width:760px){.cta{flex-wrap:wrap}.end-strip{width:100%;max-width:100%}}
+
+@page{size:13.333333in 7.5in;margin:0}
+@media print{
+ html,body{width:auto;height:auto;overflow:visible;margin:0;padding:0;background:white}
+ .viewport{position:static;inset:auto;display:block;margin:0}
+ .deck-shell{position:static;left:auto;top:auto;width:1280px;height:auto;margin:0;transform:none;overflow:visible}
+ .slides{position:static}
+ .slide,.slide.active{position:relative;inset:auto;display:block!important;width:1280px;height:720px;box-sizing:border-box;overflow:hidden;break-inside:avoid;break-after:page;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ .slide:last-child{break-after:auto}
+ .controls,.help,.source-drawer,.theme-sweep{display:none!important}
+ *,*::before,*::after{animation:none!important;transition:none!important}
+}

@@ -2,7 +2,7 @@
 
 ## Creators pitch
 
-Seven slides with a clear **Problem → Solution → Your turn** storyline. The cover introduces Antseed with “One key. Every creative possibility.” and a video/image/voice descriptor. Storyline labels use only Problem, Solution, Network Stats and Your turn. The Problem page headline is “Your ideas move fast. Your tools make you wait.” The three core solution pages follow one submission due at **2am**: access multiple models for each asset, reroute the same failed request from Provider A to compatible Provider B and return its response, and connect through one Antseed Gateway key. The plain dark workspace shows 01:48 with a 02:00 deadline. Current AntSeedStats and a demo invitation with one **Book a call** button close the story. Rewards remain a small supporting card.
+Eight slides with a clear **Problem → Solution → Your turn** storyline. The cover introduces Antseed with “An AI studio, behind every story.” and a video/image/voice descriptor. Storyline labels are Problem, Solution, Value Prop, Network Stats and Your turn. The Problem page headline is “Your ideas move fast. Your tools make you wait.” The three core solution pages follow one submission due at **2am**: access multiple models for each asset, reroute the same failed request from Provider A to compatible Provider B and return its response, then connect through one Antseed Gateway key. A Value Prop page summarizes the payoff as six creator outcomes in a Solid-style 3x2 benefit grid. The model-access page ends with a Visit antseed.com button. Current AntSeedStats then supplies the evidence. The plain dark workflow shows time pressure and same-request provider failover. A demo invitation with one **Book a call** button closes the story. The closing creator-rewards card remains removed; eligible usage can earn conditional Antseed Points in the Value Prop grid.
 
 - [Live presentation](https://antseed-creators-pitch.vercel.app/)
 - [Offline HTML](Antseed-Creators-Pitch-Updated.html)
@@ -11,9 +11,9 @@ Seven slides with a clear **Problem → Solution → Your turn** storyline. The 
 - [Source ZIP](Antseed-Creators-Pitch-Updated-source.zip)
 - [Book a call](https://calendly.com/ravi-antseed)
 
-Open the source `index.html` locally; no build step is required. Fonts, artwork, source outline, story/design maps, current kit tokens/components and QA evidence are bundled. `package.py` rebuilds the standalone HTML and source ZIP. The [brand/PDF audit](antseed-creators-pitch/brand-audit.md) records the 17-point checklist, eight-width checks, the Solid case-study reference pass and preserved user overrides. The final compliance pass aligns shared components to the supplied Solid PDF: gray Geist eyebrows with a green dot, ELSH40 section titles, ELSH20 card titles, tabular Geist page numbers, closing cards, sentence-case Your turn and Book a call, and a visible AntSeedStats CC BY credit.
+Open the source `index.html` locally; no build step is required. Fonts, artwork, source outline, story/design maps, current kit tokens/components and QA evidence are bundled. `package.py` rebuilds the standalone HTML and source ZIP. The [brand/PDF audit](antseed-creators-pitch/brand-audit.md) records the 17-point checklist, 64 viewport checks, the Solid case-study reference pass and preserved user overrides. The final compliance pass aligns shared components to the supplied Solid PDF: gray Geist eyebrows with a green dot, ELSH40 section titles, ELSH20 card titles, tabular Geist page numbers, closing cards, sentence-case Your turn and Book a call, a Solid page-4 benefit grid with green pixel icons, and a visible AntSeedStats CC BY credit.
 
-Stats refreshed **16 November 2026, 19:00 IST**, from AntSeedStats at its displayed 13:30 UTC update: **942 models, 274 lifetime settling providers, 28,254 total participants, 905.05B tokens**. Role counts may overlap; tokens include paid and free usage. Source metadata and the lifetime-provider API cross-check are in [stats-refresh.json](antseed-creators-pitch/stats-refresh.json). Attribution: AntSeedStats · CC BY 4.0. The four model-price examples retain their historical source-pitch framing.
+Stats refreshed **16 November 2026, 19:00 IST**, from AntSeedStats at its displayed 13:30 UTC update: **942+ models, 274+ lifetime settling providers, 28,254+ total participants, 905.05B+ tokens**. Role counts may overlap; tokens include paid and free usage. Source metadata and the lifetime-provider API cross-check are in [stats-refresh.json](antseed-creators-pitch/stats-refresh.json). Attribution: AntSeedStats · CC BY 4.0. The four model-price examples retain their historical source-pitch framing.
 
 ## Short neobank partner deck
 
@@ -21,16 +21,16 @@ Stats refreshed **16 November 2026, 19:00 IST**, from AntSeedStats at its displa
 
 Eight-slide version of the supplied Antseed/Solid partner case study: proposition, bank opportunity, partner offer, pricing, network and Gateway, historical network snapshot, Solid case study, and launch playbook. Exported from the approved shortened HTML with selectable text, embedded fonts and all eight pages.
 
-This neobank PDF retains its original historical pricing, stats and Solid-offer source framing and dates. Its draft testimonial was omitted because it was marked pending approval.
+This neobank PDF retains its original historical pricing and 13 November stats snapshot. Its Solid launch date, six-model list, Opus retail price and cashback caps were cross-checked against Solid’s public post on 17 November; its draft testimonial was omitted because it was marked pending approval.
 
 ## Neobank offering deck (HTML)
 
-Fourteen-slide partner-facing web deck for onchain neobanks: opportunity, three-move integration, bank case, network pricing with cashback, $ANTS rewards, how the network works, Gateway per-customer keys, network snapshot, Solid case study with its two public launch posts, the Solid playbook and a launch path. Built on the same standalone deck system as the vision deck (brand tokens/components/core/slides CSS, day/night themes, keyboard and touch navigation).
+Fourteen-slide partner-facing web deck for onchain neobanks: opportunity, three-move integration, bank case, network pricing with cashback, conditional Antseed Points, how the network works, Gateway per-customer keys, network snapshot, Solid case study with its two public launch posts, the Solid playbook and a launch path. Built on the same standalone deck system as the vision deck (brand tokens/components/core/slides CSS, day/night themes, keyboard and touch navigation).
 
 - [Deck source](antseed-neobank-deck/) — open `index.html` locally; no build step
 - [Sources and verification](antseed-neobank-deck/SOURCES.md)
 
-Built 16 November 2026 from the detailed neobank case study (`neobank-detailed.pdf`) with the fact-check fixes applied: GPT-6.1 Sol naming, 920 models, the draft testimonial removed, cashback caps footnoted, verification and data-handling footnotes, and the −78% pricing label confirmed correct by geometry. Pricing examples and network stats are historical (AntSeedStats, read 13 Nov 2026) and labeled as such. $ANTS reward wording follows the supplied brief and awaits confirmation of program mechanics.
+Built 16 November 2026 from the detailed neobank case study (`neobank-detailed.pdf`) with the fact-check fixes applied: GPT-6.1 Sol naming, 920+ models, trailing plus on growing metrics, the draft testimonial removed, cashback caps footnoted, verification and data-handling footnotes, six top models on one key, and corrected GPT-6.1 Sol pricing. Pricing examples and network stats are historical (AntSeedStats, read 13 Nov 2026) and labeled as such; the $1.68 example is labeled a network median, with Solid’s $0.21/$0.105 retail disclosed. Antseed Points wording follows the public weekly program and remains conditional.
 
 ## Neobank PDF conversion (13 slides)
 
@@ -41,3 +41,11 @@ Reference-faithful HTML version of the supplied Solid case-study PDF, with origi
 - [Source and deployment instructions](antseed-neobanks-presentation/)
 
 Standalone offline HTML with bundled artwork/fonts, selectable text, keyboard/touch navigation, mobile reading layout and 13-slide print styling.
+
+## 17 November factual review
+
+Growing network snapshots carry a trailing +; their original read dates are retained. The neobank decks use 920+/269+/24,610+/825.8B+ (13 November); creators uses 942+/274+/28,254+/905.05B+ (16 November). These are dated snapshots, not new readings.
+
+Solid’s six-model list, cashback caps and data handling were checked against https://solid.xyz/post/ai-agents-antseed. Opus’s $1.68/$0.84 example is explicitly a historical network median, distinct from Solid retail $0.21/$0.105. GPT-6.1 Sol is no longer a renamed old price: its card uses the public Solid table ($2.00 list, $0.089 retail, $0.0445 after cashback per million input tokens; table dated 4 November; rounded saving 98%). Kimi and DeepSeek remain labeled historical network examples. Cashback is capped at $50/$100/$200 monthly for Core/Prime/Ultra.
+
+Rewards use conditional Antseed Points language, with a variable share of weekly ANTS rewards under program terms, not a fixed conversion or guaranteed bank revenue. Public mechanics: https://antseedpoints.com/. Provider processing, billing retention and variation in provider practices are disclosed. Model verification is evidence, not cryptographic proof. No draft CEO testimonial is presented as an endorsement.

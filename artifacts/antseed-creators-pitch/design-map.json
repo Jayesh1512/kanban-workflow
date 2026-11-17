@@ -51,28 +51,31 @@
     "three illustrated model-access cards / submission due at 2am",
     "plain dark single-request failover flow / failed Provider A to compatible Provider B / original laptop ant retained",
     "one-key Gateway access / team support / painted strip",
+    "Value Prop benefits / 3x2 icon grid / prompt privacy and conditional Antseed Points",
     "dark AntSeedStats four-figure snapshot / night meadow",
-    "three-step demo CTA / small rewards card / single Book a Call button"
+    "three-step pilot CTA / single Book a call button"
   ],
   "adaptations": [
     "Cover keeps the vision-deck meadow, typography and assets with a general creator-facing product title and short video/image/voice descriptor.",
     "Original illustrated catalog-card art is reused inside taller cards to make room for selected source prices.",
     "Night source master and source font roles retained. Mobile reflows cards and the shared workspace.",
-    "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot. The rewards card uses 15px Geist heading and no lead $ANTS figure to stay secondary.",
-    "Story-stage eyebrows use only Problem, Solution and Action. Network evidence supports the solution; the closing Action page keeps its three steps.",
+    "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot.",
     "Slide 4 uses native dark framing and an unchanged transparent ant asset instead of a watercolor background.",
     "The closing illustration is clipped independently of its old master so removed buttons do not leave empty baked backgrounds.",
     "All three solution pages share a 2am submission deadline. The workflow shows 01:48 and an illustrative Provider A-to-B reroute; cards and Gateway keep their reference compositions.",
     "Current kit tokens/components are bundled. Only the font URL in tokens.css is rebased for offline packaging.",
     "16px margins use the kit\u2019s 2px/8px round-dot matrix and rails; dark pages use local theme variables so system theme cannot recolor the light slides.",
     "Compact 34px/36px section titles and 46px/48px cover retained for PDF fidelity. Storyline labels are short non-link labels, not documentation-link eyebrows.",
-    "User-requested visible stats-footer removal retained; attribution is in HTML/PDF metadata, the source ledger and this audit.",
+    "The three-line stats footer remains removed; one compact visible CC BY 4.0 credit sits at the foot of the stats slide.",
     "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface.",
     "Model-access intro sits at y192; cards move to y240 with their existing sizes and artwork. Mobile intro reflows above stacked cards.",
     "Closing provider-network claim replaces the removed demo intro, using 18px/27px Geist 500 at y208. Slide 4 diagram header describes deadline pressure in plain language rather than clock readings; a lock icon marks the privacy feature.",
     "Solid reference shared components applied: gray Geist eyebrows with green dot, ELSH40 section titles, ELSH20 card titles, Geist page numbers.",
     "Closing steps use the Solid page-14 card pattern; the label is Your turn and the CTA is Book a call.",
-    "The stats line now visibly credits AntSeedStats under CC BY 4.0 with the read date and time."
+    "The stats line now visibly credits AntSeedStats under CC BY 4.0 with the read date and time.",
+    "A dedicated Value Prop page sits between Gateway and Network Stats. It follows Solid page 4: three columns and two rows, green 24px pixel icons, dotted row rules, 18px/24px benefit headings, 15px/22px body copy and a single mascot at the upper right. Prompt privacy and conditional Antseed Points are the final cells, not a footnote.",
+    "Slide 3 cards moved up to y250 and shortened to 360px with 140px art to make room for one filled Visit antseed.com button at y618. Slide 4 copy changed to approaching close; the payoff eyebrow is Value Prop.",
+    "Closing step 2 reads Pilot using Antseed; the Creator rewards card is removed and Book a call moves up to y520. The third tile is intentionally unchanged for the proposed Scale with your team card."
   ],
   "cover_reference": {
     "url": "https://antseed-vision-deck.vercel.app",

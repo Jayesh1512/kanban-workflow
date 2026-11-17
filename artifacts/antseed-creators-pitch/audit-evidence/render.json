@@ -5,262 +5,74 @@
     720
   ],
   "offline": true,
+  "external_requests": [],
   "errors": [],
-  "warnings": [
-    {
-      "slide": 1,
-      "label": "An AI studio,behind every story.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 1,
-      "label": "behind every story.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 2,
-      "label": "Your ideas move fast. Your tools make you wait.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 2,
-      "label": "Your tools make you wait.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 3,
-      "label": "The whole cut.Every model.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 3,
-      "label": "Every model.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 4,
-      "label": "A provider drops. Your request reroutes.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 4,
-      "label": "Your request reroutes.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 5,
-      "label": "One key for the cut.Less setup. More time.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 5,
-      "label": "Less setup. More time.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 6,
-      "label": "The network,in numbers.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 6,
-      "label": "in numbers.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 7,
-      "label": "Your shot. Live.",
-      "outside": false,
-      "textOverflow": true
-    },
-    {
-      "slide": 7,
-      "label": "Live.",
-      "outside": false,
-      "textOverflow": true
-    }
-  ],
-  "requests": [],
   "slides": [
     {
       "slide": 1,
-      "width": 1280,
-      "height": 720,
+      "width": 1320,
+      "height": 742.5,
       "text": "Antseed for creators\n\nAn AI studio,\nbehind every story.\n\nCreate video, images and voice with leading AI models.\nAll through one Antseed key.",
-      "findings": [
-        {
-          "label": "An AI studio,behind every story.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "behind every story.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "findings": [],
+      "missing": []
     },
     {
       "slide": 2,
-      "width": 1280,
-      "height": 720,
+      "width": 1320,
+      "height": 742.5,
       "text": "Problem\n\nYour ideas move fast.\nYour tools make you wait.\nYou are not out of ideas.\n\nCredits, fast hours and queue time run out first.\n\nMultiple subscriptions. Multiple bills.\n\nMultiple logins between the idea and the final cut.\n\nYour team shares logins.\n\nYou see the cost after the work is done.\n\nA new model breaks the pipeline.\n\nAnother integration to rebuild before you can use it.\n\n02",
-      "findings": [
-        {
-          "label": "Your ideas move fast. Your tools make you wait.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "Your tools make you wait.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "findings": [],
+      "missing": []
     },
     {
       "slide": 3,
-      "width": 1280,
-      "height": 720,
-      "text": "Solution\n\nThe whole cut.\nEvery model.\n\nAntseed connects your apps and agents to AI services through a peer-to-peer network.\nOne key for video, image and voice models, at lower prices.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\n03",
-      "findings": [
-        {
-          "label": "The whole cut.Every model.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "Every model.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "width": 1320,
+      "height": 742.5,
+      "text": "Solution\n\nThe whole cut.\nEvery model.\n\nAntseed connects your apps and agents to AI services through a peer-to-peer network.\nOne key for video, image and voice models, at lower prices.\n\n60+ video models\n\nVideo\n\nKling, Veo, Seedance,\nRunway, Wan, MiniMax,\nGrok Imagine, LTX\n\nMiniMax H3\n$0.011/s\nVeo 3.1 Fast\n$0.061/s\n\n35+ image models\n\nImage\n\nFlux, GPT Image, Nano Banana,\nSeedream, Recraft,\nIdeogram\n\nGPT Image 2\n$0.003/image\n\nVoice models\n\nVoice\n\nElevenLabs Turbo,\nxAI TTS,\nQwen TTS\n\nElevenLabs Turbo\n$31.25/1M chars\nVisit antseed.com\n\u2197\n03",
+      "findings": [],
+      "missing": []
     },
     {
       "slide": 4,
-      "width": 1280,
-      "height": 720,
-      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour 2am deadline is close. The hero shot is missing.\nAntseed reroutes a failed request so you can keep editing.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nPrivacy: Antseed does not store your prompts\n\nMinutes to deliver.\nNo time to restart.\nYour request\n\nVeo · your hero shot\n\n↓\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n↓\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt · compatible provider\n\n↓\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nReduce dependency on 1 Provider",
-      "findings": [
-        {
-          "label": "A provider drops. Your request reroutes.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "Your request reroutes.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "width": 1320,
+      "height": 742.5,
+      "text": "Solution\n\nA provider drops.\nYour request reroutes.\n\nYour 2am deadline is approaching close. The hero shot is missing.\nAntseed reroutes a failed request so you can keep editing.\n\nKeep the same model and prompt\n\nRetry through another compatible provider\n\nUse the same key and endpoint\n\nPrivacy: Antseed does not store your prompts\n\nMinutes to deliver.\nNo time to restart.\nYour request\n\nVeo \u00b7 your hero shot\n\n\u2193\nInitial route\nProvider A\nFailed\n\nThe request fails at this provider\n\n\u2193\nAutomatic reroute\nProvider B\nRetry\n\nSame model and prompt \u00b7 compatible provider\n\n\u2193\nResponse\nBack to your edit\n\nResponse returned through the same endpoint\n\nReduce dependency on 1 Provider\n\n04",
+      "findings": [],
+      "missing": []
     },
     {
       "slide": 5,
-      "width": 1280,
-      "height": 720,
-      "text": "Solution\n\nOne key for the cut.\nLess setup. More time.\n\nConnect once through the Antseed Gateway. Access video, image and voice models from one endpoint.\n\nConnect your workflow\n\nOne workflow key\n\nUse models across providers.\nKeep one integration for the whole cut.\n\nBring in the team\n\nAccess per editor\n\nIssue individual keys when needed.\nSet a budget for each editor.\n\nKeep the overview\n\nOne team. One bill.\n\nSee usage and spend together.\nKeep your choice of providers.\n\nGateway docs\n↗\n05",
-      "findings": [
-        {
-          "label": "One key for the cut.Less setup. More time.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "Less setup. More time.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "width": 1320,
+      "height": 742.5,
+      "text": "Solution\n\nOne key for the cut.\nLess setup. More time.\n\nConnect once through the Antseed Gateway. Access video, image and voice models from one endpoint.\n\nConnect your workflow\n\nOne workflow key\n\nUse models across providers.\nKeep one integration for the whole cut.\n\nBring in the team\n\nAccess per editor\n\nIssue individual keys when needed.\nSet a budget for each editor.\n\nKeep the overview\n\nOne team. One bill.\n\nSee usage and spend together.\nKeep your choice of providers.\n\nGateway docs\n\u2197\n05",
+      "findings": [],
+      "missing": []
     },
     {
       "slide": 6,
-      "width": 1280,
-      "height": 720,
-      "text": "Network Stats\n\nThe network,\nin numbers.\nModels\n942\nProviders, all time\n274\nTotal active users\n28,254\nTokens consumed\n905.05B\n\nSource: AntSeedStats · CC BY 4.0 · 16 November 2026 · 13:30 UTC\n\nView AntSeedStats\n↗\n06",
-      "findings": [
-        {
-          "label": "The network,in numbers.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "in numbers.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "width": 1320,
+      "height": 742.5,
+      "text": "Value Prop\n\nLess friction.\nMore finished cuts.\n\nThe same 2am deadline, with fewer places to lose time.\n\nLower cost per shot.\n\nUse provider rates without stacking subscriptions.\n\nOne key, every model.\n\nVideo, image and voice models through one Antseed endpoint.\n\nNo single-provider failure.\n\nA failed request reroutes with the same model and prompt.\n\nEvery editor in. One bill out.\n\nPer-editor keys, budgets and usage without shared logins.\n\nPrompts stay yours.\n\nAntseed does not store your prompts.\n\nUsage can earn Points.\n\nPoints determine weekly ANTS rewards; referrals can add rewards. Terms apply.\n\n06",
+      "findings": [],
+      "missing": []
     },
     {
       "slide": 7,
-      "width": 1280,
-      "height": 720,
-      "text": "Your turn\n\nYour shot.\nLive.\n\nBuilt on Antseed’s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nRender using Antseed\n\nSee the output.\nCompare the usage bill.\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nCreator rewards\n\nEligible usage earns $ANTS; referrals can add rewards.\n\nBook a call\n07",
-      "findings": [
-        {
-          "label": "Your shot. Live.",
-          "outside": false,
-          "textOverflow": true
-        },
-        {
-          "label": "Live.",
-          "outside": false,
-          "textOverflow": true
-        }
-      ]
+      "width": 1320,
+      "height": 742.5,
+      "text": "Network Stats\n\nThe network,\nin numbers.\nModels\n942+\nProviders, all time\n274+\nTotal active users\n28,254+\nTokens consumed\n905.05B+\n\nSource: AntSeedStats \u00b7 CC BY 4.0 \u00b7 16 November 2026 \u00b7 13:30 UTC\n\nView AntSeedStats\n\u2197\n07",
+      "findings": [],
+      "missing": []
+    },
+    {
+      "slide": 8,
+      "width": 1320,
+      "height": 742.5,
+      "text": "Your turn\n\nYour shot.\nLive.\n\nBuilt on Antseed\u2019s provider network. You keep your choice of models.\n\n1\nBring one shot\n\nPick a scene from\nyour next project.\n\n2\nPilot using Antseed\n\nSee the output with simplified UX,\nCompare the usage bill\n\n3\nPut it to work\n\nUse the workflow with your team.\nShip your next video.\n\nBook a call\n08",
+      "findings": [],
+      "missing": []
     }
   ],
-  "fonts": [
-    {
-      "family": "Geist Pixel Var",
-      "weight": "400",
-      "status": "unloaded"
-    },
-    {
-      "family": "Geist",
-      "weight": "normal",
-      "status": "loaded"
-    },
-    {
-      "family": "Geist",
-      "weight": "500",
-      "status": "loaded"
-    },
-    {
-      "family": "Pixel",
-      "weight": "normal",
-      "status": "loaded"
-    },
-    {
-      "family": "Round",
-      "weight": "normal",
-      "status": "unloaded"
-    },
-    {
-      "family": "Mono",
-      "weight": "normal",
-      "status": "loaded"
-    },
-    {
-      "family": "CoverPixel",
-      "weight": "normal",
-      "status": "loaded"
-    },
-    {
-      "family": "PixelVar",
-      "weight": "normal",
-      "status": "loaded"
-    }
-  ]
+  "missing_assets": [],
+  "outside": []
 }

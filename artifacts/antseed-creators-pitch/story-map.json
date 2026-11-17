@@ -5,7 +5,7 @@
     "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
     "source_reference": "Antseed - Creators Pitch.pdf / .pptx; Antseed - AI agents for neobanks (Solid case study).pdf (shared brand-compliant layout reference)",
     "date": "2026-11-16",
-    "slide_count": 7,
+    "slide_count": 8,
     "brand_reference": "AGENTS.md v1 (12 November 2026) and the supplied Solid case-study PDF; tokens.css wins numeric conflicts"
   },
   "slides": [
@@ -34,7 +34,7 @@
     },
     {
       "slide": 3,
-      "headline": "The cut needs more than one model.",
+      "headline": "The whole cut. Every model.",
       "outline_section": [
         3,
         6
@@ -73,20 +73,35 @@
     },
     {
       "slide": 6,
+      "headline": "Less friction. More finished cuts.",
+      "outline_section": [
+        3,
+        4,
+        5
+      ],
+      "reference_pages": [
+        4
+      ],
+      "qualification": "Summarizes lower provider pricing without a best-price guarantee; one endpoint across video, image and voice models; illustrative compatible-provider rerouting with availability, capacity and limits; per-editor keys, budgets and usage through Antseed Gateway; prompt storage is scoped to Antseed, not independent providers; eligible usage can earn Antseed Points, which determine a weekly ANTS reward share, with referral rewards and program terms subject to confirmation.",
+      "takeaway": "The solution removes four kinds of overhead: cost, model access, provider failure and team access. Privacy and conditional Antseed Points are stated as supporting notes.",
+      "intro": "The same 2am deadline, with fewer places to lose time."
+    },
+    {
+      "slide": 7,
       "headline": "The network, in numbers.",
       "source": "https://antseedstats.com/",
       "retrieved_at": "2026-11-16T13:30:47.978Z",
       "source_updated_utc": "13:30",
       "metrics": {
-        "Models": "942",
-        "Providers, all time": "274",
-        "Total active users": "28,254",
-        "Tokens consumed": "905.05B"
+        "Models": "942+",
+        "Providers, all time": "274+",
+        "Total active users": "28,254+",
+        "Tokens consumed": "905.05B+"
       },
       "qualification": "Latest displayed homepage snapshot at retrieval. Provider count matches lifetime.sellers in the public network-summary API. The participant count sums roles and may count one address more than once. Tokens include paid and free usage. CC BY 4.0 attribution retained."
     },
     {
-      "slide": 7,
+      "slide": 8,
       "headline": "Your shot. Live.",
       "outline_section": [
         8,
@@ -97,12 +112,12 @@
         6,
         7
       ],
-      "qualification": "Book a Call is the sole closing link, using the user-provided Ravi Calendly URL. The requested co-launch/placement and program-terms lines are removed. The small rewards card retains eligible usage and referrals only."
+      "qualification": "Book a Call is the sole closing link, using the user-provided Ravi Calendly URL. The requested co-launch/placement and program-terms lines are removed. The creator-rewards card has been removed; the third tile is intentionally unchanged pending a Scale with your team card."
     }
   ],
   "editorial_decisions": [
     "Cover uses a general product title; the following Problem and Solution pages carry the concrete pain points and 2am deadline scenario.",
-    "Slides 3\u20135 share one scenario: submission due at 2am. The requirements are model access, compatible-provider rerouting and one-key access through Antseed Gateway.",
+    "Slides 3\u20136 share one scenario: submission due at 2am. The requirements are model access, compatible-provider rerouting, one-key access through Antseed Gateway and a clear payoff summary.",
     "Three illustrated model cards retain four historical source-pitch price examples and the user-approved 35+ image-model label.",
     "Slide 4 replaces the watercolor master with native dark framing, icons and a matching single-request failover flow. The original laptop ant is retained at x1084/y490 with height164. No watercolor appears in mobile mode either.",
     "Live stats replace the supplied historical snapshot; both the source display time and actual refresh time are shown.",
@@ -110,13 +125,13 @@
     "Co-launch/featured-placement and program-terms copy is removed from the closing reward card at the user\u2019s request.",
     "All exports, Vercel and the connected GitHub copy are refreshed together. The shortened neobank deck retains its original historical framing.",
     "At user request, the stats slide shows only the data-as-shown date. Refresh timestamp, CC BY attribution and metric-methodology lines remain in source metadata, not on the slide; the orphaned asterisk is removed.",
-    "Storyline eyebrows are exactly Problem, Solution or Action. The first content slide uses a descriptive headline instead of repeating Problem. Network stats supports Solution; the final Action slide retains three concrete actions.",
+    "Storyline eyebrows are Problem, Solution, Value Prop, Network Stats and Your turn. The first content slide uses a descriptive headline instead of repeating Problem. The final action slide retains three concrete steps.",
     "Brand audit corrects token colors, round-dot rails, button components, radii, cover punctuation/tracking, night ant lighting and figure shape. Content, models, prices, dates, 2am example and three closing actions remain approved.",
     "Slide 4 replaces the multi-model progress chart with a single-request failover flow. The text and diagram now show the identical request \u2192 failed provider \u2192 automatic reroute \u2192 response story.",
     "Slide 4 adds the exact statement Reduce dependency on 1 Provider and removes the requested illustrative-flow caption. The compatibility/capacity qualification is retained in source metadata.",
     "The two visible failover compatibility/capacity footnote lines are also removed at the user\u2019s request. Limitations remain in the source qualification ledger.",
     "The model-access slide\u2019s takeaway and price/availability notes are removed at the user\u2019s request. Four selected source-price examples remain; historical pricing and availability qualifications remain in this source ledger.",
-    "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Render using Antseed and compare the result and bill, replacing the render-together sentence.",
+    "Model-access slide adds a short Antseed intro above the cards. Closing invitation says Pilot using Antseed and compare the result and bill, replacing the render-together sentence.",
     "Removed closing demo intro and promoted the provider-network sentence to 18px/500. Added lower-price language to the model intro. Slide 4 replaces clock readings with deadline pressure and adds the narrowly scoped privacy statement, Antseed does not store your prompts.",
     "Removed Book a call from the closing title; the title is Your shot. Live., with the existing Book a Call button retained.",
     "Stats-slide storyline label changed from Solution to Network Stats at the user\u2019s request.",
@@ -127,7 +142,10 @@
     "Closing storyline label is sentence-case Your turn and the CTA is Book a call, matching the Solid reference and the guide's sentence-case rule.",
     "The closing title renders in two tones, Your shot. dark and Live. gray, fixing the single-tone regression.",
     "The visible stats line reads Source: AntSeedStats \u00b7 CC BY 4.0 \u00b7 16 November 2026 \u00b7 13:30 UTC, satisfying the brand credit requirement without restoring the removed footer block.",
-    "Approved creator cover mirrors the neobank headline structure: An AI studio, / behind every story. Supporting line explains video, image and voice models through one Antseed key."
+    "Approved creator cover mirrors the neobank headline structure: An AI studio, / behind every story. Supporting line explains video, image and voice models through one Antseed key.",
+    "Added a dedicated payoff slide at position 6, later relabeled Value Prop: six creator outcomes in a 3x2 icon grid, with prompt privacy and conditional Antseed Points as the final two cells. Network Stats and Your turn renumbered to 07 and 08 so the solution is summarized before the evidence and close.",
+    "Slide 3 gained a bottom Visit antseed.com button; slide 4 deadline copy now reads approaching close; the payoff slide eyebrow moved from Solution to Value Prop.",
+    "Closing step 2 is now Pilot using Antseed with simplified-UX output and usage-bill copy; the Creator rewards card was removed. The third tile remains Put it to work pending a Scale with your team card."
   ],
   "prices": [
     {
@@ -217,14 +235,25 @@
       "slides": [
         3,
         4,
-        5,
-        6
+        5
       ],
       "stage": "Solution"
     },
     {
       "slides": [
+        6
+      ],
+      "stage": "Value Prop"
+    },
+    {
+      "slides": [
         7
+      ],
+      "stage": "Network Stats"
+    },
+    {
+      "slides": [
+        8
       ],
       "stage": "Your turn"
     }
@@ -240,5 +269,26 @@
       "verified_date": "2026-11-16",
       "supports": "No Antseed server holds prompts, chats, files or keys. Data stays on the device or user-operated gateway; the chosen provider sees its request."
     }
+  },
+  "factual_review_2026_11_17": {
+    "solid_source": "https://solid.xyz/post/ai-agents-antseed",
+    "points_source": "https://antseedpoints.com/",
+    "pricing": "Historical median examples distinguished from Solid retail. GPT-6.1 Sol corrected to 2.00 / 0.089 / 0.0445 per million input tokens; 98% rounded savings.",
+    "caps_monthly_usd": {
+      "Core": 50,
+      "Prime": 100,
+      "Ultra": 200
+    },
+    "model_list": [
+      "Claude Opus 5.5",
+      "Claude Sonnet 5.5",
+      "GPT-6.1 Sol",
+      "DeepSeek V4.1 Flash",
+      "Kimi K3",
+      "GLM 5.3"
+    ],
+    "points": "Eligible paid usage; variable weekly share, no fixed conversion or guaranteed bank revenue.",
+    "data_handling": "Selected providers process requests; Solid stores billing counts, not prompts or answers; provider practices vary.",
+    "stats": "Trailing + added; historical read dates retained."
   }
 }

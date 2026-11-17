@@ -1,7 +1,7 @@
 {
-  "revision": "Approved creator cover: An AI studio, / behind every story. Supporting copy explains video, image and voice through one Antseed key.",
-  "date": "2026-11-16",
-  "slides": 7,
+  "revision": "Final three-deck factual review: Points, growing metrics, public Solid pricing and provider data handling.",
+  "date": "2026-11-17",
+  "slides": 8,
   "pdf_points": [
     960,
     540
@@ -11,10 +11,10 @@
     "retrieved_at": "2026-11-16T13:30:47.978Z",
     "source_updated_utc": "13:30",
     "display": {
-      "active_users": "28,254",
-      "models": "942",
-      "providers": "274",
-      "tokens": "905.05B"
+      "active_users": "28,254+",
+      "models": "942+",
+      "providers": "274+",
+      "tokens": "905.05B+"
     },
     "provider_cross_check": 274,
     "source_url": "https://antseedstats.com/"
@@ -32,9 +32,9 @@
       356,
       320
     ],
-    "slide_checks": 56,
+    "slide_checks": 64,
     "keyboard": "Home/End/arrows/Space on focused controls, boundaries and focus restoration passed",
-    "mobile_end_checks": "320px and 390px: complete failover response, Gateway docs, stats and Book a Call accessible above controls.",
+    "mobile_end_checks": "320px and 390px: the Value Prop slide stacks to one column and scrolls through all six benefit cells; Gateway docs, stats and Book a call remain accessible above the controls.",
     "workflow_ant_coordinates": [
       1084,
       490,
@@ -48,7 +48,7 @@
     "No Antseed one-line description on the Problem slide",
     "No watercolor image or mobile watercolor pseudo-element on slide 4",
     "Stats retain four metric categories and retain the source snapshot date",
-    "Problem, Solution, Network Stats and Your turn labels match the guide, Solid reference and user\u2019s latest instructions",
+    "Problem, Solution, Value Prop, Network Stats and Your turn labels match the guide, Solid reference and user\u2019s latest instructions",
     "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
     "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
     "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
@@ -60,41 +60,58 @@
     "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim.",
     "Closing title is Your shot. Live.; both tones render, the booking CTA says Book a call and the URL is retained.",
     "Stats page label is Network Stats; snapshot values and date retained.",
-    "Gateway overview card reads One bill for the entire team; source font width fits the desktop column.",
-    "Gateway card heading shortened to One team. One bill.; last-slide label reads Your turn.",
+    "Gateway slide retains One workflow key, Access per editor and One team. One bill.; the source font width fits the desktop column.",
+    "Gateway card heading reads One team. One bill.; the last-slide label reads Your turn.",
     "Model slide now leads with the vision-deck definition: Antseed connects apps and agents to AI services through a peer-to-peer network; a second line keeps one key and lower prices; slide title reads The whole cut. Every model.",
     "Stats slide visibly credits AntSeedStats under CC BY 4.0 with the read date and time.",
     "Eyebrow labels use Geist 13/18 in the secondary text tone with the kit green dot; section titles use the Pixel ELSH40 axis and -.04em tracking.",
     "Page numbers use Geist tabular figures; card titles use the Pixel ELSH20 axis; closing steps use the solid card pattern from the Solid reference.",
     "Closing title is two-tone and ends with a period; the filled CTA is the only primary button on the closing slide.",
-    "Slide 1 has the approved AI-studio headline and two-line supporting copy; HTML slides 2\u20137 and PDF text on pages 2\u20137 are unchanged."
+    "Cover has the approved AI-studio headline and two-line supporting copy; all eight slides use the current storyline and page numbering.",
+    "Slide 6 is a dedicated Value Prop slide before Network Stats, with six outcomes in a 3x2 grid: lower cost per shot, one key for every model, no single-provider failure, every editor in with one bill out, prompts stay yours, and eligible usage can earn Antseed Points.",
+    "Slide 6 uses the Solid page-4 benefit hierarchy: green 24px pixel icons, dotted row rules and a mascot at the upper right; privacy and rewards are cells, not a footnote. No new pricing percentage, best-price claim or programme terms were introduced.",
+    "Stats and closing renumbered to pages 07 and 08; the counter, dots, PDF pages, page labels and current-copy evidence all report eight slides.",
+    "Page labels run 02\u201308 with the cover unnumbered; slide 4\u2019s dark page now carries 04, matching the renumbered stats and closing pages.",
+    "Slide 3 carries one filled Visit antseed.com button at the bottom; slide 4 reads Your 2am deadline is approaching close. The hero shot is missing.",
+    "Slide 6 eyebrow reads Value Prop; narrative stages are Problem, Solution, Value Prop, Network Stats and Your turn.",
+    "Slide 8 step 2 is Pilot using Antseed with the simplified-UX and usage-bill line; the Creator rewards card is absent; Book a call is the sole closing link.",
+    "Slide 8 step 3 intentionally remains Put it to work while a Scale with your team card is proposed.",
+    "Closing Book a call sits at y520, aligned with the top of the closing art; the rewards card is removed and the third tile is unchanged."
   ],
-  "visual_review": "Approved cover inspected in desktop and phone screenshots and final PDF. Offline renderer: seven slides, no asset or console errors. Browser checks: 56 slide/viewport combinations across eight widths, navigation passed.",
-  "font_metric_warnings": 14,
+  "visual_review": "Desktop 1280px, phone 390px and final PDF page 8 inspected. Offline renderer: eight slides, zero asset, console or request errors. Browser checks: 64 slide/viewport combinations across eight widths; desktop and mobile navigation passed.",
+  "font_metric_warnings": 16,
   "brand_review": {
     "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
     "version": "v1, 12 November 2026",
-    "checked_at": "2026-11-16T16:00:00Z",
+    "checked_at": "2026-11-17T08:30:00Z",
     "half": "Friendly, with technical precision in prices, workflow and network figures",
     "reference": "Antseed - AI agents for neobanks (Solid case study).pdf, 15 pages; Antseed - Creators Pitch.pdf, 7 pages",
     "checklist_lines": 17,
     "intentional_adaptations": [
       "Compact 34/36 reference type scale instead of website title sizes",
-      "Non-link Problem, Solution and Network Stats labels instead of documentation eyebrows",
+      "Non-link Problem, Solution, Value Prop and Network Stats labels instead of documentation eyebrows",
       "User-requested plain workflow with unchanged ant position",
       "Creator-specific copy retained inside the Solid reference's card, eyebrow and type system",
-      "Authored day/night chapters; no whole-deck alternate theme claimed"
+      "Authored day/night chapters; no whole-deck alternate theme claimed",
+      "Dedicated Value Prop slide follows the Solid page-4 benefit hierarchy in a 3x2 grid, with green pixel icons, dotted row rules, six benefit cells and one mascot at the upper right."
     ]
   },
-  "cover_revision_checks": {
+  "benefits_revision_checks": {
     "offline_render_errors": 0,
     "browser_errors": 0,
-    "slide_checks": 56,
-    "pdf_pages": 7,
+    "slide_checks": 64,
+    "pdf_pages": 8,
     "pdf_dimensions_points": [
       960,
       540
     ],
-    "other_slides_unchanged": true
-  }
+    "benefit_slide_pdf_page": 6,
+    "renumbered_stats_and_close": [
+      7,
+      8
+    ],
+    "layout": "3x2 icon grid; no cards",
+    "benefit_cells": 6
+  },
+  "final_review": "final-review-2026-11-17.json supersedes historical exact-copy checks below."
 }
