@@ -11,3 +11,13 @@ Open `index.html` directly; fonts and artwork are embedded. Print includes all 1
 ## User update
 
 User-authored edits from commit 49f424f are included in the latest deployment. This HTML now differs from the original reference; the 13-slide layout is retained.
+
+## Deploy GitHub edits
+
+After Commit & Push in the browser editor, run:
+
+```sh
+bash /Users/jys/orca/workspaces/kanban-workflow/antseed-decks-publish/scripts/deploy-antseed-neobank.sh
+```
+
+This pulls the latest main branch, builds a fresh PDF using local Chrome, copies the current HTML and PDF into isolated deployment folders and publishes both main-deck Vercel projects. It verifies the live files against the published source. Vercel CLI, Git, Python 3 and Google Chrome must be installed and Vercel must be signed in. Deployment cache defaults to ~/.cache/antseed-vercel; ANTSEED_DEPLOY_ROOT and ANTSEED_CHROME can override the paths.

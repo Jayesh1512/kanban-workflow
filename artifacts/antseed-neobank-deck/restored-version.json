@@ -4,7 +4,8 @@
   "html_sha256": "5ae54f700008722028022f6502e01d936b815665fc484f9d8b19e5755e09ceee",
   "slides": 13,
   "prior_version_commit": "dd59746a233a7d7e6c539ced11c869f0a7240027",
-  "current_source_commit": "8b9ccd23487d14803772c9747114943c94678725",
-  "current_html_sha256": "d8a394c7b053af6b5298505fe0271bbfe823df4f9339a8dbaaf23aec1d435916",
-  "note": "User stats edits applied; mobile values aligned with desktop and token count formatted 825.8B+."
+  "current_source_commit": "93cef1f",
+  "current_html_sha256": "9e34cec0d0adba2613203ab2a6b0d3614ef6f9cad0444ef4e430845cbba0a702",
+  "note": "User model-family count changed to 6; mobile copy aligned. Browser-editor changes must be pulled before deploying.",
+  "navigation_fix": "Removed dangling merge-conflict marker from navigation script."
 }
