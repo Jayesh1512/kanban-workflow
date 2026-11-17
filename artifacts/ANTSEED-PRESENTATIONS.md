@@ -25,12 +25,13 @@ This neobank PDF retains its original historical pricing and 13 November stats s
 
 ## Neobank offering deck (HTML)
 
-Fourteen-slide partner-facing web deck for onchain neobanks: opportunity, three-move integration, bank case, network pricing with cashback, conditional Antseed Points, how the network works, Gateway per-customer keys, network snapshot, Solid case study with its two public launch posts, the Solid playbook and a launch path. Built on the same standalone deck system as the vision deck (brand tokens/components/core/slides CSS, day/night themes, keyboard and touch navigation).
+The main neobank presentation is restored to the exact 13-slide version at [the original reference](https://antseed-neobanks-presentation.vercel.app/), as requested on 17 November 2026. The original PDF’s copy, styling and historical figures are retained; pages 11 and 12 are omitted, with three follow-up points carried onto slide 10.
 
-- [Deck source](antseed-neobank-deck/) — open `index.html` locally; no build step
-- [Sources and verification](antseed-neobank-deck/SOURCES.md)
+- [Live main presentation](https://antseed-neobanks-offering.vercel.app/)
+- [Standalone HTML](Antseed-Neobanks-Offering.html)
+- [PDF](Antseed-Neobanks-Offering.pdf)
+- [Source](antseed-neobank-deck/)
 
-Built 16 November 2026 from the detailed neobank case study (`neobank-detailed.pdf`) with the fact-check fixes applied: GPT-6.1 Sol naming, 920+ models, trailing plus on growing metrics, the draft testimonial removed, cashback caps footnoted, verification and data-handling footnotes, six top models on one key, and corrected GPT-6.1 Sol pricing. Pricing examples and network stats are historical (AntSeedStats, read 13 Nov 2026) and labeled as such; the $1.68 example is labeled a network median, with Solid’s $0.21/$0.105 retail disclosed. Antseed Points wording follows the public weekly program and remains conditional.
 
 ## Neobank PDF conversion (13 slides)
 
