@@ -17,3 +17,7 @@ vercel --cwd artifacts/antseed-neobanks-presentation --project antseed-neobanks-
 ```
 
 The repository-root Vercel configuration belongs to the CRM application.
+
+## Main-deck URL synchronization
+
+The original presentation URL and the offering URL now serve the same current main deck, including user-edited stats with trailing plus signs. Edit `artifacts/antseed-neobank-deck/index.html` as the primary source, then sync this standalone copy when publishing. Deploy both Vercel projects (`antseed-neobanks-presentation` and `antseed-neobanks-offering`) so existing shared links stay current.

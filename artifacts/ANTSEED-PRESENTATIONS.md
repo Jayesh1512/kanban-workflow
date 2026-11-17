@@ -28,6 +28,7 @@ This neobank PDF retains its original historical pricing and 13 November stats s
 The main neobank presentation is restored to the exact 13-slide version at [the original reference](https://antseed-neobanks-presentation.vercel.app/), as requested on 17 November 2026. The original PDF’s copy, styling and historical figures are retained; pages 11 and 12 are omitted, with three follow-up points carried onto slide 10.
 
 - [Live main presentation](https://antseed-neobanks-offering.vercel.app/)
+- [Original main-deck URL, synchronized](https://antseed-neobanks-presentation.vercel.app/)
 - [Standalone HTML](Antseed-Neobanks-Offering.html)
 - [PDF](Antseed-Neobanks-Offering.pdf)
 - [Source](antseed-neobank-deck/)
