@@ -290,5 +290,10 @@
     "points": "Eligible paid usage; variable weekly share, no fixed conversion or guaranteed bank revenue.",
     "data_handling": "Selected providers process requests; Solid stores billing counts, not prompts or answers; provider practices vary.",
     "stats": "Trailing + added; historical read dates retained."
+  },
+  "slide_4_copy_revision": {
+    "date": "2026-11-17",
+    "problem": "You need the hero shot by 2am, but generation keeps failing.",
+    "solution": "Antseed reroutes a failed request so you can keep editing."
   }
 }

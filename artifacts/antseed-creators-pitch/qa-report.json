@@ -1,5 +1,5 @@
 {
-  "revision": "Final three-deck factual review: Points, growing metrics, public Solid pricing and provider data handling.",
+  "revision": "Slide 4: explicit generation failures under a 2am deadline.",
   "date": "2026-11-17",
   "slides": 8,
   "pdf_points": [
@@ -113,5 +113,22 @@
     "layout": "3x2 icon grid; no cards",
     "benefit_cells": 6
   },
-  "final_review": "final-review-2026-11-17.json supersedes historical exact-copy checks below."
+  "final_review": "final-review-2026-11-17.json supersedes historical exact-copy checks below.",
+  "slide_4_copy_revision": {
+    "date": "2026-11-17",
+    "problem": "You need the hero shot by 2am, but generation keeps failing.",
+    "solution": "Antseed reroutes a failed request so you can keep editing.",
+    "verification": {
+      "pdf_pages": 8,
+      "offline_render_errors": 0,
+      "tested_actual_viewport_widths": [
+        316,
+        386,
+        1276
+      ],
+      "text_overlap": false,
+      "horizontal_overflow": false,
+      "final_pdf_page_4_inspected": true
+    }
+  }
 }
