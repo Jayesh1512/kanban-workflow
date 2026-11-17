@@ -1,0 +1,305 @@
+{
+  "source_pdf": "Antseed - AI agents for neobanks (Solid case study).pdf",
+  "source_sha256": "10a18fae5b0e02856a896d0821cc00bcffe5b727c396bdb227b268bf2bfad1d1",
+  "source_pages": 15,
+  "output_slides": 13,
+  "removed_pages": [
+    11,
+    12
+  ],
+  "preserved_from_page_11": {
+    "output_slide": 10,
+    "points": {
+      "Where it lives": "Rewards tab",
+      "Who gets it": "Everyone",
+      "How it stacks": "On top of tiers"
+    }
+  },
+  "coverage": [
+    {
+      "slide": 1,
+      "source_pages": [
+        1
+      ],
+      "title": "AI agents, inside your neobank",
+      "copy": [
+        "Give your users one API key for the top AI models, at network prices, paid from the",
+        "balance they already hold with you.",
+        "A partner brief for onchain neobanks",
+        "AI agents, inside your neobank"
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 2,
+      "source_pages": [
+        2
+      ],
+      "title": "Your users already pay for AI. Somewhere else.",
+      "copy": [
+        "Part 1 \u00b7 The opportunity Your users already pay for AI. Somewhere else.",
+        "AI is a line item now Chat subscriptions and AI tools show up on card statements every month, at a merchant that isn't you.",
+        "Agents pay by the request Agents don't buy subscriptions. They call APIs all day, and each one needs a key and a balance to pay from.",
+        "You hold the balance Your users keep stablecoins with you. Today that money leaves your app to pay for AI. It doesn't have to."
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 3,
+      "source_pages": [
+        3
+      ],
+      "title": "Add AI agents to your app. In three moves.",
+      "copy": [
+        "Part 1 \u00b7 The opportunity Add AI agents to your app. In three moves.",
+        "Plus: the usage you bring earns you $ANTS rewards. Keep them, or pass them on as more cashback.",
+        "Antseed brings One API key",
+        "700+ models through one API: Claude, GPT, DeepSeek, Kimi, GLM and more.",
+        "\u203a",
+        "Your user gets Network prices",
+        "Providers compete on price, so your users pay less than the lab.",
+        "\u203a",
+        "You add Your reward",
+        "Cashback, tiers or points on AI spend: a reason to keep the money in your app."
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 4,
+      "source_pages": [
+        4
+      ],
+      "title": "Good for your users. Better for your bank.",
+      "copy": [
+        "Part 1 \u00b7 The opportunity Good for your users. Better for your bank.",
+        "A daily habit, not a monthly one",
+        "A card gets opened at checkout. Agents run every day, and every request is paid from your app.",
+        "A reward people actually notice",
+        "\"Half back on AI agents\" is a headline. It gives prosumers a reason to choose you.",
+        "A reason to move up a tier",
+        "Stack AI cashback on top of your tiers, and pay more back to your best customers.",
+        "A second revenue line",
+        "Usage earns you $ANTS rewards. Keep them, or turn them into more cashback.",
+        "Ready for the agent economy",
+        "Agents need a key and a balance to pay from. You hold the balance; Antseed brings the key.",
+        "No lock-in to one AI provider",
+        "700+ models through one API. When a better model ships, your users have it the same day."
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 5,
+      "source_pages": [
+        5
+      ],
+      "title": "Network prices, then your reward.",
+      "copy": [
+        "Part 1 \u00b7 The opportunity Network prices, then your reward.",
+        "Antseed lowers the price before your reward even starts. A 50% cashback on top takes Claude Opus 5.5 from $4.00 to $0.84 per million input tokens.",
+        "Effective cost under list price, with 50% cashback, on the five model families Solid offers \u221275\u201395%",
+        "Claude Opus 5.5 \u00b7 input price per million tokens",
+        "Lab list price $4.00",
+        "On Antseed $1.68",
+        "After 50% back $0.84",
+        "\u221278%",
+        "GPT-6 Astra",
+        "List $10.00",
+        "After 50% back",
+        "$2.23",
+        "\u221281%",
+        "Kimi K3",
+        "List $3.75",
+        "After 50% back $0.72",
+        "\u221295%",
+        "DeepSeek V4.1 Flash",
+        "List $0.30",
+        "After 50% back",
+        "$0.014",
+        "Per million input tokens. On Antseed: the median of healthy paid listings; list: the lab price AntSeedStats records (OpenRouter; Venice for Kimi). AntSeedStats \u00b7 read 13 Nov 2026 \u00b7 CC BY 4.0"
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 6,
+      "source_pages": [
+        6
+      ],
+      "title": "Every request earns ANTS. You decide where they go.",
+      "copy": [
+        "Part 1 \u00b7 The opportunity Every request earns ANTS. You decide where they go.",
+        "The AI usage you bring to the network earns $ANTS rewards. They are yours: a second revenue line on top of the reward you offer.",
+        "Option 1 Keep them",
+        "Hold the ANTS as your own margin on AI usage.",
+        "Option 2 Pass them on",
+        "Fund more cashback, bigger tier perks or launch promos.",
+        "Or mix the two Your rewards, your rules. Change the split whenever you like."
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 7,
+      "source_pages": [
+        7
+      ],
+      "title": "Like BitTorrent, but for AI.",
+      "copy": [
+        "Part 2 \u00b7 How it works Like BitTorrent, but for AI.",
+        "Your device finds providers over Mainline DHT, the same network BitTorrent uses, talks to them directly, and pays per request. Nobody sits in the middle.",
+        "Cards: lowest paid input price and providers \u00b7 AntSeedStats \u00b7 read 13 Nov 2026 \u00b7 CC BY 4.0",
+        "700+ models through one API key",
+        "Providers compete on price, so you pay less than the lab",
+        "Every response signed and checked against the model fingerprint",
+        "If one provider goes down, your request moves on to another",
+        "Claude Opus 5.5",
+        "$0.094/M 27",
+        "GPT-6 Astra",
+        "$0.09/M 36"
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 8,
+      "source_pages": [
+        8
+      ],
+      "title": "An API key for every customer.",
+      "copy": [
+        "Part 2 \u00b7 How it works An API key for every customer.",
+        "Deploy your own endpoint with the Antseed Gateway and give each customer, and each of their agents, their own API key.",
+        "Access to 700+ models at lower prices",
+        "Choose providers, budgets and manage access",
+        "Track balances and usage from one console",
+        "Usage per key: the base for your cashback",
+        "antseed \u2014 zsh",
+        "~ $ antseed gateway start",
+        "API-key gateway listening on http://127.0.0.1:8379/v1",
+        "0 active key(s). Manage them in the console or with `antseed gateway key",
+        "\u2026`.",
+        "Console: http://localhost:8379/console",
+        "Gateway",
+        "~ $ export ANTSEED_API_KEY=\"antseed_\u2026\"",
+        "~ $ curl http://localhost:8379/v1/chat/completions \\",
+        "-H \"Authorization: Bearer $ANTSEED_API_KEY\" -d '{\"model\":\"",
+        "&lt;peerId>@deepseek-v4-flash\",\u2026}'",
+        "{\"object\":\"chat.completion\",\"model\":\"deepseek-v4-flash\",\u2026}",
+        "Your app"
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 9,
+      "source_pages": [
+        9
+      ],
+      "title": "Live today. Settling every day.",
+      "copy": [
+        "Part 2 \u00b7 How it works Live today. Settling every day.",
+        "AntSeedStats \u00b7 read 13 Nov 2026 \u00b7 CC BY 4.0",
+        "Models 920",
+        "Providers, all time 269",
+        "Total active users 24,610",
+        "Tokens consumed 825.8B"
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 10,
+      "source_pages": [
+        10,
+        11
+      ],
+      "title": "See it live at Solid.",
+      "copy": [
+        "Part 3 \u00b7 Case study: Solid See it live at Solid.",
+        "Solid is the stablecoin money app: save, earn up to 6% APY and spend wherever Visa is accepted. On 8 Nov 2026 it added AI agents, powered by Antseed.",
+        "Cashback on AI agents, for everyone",
+        "50%",
+        "Model families on one key",
+        "5",
+        "Back on AI subscriptions, Ultra tier",
+        "20%",
+        "Monthly fees",
+        "$0",
+        "Where it lives: Rewards tab",
+        "Who gets it: Everyone",
+        "How it stacks: On top of tiers"
+      ],
+      "adaptations": [
+        "Three bottom points from source page 11 relocated beneath Solid metrics."
+      ]
+    },
+    {
+      "slide": 11,
+      "source_pages": [
+        13
+      ],
+      "title": "What Solid got right. Copy it.",
+      "copy": [
+        "Part 3 \u00b7 Case study: Solid What Solid got right. Copy it.",
+        "1",
+        "Put it where rewards live",
+        "AI agents sit in the Rewards tab, next to the card and the yield. One tap from the money.",
+        "2",
+        "Lead with the reward",
+        "\"50% back, for everyone\" did the marketing. Network prices made it affordable to offer.",
+        "3",
+        "Tie it to your tiers",
+        "Agents for everyone, subscriptions by tier: AI gives customers a reason to move up."
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 12,
+      "source_pages": [
+        14
+      ],
+      "title": "From first call to launch post.",
+      "copy": [
+        "Your turn From first call to launch post.",
+        "1",
+        "Intro call",
+        "Pick the models, the reward you'll offer and what to do with your ANTS.",
+        "2",
+        "Sandbox",
+        "Run a gateway and issue test keys. Your team sends its first requests.",
+        "3",
+        "In your app",
+        "An AI agents entry in Rewards, a key per customer and usage per key.",
+        "4",
+        "Co-launch",
+        "A joint announcement with Antseed, as Solid did on 8 Nov.",
+        "Book a call",
+        "Gateway docs antseed.com",
+        "LINK:Visit Antseed|https://antseed.com/",
+        "LINK:Gateway docs|https://antseed.com/docs/gateway/"
+      ],
+      "adaptations": []
+    },
+    {
+      "slide": 13,
+      "source_pages": [
+        15
+      ],
+      "title": "Make AI a reason to open your app.",
+      "copy": [
+        "Make AI a reason to open your app.",
+        "Solid shows how. Your users are ready for it."
+      ],
+      "adaptations": []
+    }
+  ],
+  "snapshot_date": "2026-11-13",
+  "claim_policy": "Reproduced from the supplied historical PDF. No claims or prices refreshed.",
+  "editorial_omissions": [
+    "Page 11 launch-post cards removed at user request; its three bottom points retained on slide 10.",
+    "Page 12 unapproved draft testimonial removed at user request."
+  ],
+  "adaptations": [
+    "Page numbers updated to the 13-slide sequence.",
+    "Original art and non-text graphics are embedded WebP backgrounds; all text is native, selectable SVG text with bundled source typefaces.",
+    "Mobile has a separate readable text layout with source artwork.",
+    "Navigation is outside the slide canvas.",
+    "Fonts subset to used glyphs as local WOFF2; original font axes and weights retained.",
+    "Book a call destination reused from the existing Antseed-Neobanks-Short.html in Downloads; source PDF label lacks a link annotation."
+  ]
+}

@@ -31,3 +31,13 @@ Fourteen-slide partner-facing web deck for onchain neobanks: opportunity, three-
 - [Sources and verification](antseed-neobank-deck/SOURCES.md)
 
 Built 16 November 2026 from the detailed neobank case study (`neobank-detailed.pdf`) with the fact-check fixes applied: GPT-6.1 Sol naming, 920 models, the draft testimonial removed, cashback caps footnoted, verification and data-handling footnotes, and the −78% pricing label confirmed correct by geometry. Pricing examples and network stats are historical (AntSeedStats, read 13 Nov 2026) and labeled as such. $ANTS reward wording follows the supplied brief and awaits confirmation of program mechanics.
+
+## Neobank PDF conversion (13 slides)
+
+Reference-faithful HTML version of the supplied Solid case-study PDF, with original pages 11 and 12 removed. The three bottom points from page 11 — **Rewards tab**, **Everyone**, **On top of tiers** — appear on slide 10. Other pages retain their original order and historical source framing.
+
+- [Live presentation](https://antseed-neobanks-presentation.vercel.app/)
+- [Offline HTML](antseed-neobanks-presentation/index.html)
+- [Source and deployment instructions](antseed-neobanks-presentation/)
+
+Standalone offline HTML with bundled artwork/fonts, selectable text, keyboard/touch navigation, mobile reading layout and 13-slide print styling.
