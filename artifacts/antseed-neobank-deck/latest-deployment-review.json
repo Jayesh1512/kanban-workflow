@@ -1,13 +1,20 @@
 {
-  "source_commit": "49f424f1da21ec28a64758cbdc6cec0e5aa7ba90",
+  "source_commit": "8b9ccd23487d14803772c9747114943c94678725",
   "slides": 13,
   "offline_render_errors": 0,
   "offline_render_warnings": 0,
   "pdf_pages": 13,
   "copy": "User-authored changes preserved.",
   "changes": [
-    "900+ model counts",
-    "User-updated pricing percentage"
+    "User stats edits",
+    "Mobile stats aligned with desktop",
+    "Token plus sign moved after B"
   ],
-  "html_sha256": "03b3debed8c1aa4fa98d115642f3dc30e86876e62679735c308a745b9d973080"
+  "html_sha256": "d8a394c7b053af6b5298505fe0271bbfe823df4f9339a8dbaaf23aec1d435916",
+  "stats_display": [
+    "920+",
+    "269+",
+    "24,800+",
+    "825.8B+"
+  ]
 }
