@@ -44,7 +44,7 @@ for project in antseed-neobanks-presentation antseed-neobanks-offering; do
   cp "$source_file" "$target/public/index.html"
   cp "$pdf_file" "$target/public/Antseed-Neobanks-Offering.pdf"
   cat >"$target/vercel.json" <<'JSON'
-{"framework":null,"buildCommand":null,"installCommand":"","outputDirectory":"public","cleanUrls":true}
+{"framework":null,"buildCommand":null,"installCommand":"","outputDirectory":"public","cleanUrls":true,"headers":[{"source":"/Antseed-Neobanks-Offering.pdf","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"Antseed-Neobanks-Offering.pdf\""}]}]}
 JSON
   printf '.env*\ndeployment.json\n' >"$target/.vercelignore"
   if ! test -f "$target/.vercel/project.json"; then

@@ -56,3 +56,6 @@ PDF exports keep a dated snapshot.
 This replaces the historical network snapshot described above.
 Pricing and case-study figures keep their original dates.
 See [live stats notes](../../scripts/ANTSEED-LIVE-STATS.md) for sources and deployment steps.
+
+Use **Download as PDF** below any slide to download the full deck.
+The download includes a dated stats snapshot.

@@ -24,6 +24,13 @@ for project, (source, output) in decks.items():
     (target / 'vercel.json').write_text(json.dumps({
         'framework': None, 'buildCommand': None, 'installCommand': '',
         'outputDirectory': 'public', 'cleanUrls': True,
+        'headers': [{
+            'source': '/' + output + '.pdf',
+            'headers': [{
+                'key': 'Content-Disposition',
+                'value': 'attachment; filename="' + output + '.pdf"',
+            }],
+        }],
     }) + '\n')
     (target / '.vercelignore').write_text('.env*\ndeployment.json\n')
     if project == 'antseed-creators-pitch':
