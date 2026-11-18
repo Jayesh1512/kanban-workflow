@@ -41,3 +41,6 @@ See [live stats notes](../../scripts/ANTSEED-LIVE-STATS.md) for sources and depl
 
 Use **Download as PDF** below any slide to download the full deck.
 The download includes a dated stats snapshot.
+
+Footer credits and usage notes no longer appear on slides.
+Source details remain in the metadata and source records.
