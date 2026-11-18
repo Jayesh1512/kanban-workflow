@@ -75,3 +75,19 @@ Growing network snapshots carry a trailing +; their original read dates are reta
 Solid’s six-model list, cashback caps and data handling were checked against https://solid.xyz/post/ai-agents-antseed. Opus’s $1.68/$0.84 example is explicitly a historical network median, distinct from Solid retail $0.21/$0.105. GPT-6.1 Sol is no longer a renamed old price: its card uses the public Solid table ($2.00 list, $0.089 retail, $0.0445 after cashback per million input tokens; table dated 4 November; rounded saving 98%). Kimi and DeepSeek remain labeled historical network examples. Cashback is capped at $50/$100/$200 monthly for Core/Prime/Ultra.
 
 Rewards use conditional Antseed Points language, with a variable share of weekly ANTS rewards under program terms, not a fixed conversion or guaranteed bank revenue. Public mechanics: https://antseedpoints.com/. Provider processing, billing retention and variation in provider practices are disclosed. Model verification is evidence, not cryptographic proof. No draft CEO testimonial is presented as an endorsement.
+
+
+## Studio audience revision — 18 November 2026
+
+The current deck serves the technical half.
+The approved watercolor art and mascot keep the friendly half.
+The eight masters, source typefaces, colors and artwork remain.
+Studio costs and integration replace individual editing deadlines.
+Gateway keys, budgets and usage replace editor login examples.
+The closing pilot measures output, latency, failures and cost.
+No Higgsfield customer or partnership claim appears.
+Live stats and the PDF download remain.
+Visible stats credits and usage footnotes remain removed.
+Source attribution and qualifications remain in metadata and records.
+The current QA appears in `studio-review-2026-11-18.json`.
+Previous sections record historical reviews.

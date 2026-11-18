@@ -1,134 +1,159 @@
 {
-  "revision": "Slide 4: explicit generation failures under a 2am deadline.",
-  "date": "2026-11-17",
-  "slides": 8,
-  "pdf_points": [
-    960,
-    540
-  ],
-  "selectable_text_all_pages": true,
-  "stats_capture": {
-    "retrieved_at": "2026-11-16T13:30:47.978Z",
-    "source_updated_utc": "13:30",
-    "display": {
-      "active_users": "28,254+",
-      "models": "942+",
-      "providers": "274+",
-      "tokens": "905.05B+"
-    },
-    "provider_cross_check": 274,
-    "source_url": "https://antseedstats.com/"
+  "date": "2026-11-18",
+  "audience": "AI creator studios and creative platforms",
+  "slide_count": 8,
+  "brand_direction": "Technical studio operations within the approved friendly watercolor system.",
+  "content_review": {
+    "all_eight_slides_reframed": true,
+    "individual_deadline_story_removed": true,
+    "higgsfield_customer_claim": false,
+    "source_prices_and_units_retained": true,
+    "live_stats_and_pdf_download_retained": true,
+    "visible_footer_omissions_retained": true
   },
-  "offline_http_requests": [],
-  "missing_assets_or_console_errors": [],
-  "browser_checks": {
-    "widths": [
-      1920,
+  "screen": {
+    "viewports": [
+      1440,
       1366,
-      1280,
-      820,
+      1024,
+      768,
       760,
+      640,
       390,
-      356,
       320
     ],
-    "slide_checks": 64,
-    "keyboard": "Home/End/arrows/Space on focused controls, boundaries and focus restoration passed",
-    "mobile_end_checks": "320px and 390px: the Value Prop slide stacks to one column and scrolls through all six benefit cells; Gateway docs, stats and Book a call remain accessible above the controls.",
-    "workflow_ant_coordinates": [
-      1084,
-      490,
-      164
+    "slides_per_viewport": 8,
+    "errors": [],
+    "external_requests_offline": [],
+    "keyboard": {
+      "arrow": true,
+      "home": true,
+      "end": true
+    },
+    "inactive_slides_inert": true,
+    "mobile_horizontal_overflow": false,
+    "controls_overlap": false
+  },
+  "render": {
+    "errors": [],
+    "warnings": [
+      {
+        "slide": 1,
+        "label": "Your creative platformOne model network",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 1,
+        "label": "One model network",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 2,
+        "label": "Your studio grows.So do model costs.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 2,
+        "label": "So do model costs.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 3,
+        "label": "Video. Image. Voice.Behind your studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 3,
+        "label": "Behind your studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 4,
+        "label": "A provider fails.Your studio retries.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 4,
+        "label": "Your studio retries.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 5,
+        "label": "One studio integration.Control access and spend.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 5,
+        "label": "Control access and spend.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 6,
+        "label": "Your product experience.More control underneath.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 6,
+        "label": "More control underneath.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 7,
+        "label": "A network behindyour studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 7,
+        "label": "your studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 8,
+        "label": "Test one studio workflow.Then plan the rollout.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 8,
+        "label": "Then plan the rollout.",
+        "outside": false,
+        "textOverflow": true
+      }
     ],
-    "sole_close_link": "https://calendly.com/ravi-antseed",
-    "calendly_title_verified": "Calendly - Ravi Agrawal"
+    "warning_review": "All 16 warnings concern the pixel-heading line boxes, including span line boxes. Each has outside=false. Full-size review found no clipped text, overlap or missing glyphs. The same pattern occurs in the original deck.",
+    "full_size_slides_reviewed": 8
   },
-  "content_checks": [
-    "No co-launch/placement/program-terms text in the rendered presentation",
-    "No Antseed one-line description on the Problem slide",
-    "No watercolor image or mobile watercolor pseudo-element on slide 4",
-    "Stats retain four metric categories and retain the source snapshot date",
-    "Problem, Solution, Value Prop, Network Stats and Your turn labels match the guide, Solid reference and user\u2019s latest instructions",
-    "01:48 workspace explicitly shows submission due at 02:00; old next-day launch framing removed.",
-    "Stats slide omits the three user-specified lines and orphaned asterisk; all four values and Data as shown date retained.",
-    "Cover has a general product title and video/image/voice descriptor. Deadline narrative remains on the solution pages.",
-    "Exact green/body/night token colors, 11px card and 10px button radii, H1 punctuation, font weights and night character filters verified in computed styles.",
-    "Slide 4 text and visual follow one request to failed Provider A, automatic retry through compatible Provider B, then response through the same endpoint. No multi-model fanout or progress bars remain.",
-    "Exact Reduce dependency on 1 Provider statement present; requested illustrative-flow caption absent in both HTML and PDF.",
-    "Slide 4 retains the exact dependency statement; illustrative-flow caption and both requested failover footnote lines are absent.",
-    "Model-access slide takeaway and pricing/availability notes absent; all three cards and four selected rates retained.",
-    "Closing intro absent and network statement is 18px/500; slide 3 mentions lower prices; slide 4 replaces numeric clock with time pressure and adds source-verified no-prompt-storage privacy claim.",
-    "Closing title is Your shot. Live.; both tones render, the booking CTA says Book a call and the URL is retained.",
-    "Stats page label is Network Stats; snapshot values and date retained.",
-    "Gateway slide retains One workflow key, Access per editor and One team. One bill.; the source font width fits the desktop column.",
-    "Gateway card heading reads One team. One bill.; the last-slide label reads Your turn.",
-    "Model slide now leads with the vision-deck definition: Antseed connects apps and agents to AI services through a peer-to-peer network; a second line keeps one key and lower prices; slide title reads The whole cut. Every model.",
-    "Stats slide visibly credits AntSeedStats under CC BY 4.0 with the read date and time.",
-    "Eyebrow labels use Geist 13/18 in the secondary text tone with the kit green dot; section titles use the Pixel ELSH40 axis and -.04em tracking.",
-    "Page numbers use Geist tabular figures; card titles use the Pixel ELSH20 axis; closing steps use the solid card pattern from the Solid reference.",
-    "Closing title is two-tone and ends with a period; the filled CTA is the only primary button on the closing slide.",
-    "Cover has the approved AI-studio headline and two-line supporting copy; all eight slides use the current storyline and page numbering.",
-    "Slide 6 is a dedicated Value Prop slide before Network Stats, with six outcomes in a 3x2 grid: lower cost per shot, one key for every model, no single-provider failure, every editor in with one bill out, prompts stay yours, and eligible usage can earn Antseed Points.",
-    "Slide 6 uses the Solid page-4 benefit hierarchy: green 24px pixel icons, dotted row rules and a mascot at the upper right; privacy and rewards are cells, not a footnote. No new pricing percentage, best-price claim or programme terms were introduced.",
-    "Stats and closing renumbered to pages 07 and 08; the counter, dots, PDF pages, page labels and current-copy evidence all report eight slides.",
-    "Page labels run 02\u201308 with the cover unnumbered; slide 4\u2019s dark page now carries 04, matching the renumbered stats and closing pages.",
-    "Slide 3 carries one filled Visit antseed.com button at the bottom; slide 4 reads Your 2am deadline is approaching close. The hero shot is missing.",
-    "Slide 6 eyebrow reads Value Prop; narrative stages are Problem, Solution, Value Prop, Network Stats and Your turn.",
-    "Slide 8 step 2 is Pilot using Antseed with the simplified-UX and usage-bill line; the Creator rewards card is absent; Book a call is the sole closing link.",
-    "Slide 8 step 3 intentionally remains Put it to work while a Scale with your team card is proposed.",
-    "Closing Book a call sits at y520, aligned with the top of the closing art; the rewards card is removed and the third tile is unchanged."
-  ],
-  "visual_review": "Desktop 1280px, phone 390px and final PDF page 8 inspected. Offline renderer: eight slides, zero asset, console or request errors. Browser checks: 64 slide/viewport combinations across eight widths; desktop and mobile navigation passed.",
-  "font_metric_warnings": 16,
-  "brand_review": {
-    "guide": "https://antseed-home.vercel.app/brand/AGENTS.md",
-    "version": "v1, 12 November 2026",
-    "checked_at": "2026-11-17T08:30:00Z",
-    "half": "Friendly, with technical precision in prices, workflow and network figures",
-    "reference": "Antseed - AI agents for neobanks (Solid case study).pdf, 15 pages; Antseed - Creators Pitch.pdf, 7 pages",
-    "checklist_lines": 17,
-    "intentional_adaptations": [
-      "Compact 34/36 reference type scale instead of website title sizes",
-      "Non-link Problem, Solution, Value Prop and Network Stats labels instead of documentation eyebrows",
-      "User-requested plain workflow with unchanged ant position",
-      "Creator-specific copy retained inside the Solid reference's card, eyebrow and type system",
-      "Authored day/night chapters; no whole-deck alternate theme claimed",
-      "Dedicated Value Prop slide follows the Solid page-4 benefit hierarchy in a 3x2 grid, with green pixel icons, dotted row rules, six benefit cells and one mascot at the upper right."
-    ]
-  },
-  "benefits_revision_checks": {
-    "offline_render_errors": 0,
-    "browser_errors": 0,
-    "slide_checks": 64,
-    "pdf_pages": 8,
-    "pdf_dimensions_points": [
+  "pdf": {
+    "pages": 8,
+    "page_dimensions_pt": [
       960,
       540
     ],
-    "benefit_slide_pdf_page": 6,
-    "renumbered_stats_and_close": [
-      7,
-      8
-    ],
-    "layout": "3x2 icon grid; no cards",
-    "benefit_cells": 6
+    "selectable_text": true,
+    "embedded_font_objects": 12,
+    "all_pages_rendered_and_contact_sheet_reviewed": true,
+    "title": "Antseed for creator studios",
+    "attribution": "AntSeedStats, CC BY 4.0; metadata and source records"
   },
-  "final_review": "final-review-2026-11-17.json supersedes historical exact-copy checks below.",
-  "slide_4_copy_revision": {
-    "date": "2026-11-17",
-    "problem": "You need the hero shot by 2am, but generation keeps failing.",
-    "solution": "Antseed reroutes a failed request so you can keep editing.",
-    "verification": {
-      "pdf_pages": 8,
-      "offline_render_errors": 0,
-      "tested_actual_viewport_widths": [
-        316,
-        386,
-        1276
-      ],
-      "text_overlap": false,
-      "horizontal_overflow": false,
-      "final_pdf_page_4_inspected": true
+  "snapshot_policy": "Bundled dated snapshot retained in offline HTML and PDF. Online live refresh retained.",
+  "research": [
+    {
+      "source": "https://higgsfield.ai/",
+      "use": "Studio audience context only; no endorsement or partnership claim."
     }
-  }
+  ]
 }

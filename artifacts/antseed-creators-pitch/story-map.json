@@ -1,27 +1,29 @@
 {
   "brief": {
-    "audience": "Top creator with a team, daily output and deadline pressure",
+    "audience": "Product, engineering and business teams at AI creator studios and creative platforms, such as Higgsfield.",
     "arc": "Problem \u2192 Solution \u2192 Action",
     "source_outline": "/Users/jys/Documents/antseed/antseed-creators-pitch.md",
     "source_reference": "Antseed - Creators Pitch.pdf / .pptx; Antseed - AI agents for neobanks (Solid case study).pdf (shared brand-compliant layout reference)",
-    "date": "2026-11-16",
+    "date": "2026-11-18",
     "slide_count": 8,
-    "brand_reference": "AGENTS.md v1 (12 November 2026) and the supplied Solid case-study PDF; tokens.css wins numeric conflicts"
+    "brand_reference": "AGENTS.md v1 (12 November 2026) and the supplied Solid case-study PDF; tokens.css wins numeric conflicts",
+    "revision": "Studio platform audience; replaces individual-creator framing.",
+    "scope": "Keep eight slides, the source design, approved model/price examples, live stats and PDF download."
   },
   "slides": [
     {
       "slide": 1,
-      "headline": "An AI studio, / behind every story.",
+      "headline": "Your creative platform One model network",
       "outline_section": 1,
       "reference_pages": [
         1
       ],
       "qualification": null,
-      "takeaway": "Create video, images and voice with leading AI models\u2014all through one Antseed key."
+      "takeaway": "The studio keeps its product and customer relationship. Antseed supplies access to the model network."
     },
     {
       "slide": 2,
-      "headline": "Your ideas move fast. Your tools make you wait.",
+      "headline": "Your studio grows. So do model costs.",
       "outline_section": [
         1,
         2
@@ -30,11 +32,12 @@
         1,
         4
       ],
-      "qualification": null
+      "qualification": null,
+      "takeaway": "Growing usage raises model costs and makes provider reliability and account-level costs important."
     },
     {
       "slide": 3,
-      "headline": "The whole cut. Every model.",
+      "headline": "Video. Image. Voice. Behind your studio.",
       "outline_section": [
         3,
         6
@@ -44,12 +47,11 @@
         3
       ],
       "qualification": "60+ video and 35+ image models. Four USD price examples retained from the source: MiniMax H3, Veo 3.1 Fast, GPT Image 2 and ElevenLabs Turbo. Not live quotes; provider configuration and model availability vary.",
-      "takeaway": "For a 2am submission, choose video, image and voice models for every asset in the cut.",
-      "intro": "Antseed brings video, image and voice models together through one API key at lower prices."
+      "takeaway": "One backend integration supplies video, image and voice model access."
     },
     {
       "slide": 4,
-      "headline": "A provider drops. Your request reroutes.",
+      "headline": "A provider fails. Your studio retries.",
       "outline_section": [
         4,
         5
@@ -59,21 +61,21 @@
         4
       ],
       "qualification": "Illustrative single-request failover scenario. Compatible-provider availability, capacity and limits apply. Privacy statement concerns Antseed storage, not independent providers or gateway operators.",
-      "takeaway": "When a deadline is close and the hero shot is missing, reroute the same failed request to another compatible provider. Antseed does not centrally store prompts."
+      "takeaway": "Retry the same model and prompt through compatible providers when capacity is available."
     },
     {
       "slide": 5,
-      "headline": "One key for the cut. Less setup. More time.",
+      "headline": "One studio integration. Control access and spend.",
       "outline_section": 7,
       "reference_pages": [
         4
       ],
-      "qualification": "Antseed Gateway manages per-editor/project keys, budgets, caps and usage. Gateway docs button links to the existing official Gateway documentation.",
-      "takeaway": "Use one Gateway workflow key and endpoint across models; per-editor access and shared billing support the team."
+      "qualification": "Gateway key management, budgets and usage records support studio-account allocation. No consumer checkout, credit conversion or finished billing product is asserted.",
+      "takeaway": "Use Gateway keys, budgets and usage records per customer or workspace."
     },
     {
       "slide": 6,
-      "headline": "Less friction. More finished cuts.",
+      "headline": "Your product experience. More control underneath.",
       "outline_section": [
         3,
         4,
@@ -83,12 +85,11 @@
         4
       ],
       "qualification": "Summarizes lower provider pricing without a best-price guarantee; one endpoint across video, image and voice models; illustrative compatible-provider rerouting with availability, capacity and limits; per-editor keys, budgets and usage through Antseed Gateway; prompt storage is scoped to Antseed, not independent providers; eligible usage can earn Antseed Points, which determine a weekly ANTS reward share, with referral rewards and program terms subject to confirmation.",
-      "takeaway": "The solution removes four kinds of overhead: cost, model access, provider failure and team access. Privacy and conditional Antseed Points are stated as supporting notes.",
-      "intro": "The same 2am deadline, with fewer places to lose time."
+      "takeaway": "Compare generation costs, offer model choice and manage provider dependencies, account costs, privacy and conditional rewards."
     },
     {
       "slide": 7,
-      "headline": "The network, in numbers.",
+      "headline": "A network behind your studio.",
       "source": "https://antseedstats.com/",
       "retrieved_at": "2026-11-16T13:30:47.978Z",
       "source_updated_utc": "13:30",
@@ -98,11 +99,12 @@
         "Total active users": "28,254+",
         "Tokens consumed": "905.05B+"
       },
-      "qualification": "Latest displayed homepage snapshot at retrieval. Provider count matches lifetime.sellers in the public network-summary API. The participant count sums roles and may count one address more than once. Tokens include paid and free usage. CC BY 4.0 attribution retained."
+      "qualification": "Latest displayed homepage snapshot at retrieval. Provider count matches lifetime.sellers in the public network-summary API. The participant count sums roles and may count one address more than once. Tokens include paid and free usage. CC BY 4.0 attribution retained.",
+      "takeaway": "Retain the existing approved snapshot and live AntSeedStats refresh."
     },
     {
       "slide": 8,
-      "headline": "Your shot. Live.",
+      "headline": "Test one studio workflow. Then plan the rollout.",
       "outline_section": [
         8,
         9
@@ -112,7 +114,8 @@
         6,
         7
       ],
-      "qualification": "Book a Call is the sole closing link, using the user-provided Ravi Calendly URL. The requested co-launch/placement and program-terms lines are removed. The creator-rewards card has been removed; the third tile is intentionally unchanged pending a Scale with your team card."
+      "qualification": "Book a Call is the sole closing link, using the user-provided Ravi Calendly URL. The requested co-launch/placement and program-terms lines are removed. The creator-rewards card has been removed; the third tile is intentionally unchanged pending a Scale with your team card.",
+      "takeaway": "Pilot one model and workflow. Measure output, latency, failures and cost before expanding."
     }
   ],
   "editorial_decisions": [
@@ -295,5 +298,28 @@
     "date": "2026-11-17",
     "problem": "You need the hero shot by 2am, but generation keeps failing.",
     "solution": "Antseed reroutes a failed request so you can keep editing."
+  },
+  "audience_research": [
+    {
+      "url": "https://higgsfield.ai/",
+      "retrieved_date": "2026-11-18",
+      "use": "Audience context only: image, video, audio, studio products and API access. Higgsfield is a target example, not a customer or partner."
+    }
+  ],
+  "audience_revision": {
+    "removed": [
+      "Individual 2am editing deadline.",
+      "Personal subscriptions and shared editor login framing.",
+      "Hero-shot and final-cut pilot."
+    ],
+    "added": [
+      "Studio backend integration.",
+      "Generation cost and provider dependency.",
+      "Per-customer or workspace keys, budgets and usage.",
+      "Measured studio pilot and staged rollout."
+    ],
+    "claims": "Approved source prices and model coverage retained. No studio traction, savings guarantee, SLA or partnership claim added.",
+    "stats": "Existing live refresh retained. Offline HTML and PDF retain the bundled dated snapshot.",
+    "credits": "Keep the latest user-approved omission of visible stats credits and usage footnotes. Retain attribution and definitions in metadata and records."
   }
 }

@@ -46,14 +46,14 @@
   },
   "assets": "Unchanged text-free illustrations extracted from native supplied PPTX, re-encoded WebP. Native text overlays; no source text flattened.",
   "masters": [
-    "vision-deck centered meadow home",
-    "Problem / four creator bottlenecks / watercolor panel",
-    "three illustrated model-access cards / submission due at 2am",
-    "plain dark single-request failover flow / failed Provider A to compatible Provider B / original laptop ant retained",
-    "one-key Gateway access / team support / painted strip",
-    "Value Prop benefits / 3x2 icon grid / prompt privacy and conditional Antseed Points",
-    "dark AntSeedStats four-figure snapshot / night meadow",
-    "three-step pilot CTA / single Book a call button"
+    "Studio platform cover",
+    "Four studio backend problems",
+    "Three model-access cards",
+    "Compatible-provider failover",
+    "Gateway account controls",
+    "Six studio benefits",
+    "Live network figures",
+    "Three-step studio pilot"
   ],
   "adaptations": [
     "Cover keeps the vision-deck meadow, typography and assets with a general creator-facing product title and short video/image/voice descriptor.",
@@ -124,5 +124,17 @@
     "metrics": "Native 2\u00d72 figures, 36px Pixel values, dotted top rules",
     "snapshot_date": "2026-11-16",
     "retrieved_at": "2026-11-16T13:30:47.978Z"
+  },
+  "audience_revision": {
+    "date": "2026-11-18",
+    "approach": "Copy revision within the eight approved masters. Friendly watercolor system with a technical studio-operations story.",
+    "preserved": [
+      "Canvas, typography, tokens, artwork, dark technical pages, navigation, live stats and PDF download."
+    ],
+    "adaptations": [
+      "Cover body copy width is 700px.",
+      "Failover copy width is 520px.",
+      "Benefit rows use a 166px desktop minimum and a 24px gap."
+    ]
   }
 }

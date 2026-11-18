@@ -118,3 +118,14 @@ html,body{color:var(--color-text);background:var(--color-page-bg)}
  .benefit-grid li{min-height:0;padding-top:18px}
  .benefit-grid p{max-width:none}
 }
+
+/* Studio audience revision, 18 November 2026. */
+.home-copy>p:last-child{max-width:700px}
+.night-workflow .fail-lede{width:520px}
+.benefit-grid{row-gap:24px}
+.benefit-grid li{min-height:166px}
+@media screen and (max-width:760px){
+ .home-copy>p:last-child{max-width:340px}
+ .night-workflow .fail-lede{width:auto}
+ .benefit-grid li{min-height:0}
+}

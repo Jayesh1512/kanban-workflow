@@ -1,0 +1,159 @@
+{
+  "date": "2026-11-18",
+  "audience": "AI creator studios and creative platforms",
+  "slide_count": 8,
+  "brand_direction": "Technical studio operations within the approved friendly watercolor system.",
+  "content_review": {
+    "all_eight_slides_reframed": true,
+    "individual_deadline_story_removed": true,
+    "higgsfield_customer_claim": false,
+    "source_prices_and_units_retained": true,
+    "live_stats_and_pdf_download_retained": true,
+    "visible_footer_omissions_retained": true
+  },
+  "screen": {
+    "viewports": [
+      1440,
+      1366,
+      1024,
+      768,
+      760,
+      640,
+      390,
+      320
+    ],
+    "slides_per_viewport": 8,
+    "errors": [],
+    "external_requests_offline": [],
+    "keyboard": {
+      "arrow": true,
+      "home": true,
+      "end": true
+    },
+    "inactive_slides_inert": true,
+    "mobile_horizontal_overflow": false,
+    "controls_overlap": false
+  },
+  "render": {
+    "errors": [],
+    "warnings": [
+      {
+        "slide": 1,
+        "label": "Your creative platformOne model network",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 1,
+        "label": "One model network",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 2,
+        "label": "Your studio grows.So do model costs.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 2,
+        "label": "So do model costs.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 3,
+        "label": "Video. Image. Voice.Behind your studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 3,
+        "label": "Behind your studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 4,
+        "label": "A provider fails.Your studio retries.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 4,
+        "label": "Your studio retries.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 5,
+        "label": "One studio integration.Control access and spend.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 5,
+        "label": "Control access and spend.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 6,
+        "label": "Your product experience.More control underneath.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 6,
+        "label": "More control underneath.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 7,
+        "label": "A network behindyour studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 7,
+        "label": "your studio.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 8,
+        "label": "Test one studio workflow.Then plan the rollout.",
+        "outside": false,
+        "textOverflow": true
+      },
+      {
+        "slide": 8,
+        "label": "Then plan the rollout.",
+        "outside": false,
+        "textOverflow": true
+      }
+    ],
+    "warning_review": "All 16 warnings concern the pixel-heading line boxes, including span line boxes. Each has outside=false. Full-size review found no clipped text, overlap or missing glyphs. The same pattern occurs in the original deck.",
+    "full_size_slides_reviewed": 8
+  },
+  "pdf": {
+    "pages": 8,
+    "page_dimensions_pt": [
+      960,
+      540
+    ],
+    "selectable_text": true,
+    "embedded_font_objects": 12,
+    "all_pages_rendered_and_contact_sheet_reviewed": true,
+    "title": "Antseed for creator studios",
+    "attribution": "AntSeedStats, CC BY 4.0; metadata and source records"
+  },
+  "snapshot_policy": "Bundled dated snapshot retained in offline HTML and PDF. Online live refresh retained.",
+  "research": [
+    {
+      "source": "https://higgsfield.ai/",
+      "use": "Studio audience context only; no endorsement or partnership claim."
+    }
+  ]
+}

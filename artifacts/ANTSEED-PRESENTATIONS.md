@@ -1,19 +1,16 @@
 # Antseed presentations
 
-## Creators pitch
+## Creator studios pitch
 
-Eight slides with a clear **Problem → Solution → Your turn** storyline. The cover introduces Antseed with “An AI studio, behind every story.” and a video/image/voice descriptor. Storyline labels are Problem, Solution, Value Prop, Network Stats and Your turn. The Problem page headline is “Your ideas move fast. Your tools make you wait.” The three core solution pages follow one submission due at **2am**: access multiple models for each asset, reroute the same failed request from Provider A to compatible Provider B and return its response, then connect through one Antseed Gateway key. A Value Prop page summarizes the payoff as six creator outcomes in a Solid-style 3x2 benefit grid. The model-access page ends with a Visit antseed.com button. Current AntSeedStats then supplies the evidence. The plain dark workflow shows time pressure and same-request provider failover. A demo invitation with one **Book a call** button closes the story. The closing creator-rewards card remains removed; eligible usage can earn conditional Antseed Points in the Value Prop grid.
+Eight slides for AI creator studios and creative platforms, including teams like Higgsfield. The studio keeps its user experience and customer relationship. Antseed supplies model access behind the product. The story covers generation costs, compatible-provider retries, Gateway keys and budgets, account-level usage and a measured workflow pilot.
 
 - [Live presentation](https://antseed-creators-pitch.vercel.app/)
 - [Offline HTML](Antseed-Creators-Pitch-Updated.html)
 - [PDF](Antseed-Creators-Pitch-Updated.pdf)
 - [Editable source](antseed-creators-pitch/)
 - [Source ZIP](Antseed-Creators-Pitch-Updated-source.zip)
-- [Book a call](https://calendly.com/ravi-antseed)
 
-Open the source `index.html` locally; no build step is required. Fonts, artwork, source outline, story/design maps, current kit tokens/components and QA evidence are bundled. `package.py` rebuilds the standalone HTML and source ZIP. The [brand/PDF audit](antseed-creators-pitch/brand-audit.md) records the 17-point checklist, 64 viewport checks, the Solid case-study reference pass and preserved user overrides. The final compliance pass aligns shared components to the supplied Solid PDF: gray Geist eyebrows with a green dot, ELSH40 section titles, ELSH20 card titles, tabular Geist page numbers, closing cards, sentence-case Your turn and Book a call, a Solid page-4 benefit grid with green pixel icons, and a visible AntSeedStats CC BY credit.
-
-Stats refreshed **16 November 2026, 19:00 IST**, from AntSeedStats at its displayed 13:30 UTC update: **942+ models, 274+ lifetime settling providers, 28,254+ total participants, 905.05B+ tokens**. Role counts may overlap; tokens include paid and free usage. Source metadata and the lifetime-provider API cross-check are in [stats-refresh.json](antseed-creators-pitch/stats-refresh.json). Attribution: AntSeedStats · CC BY 4.0. The four model-price examples retain their historical source-pitch framing.
+Revised 18 November 2026. The eight-slide design, artwork, model-price examples, live network figures and PDF download remain. Source prices retain their historical framing. Higgsfield provides audience context, not a customer endorsement.
 
 ## Short neobank partner deck
 
