@@ -1,0 +1,383 @@
+{
+  "date": "2026-11-18",
+  "network_behaviors": [
+    "Live refresh",
+    "Invalid-response fallback",
+    "Stale-response fallback",
+    "Network-failure fallback",
+    "Offline snapshot",
+    "Print snapshot",
+    "Refresh request limits"
+  ],
+  "responsive_widths": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "deck_checks": [
+    {
+      "name": "creators",
+      "calls": 4,
+      "sizes": [
+        {
+          "width": 1440,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 1024,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 320,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "short",
+      "calls": 4,
+      "sizes": [
+        {
+          "width": 1440,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 1024,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 320,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "main",
+      "calls": 4,
+      "sizes": [
+        {
+          "width": 1440,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 1024,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        },
+        {
+          "width": 320,
+          "bodyOverflow": false,
+          "metrics": [
+            {
+              "text": "968+",
+              "overflow": false
+            },
+            {
+              "text": "280+",
+              "overflow": false
+            },
+            {
+              "text": "29,710+",
+              "overflow": false
+            },
+            {
+              "text": "954.88B+",
+              "overflow": false
+            }
+          ]
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "pdf_pages": {
+    "creators": 8,
+    "short_neobank": 8,
+    "main_neobank": 13
+  },
+  "pdf_page_points": [
+    960,
+    540
+  ],
+  "pdf_review": "All contact sheets and all three stats pages reviewed. Fonts, values and dates checked.",
+  "api": "https://antseed-creators-pitch.vercel.app/api/stats"
+}

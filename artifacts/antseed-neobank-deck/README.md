@@ -21,3 +21,13 @@ bash /Users/jys/orca/workspaces/kanban-workflow/antseed-decks-publish/scripts/de
 ```
 
 This pulls the latest main branch, builds a fresh PDF using local Chrome, copies the current HTML and PDF into isolated deployment folders and publishes both main-deck Vercel projects. It verifies the live files against the published source. Vercel CLI, Git, Python 3 and Google Chrome must be installed and Vercel must be signed in. Deployment cache defaults to ~/.cache/antseed-vercel; ANTSEED_DEPLOY_ROOT and ANTSEED_CHROME can override the paths.
+
+## Live stats, 18 November 2026
+
+The stats slide now refreshes from AntSeedStats once per minute while the page is visible.
+It combines the public API with the homepage totals omitted from that API.
+The slide shows the fetch time and keeps saved figures when a request fails.
+PDF exports keep a dated snapshot.
+This replaces the historical network snapshot described above.
+Pricing and case-study figures keep their original dates.
+See [live stats notes](../../scripts/ANTSEED-LIVE-STATS.md) for sources and deployment steps.

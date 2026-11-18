@@ -28,3 +28,13 @@ Growing network snapshots carry a trailing +; their original read dates are reta
 Solid’s six-model list, cashback caps and data handling were checked against https://solid.xyz/post/ai-agents-antseed. Opus’s $1.68/$0.84 example is explicitly a historical network median, distinct from Solid retail $0.21/$0.105. GPT-6.1 Sol is no longer a renamed old price: its card uses the public Solid table ($2.00 list, $0.089 retail, $0.0445 after cashback per million input tokens; table dated 4 November; rounded saving 98%). Kimi and DeepSeek remain labeled historical network examples. Cashback is capped at $50/$100/$200 monthly for Core/Prime/Ultra.
 
 Rewards use conditional Antseed Points language, with a variable share of weekly ANTS rewards under program terms, not a fixed conversion or guaranteed bank revenue. Public mechanics: https://antseedpoints.com/. Provider processing, billing retention and variation in provider practices are disclosed. Model verification is evidence, not cryptographic proof. No draft CEO testimonial is presented as an endorsement.
+
+## Live stats, 18 November 2026
+
+The stats slide now refreshes from AntSeedStats once per minute while the page is visible.
+It combines the public API with the homepage totals omitted from that API.
+The slide shows the fetch time and keeps saved figures when a request fails.
+PDF exports keep a dated snapshot.
+This replaces the historical network snapshot described above.
+Pricing and case-study figures keep their original dates.
+See [live stats notes](../../scripts/ANTSEED-LIVE-STATS.md) for sources and deployment steps.

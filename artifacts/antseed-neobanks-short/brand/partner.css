@@ -27,3 +27,4 @@
 @media print{@page{size:1280px 720px;margin:0}html,body{width:auto;height:auto;overflow:visible;padding:0;background:white!important}.viewport{position:static;inset:auto;display:block;margin:0}.deck-shell{position:static;transform:none;width:1280px;height:auto;overflow:visible}.slides{position:static}.slide,.slide.active{position:relative;display:block;width:1280px;height:720px;break-after:page;page-break-after:always;print-color-adjust:exact;-webkit-print-color-adjust:exact}.slide:last-child{break-after:auto;page-break-after:auto}.controls,.help,.theme-sweep{display:none!important}a{text-decoration:none}}
 /* The PDF prints smoked translucency without the website's backdrop blur. */
 .terminal.ak-terminal{backdrop-filter:none;-webkit-backdrop-filter:none}
+@media screen and (max-width:760px){.snapshot .fig .v{font-size:clamp(20px,6vw,30px);line-height:1.2}}

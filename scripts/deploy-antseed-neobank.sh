@@ -9,9 +9,12 @@ chrome="${ANTSEED_CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google 
 source_file="$repo_dir/artifacts/antseed-neobank-deck/index.html"
 command -v vercel >/dev/null || { echo 'Install the Vercel CLI first.' >&2; exit 1; }
 command -v python3 >/dev/null || { echo 'Python 3 is required.' >&2; exit 1; }
+command -v node >/dev/null || { echo 'Node.js is required.' >&2; exit 1; }
 test -x "$chrome" || { echo 'Set ANTSEED_CHROME to your Chrome executable.' >&2; exit 1; }
 
 git -C "$repo_dir" pull --ff-only
+node "$repo_dir/scripts/refresh-antseed-stats.cjs" antseed-neobank-deck
+cp "$source_file" "$repo_dir/artifacts/Antseed-Neobanks-Offering.html"
 source_commit="$(git -C "$repo_dir" rev-parse --short HEAD)"
 echo "Publishing main neobank deck from $source_commit"
 python3 - "$source_file" <<'PY'
@@ -33,6 +36,7 @@ if ! "$chrome" --headless --no-pdf-header-footer --force-prefers-reduced-motion 
   exit 1
 fi
 test -s "$pdf_file" || { echo 'Chrome did not produce the PDF.' >&2; exit 1; }
+cp "$pdf_file" "$repo_dir/artifacts/Antseed-Neobanks-Offering.pdf"
 
 for project in antseed-neobanks-presentation antseed-neobanks-offering; do
   target="$deploy_root/$project"

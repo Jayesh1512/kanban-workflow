@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "fetchedAt": "2026-11-18T12:32:13.407Z",
+  "metrics": {
+    "models": 968,
+    "providers": 280,
+    "participants": 29710,
+    "tokensBillions": 954.88
+  },
+  "source": "https://antseedstats.com/",
+  "license": "CC BY 4.0",
+  "meta": {
+    "models": {
+      "version": "v1",
+      "endpoint": "models",
+      "as_of_block": 59067957,
+      "as_of_ts": 1795004105,
+      "indexer_lag_blocks": 4190,
+      "generated_at": 1795004809,
+      "max_age_s": 402,
+      "sources": {
+        "prices": "announce",
+        "usage": "chain",
+        "organic": "antseedstats"
+      },
+      "docs": {
+        "endpoint": "https://antseedstats.com/developers#models",
+        "page": "https://antseedstats.com/models",
+        "glossary": "https://antseedstats.com/api/v1/glossary?page=models"
+      }
+    },
+    "providers": {
+      "version": "v1",
+      "endpoint": "network.summary",
+      "as_of_block": 59069943,
+      "as_of_ts": 1795004406,
+      "indexer_lag_blocks": 3771,
+      "generated_at": 1795005121,
+      "max_age_s": 45,
+      "sources": {
+        "lifetime": "chain",
+        "windows": "chain",
+        "paid_usage_24h": "chain",
+        "epoch": "chain"
+      },
+      "docs": {
+        "endpoint": "https://antseedstats.com/developers#network.summary",
+        "page": "https://antseedstats.com/",
+        "glossary": "https://antseedstats.com/api/v1/glossary?page=home"
+      }
+    },
+    "homepageUpdated": "12:29",
+    "definitions": {
+      "models": "Canonical models, all sellers; API /models data.total.",
+      "providers": "Lifetime sellers with settled trades; API /network/summary data.lifetime.sellers.",
+      "participants": "Homepage total: reserve/free buyers, settling sellers and DIEM stakers. Roles can overlap.",
+      "tokensBillions": "Homepage lifetime paid and free tokens, in billions, at its published precision."
+    }
+  }
+}
