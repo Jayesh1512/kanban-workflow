@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { readFile } from 'node:fs/promises';
 import { OutreachRepository } from '../../src/outreach/repository.js';
 import { SALES_STAGES } from '../../src/shared/outreach-domain.js';
-import { fixtureDatabase } from '../workflow/database.js';
+import { fixtureDatabase, seedJob } from '../workflow/database.js';
 
 const company = '00000000-0000-4000-8000-000000000101';
 const person = '00000000-0000-4000-8000-000000000102';
@@ -10,7 +11,7 @@ const fact = '00000000-0000-4000-8000-000000000104';
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
 export async function outreachFixture() {
-  const db = await fixtureDatabase([new URL('../../db/migrations/202610250001_outreach_core.sql', import.meta.url), new URL('../../db/migrations/202610260002_stable_outreach_sources.sql', import.meta.url)]);
+  const db = await fixtureDatabase([new URL('../../db/migrations/202610250001_outreach_core.sql', import.meta.url), new URL('../../db/migrations/202610260002_stable_outreach_sources.sql', import.meta.url), new URL('../../db/migrations/202611200001_initial_placement_removal.sql', import.meta.url), new URL('../../db/migrations/202611200002_workstream_counterparty.sql', import.meta.url), new URL('../../db/migrations/202611200004_manual_crm_cards.sql', import.meta.url)]);
   const repo = new OutreachRepository(db, { now: () => new Date('2026-10-25T12:00:00Z') });
   return { db, repo };
 }
@@ -35,8 +36,55 @@ describe('persistent commercial read model (actual local PostgreSQL engine, synt
     await expect(h.db.query("UPDATE outreach_relationships SET accepted_stage='Completed' WHERE id=$1", [r.id])).rejects.toThrow();
     expect((await h.db.query('SELECT lane,stage_version FROM tickets')).rows).toEqual([{ lane: 'To be started', stage_version: 0 }]);
   });
-  it('groups confirmed company chats; repeated sweep/repository reconstruction retains identity and versions', async () => {
+  it('carries the decided direction of trade onto the relationship instead of an Others default', async () => {
     const h = await setup();
+    await h.db.query(`UPDATE analysis_jobs SET status='completed',decision='{"workstream":"Buyer"}' WHERE chat_id=-1001`);
+    await h.repo.reconcile();
+    const r = (await h.repo.list({})).items[0]!;
+    expect(r.workstream).toBe('Buyer');
+    // The company row itself stays untouched here; the relationship owns the label.
+    expect((await h.db.query('SELECT workstream FROM companies WHERE id=$1', [company])).rows[0]!.workstream).toBeNull();
+  });
+  it('classifies a contact prospect with no company from the conversation direction', async () => {
+    const h = await setup();
+    await h.db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status) VALUES(-1004,'user','Mira Direct','included','unresolved')");
+    await h.db.query("INSERT INTO tickets(chat_id,kind) VALUES(-1004,'contact_prospect')");
+    await approve(h.db, '-1004', 9401);
+    await seedJob(h.db, '00000000-0000-4000-8000-000000000941', '-1004');
+    await h.db.query(`UPDATE analysis_jobs SET status='completed',decision='{"workstream":"Provider"}' WHERE chat_id=-1004`);
+    await h.repo.reconcile();
+    const row = (await h.db.query(`SELECT r.display_name,r.kind,r.workstream FROM outreach_relationships r
+      JOIN outreach_relationship_sources rs ON rs.relationship_id=r.id
+      JOIN outreach_source_threads s ON s.id=rs.source_thread_id WHERE s.chat_id=-1004`)).rows[0]!;
+    expect(row).toMatchObject({ kind: 'contact_prospect', workstream: 'Provider' });
+  });
+  it('leaves an unproven direction unclassified instead of labelling it Others', async () => {
+    const h = await setup();
+    await h.db.query(`UPDATE analysis_jobs SET status='completed',decision='{"workstream":null}' WHERE chat_id=-1001`);
+    await h.repo.reconcile();
+    expect((await h.repo.list({})).items[0]!.workstream).toBeNull();
+  });
+  it('backfills an unclassified company from stored diagnostics under the current rule', async () => {
+    const h = await setup();
+    const migration = await readFile(new URL('../../db/migrations/202611200002_workstream_counterparty.sql', import.meta.url), 'utf8');
+    const statements = migration.split(/\n(?=DO \$\$)/);
+    expect(statements).toHaveLength(2);
+    const apply = async () => { for (const sql of statements) await h.db.query(sql); };
+    await apply();
+    await h.db.query(`UPDATE analysis_jobs SET status='completed',jev_diagnostics=$1 WHERE chat_id=-1001`, [JSON.stringify({
+      answers: { workstream: { type: 'choice', choice: 'Buyer', confidence: 0.72,
+        probabilities: { Buyer: 0.72, uncertain: 0.2, Provider: 0.05, Others: 0.02, Integration: 0.01 } } } })]);
+    await apply();
+    expect((await h.db.query('SELECT workstream FROM companies WHERE id=$1', [company])).rows[0]!.workstream).toBe('Buyer');
+    // A distribution the model itself left unresolved must stay unclassified.
+    await h.db.query(`UPDATE companies SET workstream=NULL WHERE id=$1`, [company]);
+    await h.db.query(`UPDATE analysis_jobs SET jev_diagnostics=$1 WHERE chat_id=-1001`, [JSON.stringify({
+      answers: { workstream: { type: 'choice', choice: 'Buyer', confidence: 0.4,
+        probabilities: { Buyer: 0.37, uncertain: 0.33, Provider: 0.2, Others: 0.06, Integration: 0.04 } } } })]);
+    await apply();
+    expect((await h.db.query('SELECT workstream FROM companies WHERE id=$1', [company])).rows[0]!.workstream).toBeNull();
+  });
+  it('groups confirmed company chats; repeated sweep/repository reconstruction retains identity and versions', async () => {    const h = await setup();
     await h.db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status,company_id) VALUES(-1002,'supergroup','Cedar second room','included','confirmed',$1)", [company]);
     await h.db.query('INSERT INTO tickets(chat_id,company_id) VALUES(-1002,$1)', [company]);
     await approve(h.db,'-1002',9301);

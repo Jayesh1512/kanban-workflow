@@ -9,7 +9,7 @@ import { fixtureDatabase } from '../workflow/database.js';
 const close:Array<()=>Promise<unknown>>=[];
 afterEach(async()=>{for(const fn of close.splice(0).reverse())await fn();});
 async function setup(){
- const names=['202610250001_outreach_core.sql','202610260001_outreach_workflow.sql','202610260002_stable_outreach_sources.sql','202610270004_operator_intake_approvals.sql','202610280001_crm_first.sql','202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql'];
+ const names=['202610250001_outreach_core.sql','202610260001_outreach_workflow.sql','202610260002_stable_outreach_sources.sql','202610270004_operator_intake_approvals.sql','202610280001_crm_first.sql','202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql','202611200001_initial_placement_removal.sql','202611200002_workstream_counterparty.sql','202611200003_manual_work_cards.sql','202611200004_manual_crm_cards.sql'];
  const db=await fixtureDatabase(names.map(name=>new URL('../../db/migrations/'+name,import.meta.url)));close.push(()=>db.close());
  const identities=new Map(['admin','manager','viewer','member'].map(role=>[role,{id:randomUUID(),email:role+'@example.com',email_confirmed_at:'2026-10-29T00:00:00Z'}]));
  const access=new AccessControl(db,{supabaseUrl:'https://synthetic.example',publishableKey:'synthetic',adminEmail:null,appUrl:'http://localhost:19491',crmApproval:'direct'},async(_url,init)=>{

@@ -6,6 +6,7 @@ import type { Clock, CompanyWrite, ContactWrite, Database, RecordsService, SqlEx
 import { updateActionsSchema, updateFactSchema, uuidSchema, workstreamSchema } from '../shared/schemas.js';
 import { addDays, localDay } from '../intelligence/validation.js';
 import { assert, assertEvidence, chatRow, command, companyRow, companyRows, evidenceFor, evidenceRow, iso, links, messageRow, nullableIso, page, ticketRow, type Row } from './sql.js';
+import { createWorkCardTx, manualCardSchema } from './manual-cards.js';
 
 const companyInput = z.strictObject({ idempotencyKey: z.string().min(1).max(200), canonicalName: z.string().trim().min(1).max(500), aliases: z.array(z.string()), domains: z.array(z.string()),
   workstream: workstreamSchema.nullable(), summary: z.string().max(16000), buyerIds: z.array(z.string()), providerIds: z.array(z.string()), evidenceIds: z.array(uuidSchema) });
@@ -179,6 +180,14 @@ export class RecordsRepository implements RecordsService {
   }
   async getTicket(id: string) { uuidSchema.parse(id); return getTicketTx(this.db, id); }
   async ensureTicket(chatId: string) { return this.db.transaction((tx) => ensureTicketTx(tx, chatId)); }
+  async createWorkCard(input: Parameters<RecordsService['createWorkCard']>[0]) {
+    const { actorId, ...raw } = input;
+    const parsed = manualCardSchema.parse(raw);
+    return this.db.transaction(async (tx) => {
+      await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`manual-card:${parsed.idempotencyKey}`]);
+      return createWorkCardTx(tx, parsed, actorId);
+    });
+  }
   async listTickets(input: Parameters<RecordsService['listTickets']>[0]) {
     const p = page(input); const rows = (await this.db.query(`SELECT * FROM tickets WHERE ($1::uuid IS NULL OR id>$1) AND ($2::uuid IS NULL OR company_id=$2) AND ($3::text IS NULL OR lane=$3) ORDER BY id LIMIT $4`, [p.after, input.companyId ?? null, input.lane ?? null, p.limit + 1])).rows;
     return { items: await Promise.all(rows.slice(0, p.limit).map((r) => ticketRow(this.db, r))), nextCursor: rows.length > p.limit ? String(rows[p.limit - 1]!.id) : null };

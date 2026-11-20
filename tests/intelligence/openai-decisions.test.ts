@@ -46,6 +46,48 @@ it('keeps low-confidence choices uncertain instead of manufacturing a stage prop
   const raw = nativeDecisionFixture(); for (const a of raw.answers) if ('confidence' in a) a.confidence = 0.1;
   expect(parseOpenAIDecisions(raw, input())).toMatchObject({ relevance: 'uncertain', lane: { outcome: 'uncertain' }, workstream: null });
 });
+it('accepts a clear counterparty workstream without the 90% identity threshold', () => {
+  const raw = nativeDecisionFixture(), ws = raw.answers.find(a => a.name === 'workstream')!;
+  if (ws.type !== 'choice') throw new Error('fixture');
+  ws.choice = 'Buyer'; ws.confidence = 0.72;
+  ws.probabilities = [{ value: 'Buyer', probability: 0.72 }, { value: 'uncertain', probability: 0.2 }, { value: 'Provider', probability: 0.05 }, { value: 'Others', probability: 0.02 }, { value: 'Integration', probability: 0.01 }];
+  expect(parseOpenAIDecisions(raw, input()).workstream).toBe('Buyer');
+});
+it('never invents a workstream when the counterparty direction is unresolved', () => {
+  const raw = nativeDecisionFixture(), ws = raw.answers.find(a => a.name === 'workstream')!;
+  if (ws.type !== 'choice') throw new Error('fixture');
+  ws.choice = 'Buyer'; ws.confidence = 0.4;
+  ws.probabilities = [{ value: 'Buyer', probability: 0.37 }, { value: 'uncertain', probability: 0.33 }, { value: 'Provider', probability: 0.2 }, { value: 'Others', probability: 0.06 }, { value: 'Integration', probability: 0.04 }];
+  expect(parseOpenAIDecisions(raw, input()).workstream).toBeNull();
+});
+it('uses the sourced AntSeed pitch as direction of trade when the model abstains', () => {
+  const own = '00000000-0000-4000-8000-000000000011';
+  const base = inputFixture();
+  const pitch = {
+    ...base.messages[0]!, id: 2, senderId: '99', sentAt: '2026-10-16T21:00:00.000Z',
+    text: 'Hi Mira, would you like to try the AntSeed API services?',
+    sender: { ...base.messages[0]!.sender, id: '99', names: ['AntSeed'] },
+  };
+  const withPitch = { ...base, messages: [...base.messages, pitch],
+    evidence: [...base.evidence, { ...base.evidence[0]!, id: own, messageId: 2, excerpt: pitch.text }] };
+  const raw = nativeDecisionFixture(), ws = raw.answers.find(a => a.name === 'workstream')!;
+  const outbound = raw.answers.find(a => a.name === 'outbound_enquiry')!;
+  if (ws.type !== 'choice' || outbound.type !== 'predicate') throw new Error('fixture');
+  ws.choice = 'uncertain'; ws.confidence = 0.9;
+  ws.probabilities = [{ value: 'uncertain', probability: 0.9 }, { value: 'Buyer', probability: 0.1 }, { value: 'Provider', probability: 0 }, { value: 'Integration', probability: 0 }, { value: 'Others', probability: 0 }];
+  outbound.probability = 1;
+  const decision = parseOpenAIDecisions(raw, { ...withPitch, extraction: extractionFixture(own) });
+  expect(decision.outreach?.outcome).toBe('enquiry');
+  expect(decision.workstream).toBe('Buyer');
+});
+it('classifies the external counterparty by direction of trade', () => {
+  const question = buildOpenAIDecisionsRequest(input()).questions.find(q => q.name === 'workstream')!;
+  expect(question.instructions).toContain('counterparty is the participant AntSeed addresses');
+  expect(question.instructions).toContain('AntSeed itself is never the subject');
+  const choices = Object.fromEntries((question.choices ?? []).map(c => [c.value, c.description]));
+  expect(choices['Provider']).toContain('counterparty sells');
+  expect(choices['Buyer']).toContain('AntSeed sells');
+});
 it('surfaces credit errors once and infrastructure errors as retryable, with no fallback', async () => {
   mode = 'credit'; requests.length = 0;
   const result = await createOpenAIDecisions({ ...config, maxAttempts: 3 }, { fetch: localFetch }).decide(input());

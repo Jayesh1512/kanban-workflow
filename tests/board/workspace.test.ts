@@ -12,12 +12,13 @@ import { registerBoard } from '../../src/board/routes.js';
 import { OutreachWorkflow } from '../../src/outreach/service.js';
 import { NativeProposalWorkflow } from '../../src/board/native-workflow.js';
 import { ProposalRepository } from '../../src/workflow/proposals.js';
+import { RecordsRepository } from '../../src/workflow/records.js';
 import { fixtureDatabase } from '../workflow/database.js';
 import type { Member } from '../../src/access/service.js';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { registerMcp } from '../../src/hermes/mcp.js';
 
-const names=['202610250001_outreach_core.sql','202610260001_outreach_workflow.sql','202610260002_stable_outreach_sources.sql','202610270004_operator_intake_approvals.sql','202610280001_crm_first.sql','202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql'];
+const names=['202610250001_outreach_core.sql','202610260001_outreach_workflow.sql','202610260002_stable_outreach_sources.sql','202610270004_operator_intake_approvals.sql','202610280001_crm_first.sql','202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql','202610310002_dedupe_pending_approvals.sql','202611200001_initial_placement_removal.sql','202611200002_workstream_counterparty.sql','202611200003_manual_work_cards.sql','202611200004_manual_crm_cards.sql'];
 const cleanup:Array<()=>Promise<unknown>>=[];
 afterEach(async()=>{for(const close of cleanup.splice(0).reverse())await close();});
 async function setup(){
@@ -51,7 +52,8 @@ async function setup(){
   const outreach=new OutreachWorkflow(db,{now:()=>new Date()},{provider:'openai',endpoint:'https://api.openai.com/v1/decisions',model:'gpt-6-luna',apiKey:null,timeoutMs:1000,maxAttempts:1},{nativeBoard:true});
   const work=new ProposalRepository(db,{subscribe:()=>()=>{},enqueueProposal:async()=>{}});
   const intake=new TelegramStore(db as unknown as PgDatabase,{apiId:null,apiHash:null,sessionPath:'',historyBatchSize:10,historyMaxBatches:1});
-  registerBoard(app,db,outreach,async()=>{},'Asia/Kolkata',{work,intake});
+  const records = new RecordsRepository(db,{now:()=>new Date('2026-11-20T00:00:00Z')});
+  registerBoard(app,db,outreach,async()=>{},'Asia/Kolkata',{work,intake},records);
   app.get('/api/outreach/relationships',async()=>outreach.list({}));
   app.get('/api/outreach/relationships/:id',async req=>outreach.get((req.params as {id:string}).id));
   app.get('/api/outreach/proposals',async()=>outreach.listProposals({}));
@@ -74,6 +76,24 @@ async function setup(){
   return {db,app,access,outreach,work,intake,members,headers,task,identities,sign,bootstrapTelegramId,userRequests:()=>userRequests,failProvider:()=>{providerFailure=true;}};
 }
 describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQL engine)',()=>{
+  it('creates one manual Work card for an excluded conversation and lists it in the team feed',async()=>{
+    const h=await setup();
+    await h.db.query("INSERT INTO chats(id,kind,title,inclusion,is_control) VALUES(-1007,'user','Grovio direct','excluded',false)");
+    const payload={idempotencyKey:randomUUID(),title:'Reply to Grovio on pricing',chatId:'-1007',channel:'whatsapp',reason:'Manual card requested by Ravi'};
+    const created=await h.app.inject({method:'POST',url:'/api/board/work/cards',headers:h.headers('member'),payload});
+    expect(created.statusCode).toBe(200);
+    const card=created.json();
+    expect(card).toMatchObject({chatId:'-1007',kind:'contact_prospect',nextAction:'Reply to Grovio on pricing',trackingState:'active'});
+    expect((await h.db.query('SELECT inclusion FROM chats WHERE id=-1007')).rows[0]!.inclusion).toBe('included');
+    expect((await h.db.query("SELECT decision_origin,operator_reason FROM chat_intake_requests WHERE chat_id=-1007")).rows[0])
+      .toMatchObject({decision_origin:'operator',operator_reason:'Manual card requested by Ravi'});
+    const team=(await h.app.inject({url:'/api/board/tasks?scope=team',headers:h.headers('member')})).json().items;
+    expect(team.some((t:{id:string})=>t.id===card.id)).toBe(true);
+    // Replaying the same key returns the same card; a viewer cannot create one.
+    expect((await h.app.inject({method:'POST',url:'/api/board/work/cards',headers:h.headers('member'),payload})).json().id).toBe(card.id);
+    expect((await h.app.inject({method:'POST',url:'/api/board/work/cards',headers:h.headers('viewer'),payload:{...payload,idempotencyKey:randomUUID()}})).statusCode).toBe(403);
+    expect((await h.db.query('SELECT count(*)::int AS n FROM tickets')).rows[0]!.n).toBe(1);
+  });
   it('assigns existing generated Work once, defaults future Work to Ravi, and includes both task types in My tasks',async()=>{
     const h=await setup();
     const legacy=(await h.db.query("INSERT INTO tickets(chat_id,kind,summary,next_action,owner_id) VALUES(-1001,'contact_prospect','Existing generated work','Send the revised pricing agreement to the partner today',NULL) RETURNING id")).rows[0]!;
@@ -232,6 +252,28 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     await h.db.query('UPDATE outreach_relationships SET evidence_revision=evidence_revision+1 WHERE id=$1',[r.id]);
     expect((await h.app.inject({method:'POST',url:`/api/board/approvals/proposals/${result.json().replacement_id}/decision`,headers:h.headers('manager'),payload:{action:'approve',reason:'Outdated',idempotencyKey:'stale-key'}})).statusCode).toBe(409);
     expect((await h.outreach.get(r.id)).relationship.acceptedStage).toBeNull();
+  });
+  it('removes an unplaced card from Initial placement without accepting its stage or applying a pending suggestion',async()=>{
+    const h=await setup();await h.outreach.reconcile();const r=(await h.outreach.listReviewRelationships({})).items[0]!;
+    const pending=await h.outreach.propose({relationshipId:r.id,expectedEvidenceRevision:r.evidenceRevision,targetStage:'lead',idempotencyKey:'removal-fixture',reason:'Synthetic suggestion'},'openai');
+    expect((await h.app.inject({url:'/api/board/approvals/placements',headers:h.headers('member')})).statusCode).toBe(403);
+    const url=`/api/board/approvals/relationships/${r.id}/remove`,payload={reason:'Removed from Initial placement in Approvals',idempotencyKey:'removal-key'};
+    expect((await h.app.inject({method:'POST',url,headers:h.headers('viewer'),payload})).statusCode).toBe(403);
+    expect((await h.app.inject({method:'POST',url,headers:h.headers('manager'),payload:{idempotencyKey:'removal-bad'}})).statusCode).toBe(400);
+    expect((await h.app.inject({method:'POST',url,headers:h.headers('manager'),payload})).statusCode).toBe(200);
+    expect((await h.app.inject({method:'POST',url,headers:h.headers('manager'),payload})).statusCode).toBe(200);
+    expect((await h.outreach.getProposal(pending.id)).state).toBe('stale');
+    expect((await h.outreach.listReviewRelationships({})).items).toEqual([]);
+    const detail=(await h.outreach.get(r.id)).relationship;
+    expect(detail.acceptedStage).toBeNull();
+    expect(detail.displayStage).toBeNull();
+    expect(detail.sourceCount).toBe(r.sourceCount);
+    expect((await h.outreach.list({})).items).toEqual([]);
+    expect((await h.db.query("SELECT * FROM workspace_audit WHERE action='crm.placement.remove'")).rowCount).toBe(1);
+    expect((await h.db.query('SELECT placement_removed_at FROM outreach_relationships WHERE id=$1',[r.id])).rows[0]!.placement_removed_at).not.toBeNull();
+    const place=await h.app.inject({method:'POST',url:`/api/board/approvals/relationships/${r.id}/place`,headers:h.headers('manager'),payload:{targetStage:'lead',expectedEvidenceRevision:detail.evidenceRevision,idempotencyKey:'removal-replace',reason:'Placed after removal'}});
+    expect(place.statusCode).toBe(200);expect((await h.outreach.listReviewRelationships({})).items).toEqual([]);
+    expect((await h.db.query('SELECT placement_removed_at,accepted_stage FROM outreach_relationships WHERE id=$1',[r.id])).rows[0]).toEqual({placement_removed_at:null,accepted_stage:'lead'});
   });
   it('queues approved Work for native application and prevents Telegram from applying it twice',async()=>{
     const h=await setup();await h.db.query("UPDATE app_settings SET value='{}' WHERE key='workflow:crm-first'");

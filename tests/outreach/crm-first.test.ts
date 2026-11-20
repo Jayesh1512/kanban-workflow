@@ -16,9 +16,9 @@ import { fixtureDatabase } from '../workflow/database.js';
 import { decisionFixture, extractionFixture, provenance } from '../intelligence/fixtures.js';
 import { telegramFixture, fixtureMessage } from '../platform/telegram-fixture.js';
 
-const migrationNames = ['202610250001_outreach_core.sql', '202610260001_outreach_workflow.sql',
-  '202610260002_stable_outreach_sources.sql', '202610270004_operator_intake_approvals.sql', '202610280001_crm_first.sql'];
-const migrations = migrationNames.map(name => new URL(`../../db/migrations/${name}`, import.meta.url));
+const migrations = ['202610250001_outreach_core.sql', '202610260001_outreach_workflow.sql',
+  '202610260002_stable_outreach_sources.sql', '202610270004_operator_intake_approvals.sql', '202611200001_initial_placement_removal.sql', '202611200002_workstream_counterparty.sql', '202611200004_manual_crm_cards.sql', '202610280001_crm_first.sql']
+  .map(name => new URL(`../../db/migrations/${name}`, import.meta.url));
 const config: RuntimeConfig['jev'] = { provider: 'openai', endpoint: 'https://api.openai.com/v1/decisions', model: 'gpt-6-luna', apiKey: null, timeoutMs: 1000, maxAttempts: 1 };
 const cleanup: Array<() => Promise<unknown>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });

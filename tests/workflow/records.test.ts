@@ -6,7 +6,13 @@ import { decisionFixture, extractionFixture, provenance } from '../intelligence/
 import { fixtureDatabase } from './database.js';
 
 let db: Database; let records: RecordsRepository;
-beforeEach(async () => { db = await fixtureDatabase(); records = new RecordsRepository(db, { now: () => new Date('2026-10-19T00:00:00Z') }); });
+const manualMigrations = [
+  new URL('../../db/migrations/202610270004_operator_intake_approvals.sql', import.meta.url),
+  new URL('../../db/migrations/202610290001_native_workspace.sql', import.meta.url),
+  new URL('../../db/migrations/202610300001_work_task_ownership.sql', import.meta.url),
+  new URL('../../db/migrations/202611200003_manual_work_cards.sql', import.meta.url),
+];
+beforeEach(async () => { db = await fixtureDatabase(manualMigrations); records = new RecordsRepository(db, { now: () => new Date('2026-10-19T00:00:00Z') }); });
 afterEach(async () => { await db?.close(); });
 const companyWrite = { idempotencyKey: 'company1', canonicalName: 'Cedar Labs', aliases: ['Cedar'], domains: ['cedar.example.invalid'], buyerIds: ['buyer_demo'], providerIds: [], workstream: 'Buyer' as const, summary: 'Synthetic directory', evidenceIds: [] };
 async function resolvedTicket() {
@@ -67,5 +73,31 @@ describe('records, contact roles, manual precedence and priorities (isolated Pos
     const { ticket, evidence } = await resolvedTicket(); await db.query('UPDATE messages SET version=version+1');
     expect((await records.listFacts({ ticketId: ticket.id })).items).toEqual([]);
     await expect(records.getEvidence([evidence])).rejects.toThrow('Evidence'); await expect(records.createCompany({ ...companyWrite, evidenceIds: [evidence] })).rejects.toThrow('Evidence');
+  });
+  it('creates a manual card for an offline conversation with no CRM relationship and records the operator reason', async () => {
+    const card = await records.createWorkCard({ idempotencyKey: 'manual-1', title: 'Call Grovio about the API pilot',
+      chatTitle: 'Grovio | Amit (WhatsApp)', channel: 'whatsapp', companyName: 'Grovio', reason: 'Manual card for a WhatsApp conversation' });
+    expect(card).toMatchObject({ kind: 'company', lane: 'To be started', nextAction: 'Call Grovio about the API pilot', trackingState: 'active', actionsSource: 'manual' });
+    const chat = (await db.query('SELECT * FROM chats WHERE id=$1', [card.chatId])).rows[0]!;
+    expect(chat).toMatchObject({ kind: 'manual', title: 'Grovio | Amit (WhatsApp)', inclusion: 'included', mapping_status: 'confirmed' });
+    expect(chat.company_id).toBe(card.companyId);
+    const ticket = (await db.query('SELECT * FROM tickets WHERE id=$1', [card.id])).rows[0]!;
+    expect(ticket).toMatchObject({ creation_origin: 'manual', creation_channel: 'whatsapp', creation_key: 'manual-1', creation_note: 'Manual card for a WhatsApp conversation' });
+    const intake = (await db.query('SELECT * FROM chat_intake_requests WHERE chat_id=$1', [card.chatId])).rows[0]!;
+    expect(intake).toMatchObject({ decision: 'approved', decision_origin: 'operator', operator_reason: 'Manual card for a WhatsApp conversation' });
+    // The same key returns the same card and never creates a second one.
+    expect((await records.createWorkCard({ idempotencyKey: 'manual-1', title: 'Call Grovio about the API pilot',
+      chatTitle: 'Grovio | Amit (WhatsApp)', channel: 'whatsapp', companyName: 'Grovio', reason: 'Manual card for a WhatsApp conversation' })).id).toBe(card.id);
+    expect((await db.query('SELECT count(*)::int AS n FROM tickets')).rows[0]!.n).toBe(1);
+  });
+  it('admits an excluded chat for a manual card without inventing a company or a Telegram approval', async () => {
+    await db.query("INSERT INTO chats(id,kind,title,inclusion,mapping_status) VALUES(-1009,'user','Grovio direct',  'excluded','unresolved')");
+    const card = await records.createWorkCard({ idempotencyKey: 'manual-2', title: 'Reply to Grovio on pricing', chatId: '-1009', reason: 'Person asked for a card on an excluded chat' });
+    expect(card).toMatchObject({ kind: 'contact_prospect', companyId: null });
+    const chat = (await db.query('SELECT * FROM chats WHERE id=-1009')).rows[0]!;
+    expect(chat).toMatchObject({ inclusion: 'included', mapping_status: 'unresolved', company_id: null });
+    const intake = (await db.query('SELECT * FROM chat_intake_requests WHERE chat_id=-1009')).rows[0]!;
+    expect(intake).toMatchObject({ decision_origin: 'operator', decided_message_id: null, control_chat_id: null, message_id: null });
+    expect((await db.query('SELECT count(*)::int AS n FROM companies')).rows[0]!.n).toBe(0);
   });
 });

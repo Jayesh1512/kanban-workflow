@@ -88,4 +88,15 @@ describe('native workspace pages (static shell checks)', () => {
     expect(workspacePage).toContain("if(!canReview()){location.replace('/dashboard')");
     expect(workspacePage).toContain("n!=='proposals'");
   });
+  it('initial placement keeps every action on the closed card and offers a removal', () => {
+    const placement = workspacePage.slice(workspacePage.indexOf('function placementCard(r)'), workspacePage.indexOf('const placementRemoval='));
+    // Actions sit inside <summary>, so no expand step is needed to act.
+    expect(placement.indexOf('removeBar(card,r)')).toBeLessThan(placement.indexOf('card.append(summary)'));
+    expect(placement).toContain('decideBlockPlace(card,r,sel,lab,true)');
+    expect(placement).toContain('quickBar(card,proposalOpts(pending,dropPlacement))');
+    expect(workspacePage).toContain("'/remove'");
+    expect(workspacePage).toContain("'Confirm removal'");
+    expect(workspacePage).not.toContain('Approved Telegram conversations feed the CRM first');
+    expect(workspacePage).not.toContain('Operational lanes do not establish commercial stages');
+  });
 });

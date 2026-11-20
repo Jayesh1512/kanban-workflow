@@ -125,4 +125,21 @@ describe('durable analysis checkpoint and immutable lease fencing (isolated PGli
     const input = await queue.loadInput(job.id); expect(input.messages.some((m) => m.id === 1)).toBe(true);
     expect(input.messages.reduce((sum, m) => sum + m.text.length, 0)).toBeLessThanOrEqual(64000);
   });
+  it('records the decided direction of trade on a title-mapped company that the extraction does not relist', async () => {
+    // The CRM-first path maps companies from an explicit group title, and that
+    // mapping marks the chat manual, so the extraction branch never runs.
+    const company = '00000000-0000-4000-8000-0000000000c1';
+    await db.query("INSERT INTO companies(id,canonical_name) VALUES($1,'Cedar Labs')", [company]);
+    await db.query("INSERT INTO mapping_history(chat_id,company_id,mapping_status,version,reason,source) VALUES(-1001,$1,'confirmed',0,'structured_group_title:v1 {\"title\":\"AntSeed <> Cedar Labs\"}','analysis')", [company]);
+    await db.query("UPDATE chats SET company_id=$1,mapping_status='confirmed' WHERE id=-1001", [company]);
+    const value = await checkpoint();
+    // Extraction finds no company this turn; only the decision names the direction.
+    value.extraction.companies = []; value.extraction.companyCandidates = [];
+    await queue.saveExtraction(value, job.claimToken);
+    const decision = decisionFixture(value.extraction.evidenceIds[0]);
+    decision.companyMatch = { outcome: 'ambiguous', candidates: [] };
+    decision.workstream = 'Provider';
+    await queue.complete(job.id, decision, provenance('vercel'), job.claimToken);
+    expect((await db.query('SELECT workstream FROM companies WHERE id=$1', [company])).rows[0]!.workstream).toBe('Provider');
+  });
 });

@@ -228,6 +228,11 @@ export class SqlAnalysisQueue implements AnalysisQueue {
         const selectedCompany = companyId ? await getCompanyTx(tx, companyId) : null;
         const extracted = selectedCompany ? extraction.companies.find((c) => c.canonicalName.toLowerCase() === selectedCompany.canonicalName.toLowerCase()) : null;
         if (extracted && selectedCompany) await writeCompanyTx(tx, { ...selectedCompany, idempotencyKey: jobId, aliases: [...new Set([...selectedCompany.aliases, ...extracted.aliases])], domains: [...new Set([...selectedCompany.domains, ...extracted.domains])], buyerIds: [...new Set([...selectedCompany.buyerIds, ...extracted.buyerIds])], providerIds: [...new Set([...selectedCompany.providerIds, ...extracted.providerIds])], workstream: decision.workstream ?? selectedCompany.workstream, evidenceIds: [...new Set([...selectedCompany.evidenceIds, ...extracted.evidenceIds])] }, selectedCompany.id, selectedCompany.version);
+        // Title-derived and manually mapped companies never pass through the
+        // extraction branch above, so record the decided direction of trade on
+        // the resolved company itself. Without this step every CRM-first company
+        // stayed unclassified even when the model named a workstream.
+        if (companyId && decision.workstream) await tx.query('UPDATE companies SET workstream=$2,version=version+1,updated_at=now() WHERE id=$1 AND workstream IS DISTINCT FROM $2', [companyId, decision.workstream]);
         for (const contact of extraction.contacts) {
           if (!contact.telegramUserIds.length) continue; // no guessed merge on display name
           const existingIds = (await tx.query<{ contact_id: string }>('SELECT DISTINCT contact_id FROM contact_telegram_ids WHERE telegram_user_id=ANY($1::bigint[])', [contact.telegramUserIds])).rows;

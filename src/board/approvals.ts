@@ -33,12 +33,23 @@ export function registerApprovals(app: FastifyInstance, db: Database, outreach: 
     const input=salesProposalSchema.omit({relationshipId:true}).parse(request.body);
     return outreach.moveByHuman({...input,relationshipId:id},actor,'unplaced');
   });
+  app.post('/api/board/approvals/relationships/:id/remove',async request=>{
+    const actor=await reviewer(request),id=idSchema.parse(request.params).id;
+    const input=z.strictObject({idempotencyKey:z.string().trim().min(1).max(200),reason:z.string().trim().min(1).max(4000)}).parse(request.body);
+    return outreach.removePlacement({...input,relationshipId:id},actor);
+  });
+  /** A CRM card for a company with no imported conversation. CRM managers only. */
+  app.post('/api/board/crm/cards',async request=>{
+    const actor=await reviewer(request);
+    return outreach.createManual(request.body,actor);
+  });
   app.get('/api/board/approvals/proposals',async request=>{
     await reviewer(request);const input=pageSchema.parse(request.query);
     const rows=(await db.query(`SELECT p.id,p.relationship_id,p.target_stage,p.reason,p.command_kind,p.command_payload,p.origin,p.state,p.created_at,
       r.display_name,r.accepted_stage FROM outreach_sales_proposals p
       JOIN outreach_relationships r ON r.id=p.relationship_id WHERE p.state='pending' AND r.retained
-      AND ($1::uuid IS NULL OR p.id>$1) ORDER BY p.id LIMIT $2`,[input.cursor??null,input.limit+1])).rows;
+        AND NOT ((p.command_kind IS NULL OR p.command_kind='stage') AND r.placement_removed_at IS NOT NULL)
+        AND ($1::uuid IS NULL OR p.id>$1) ORDER BY p.id LIMIT $2`,[input.cursor??null,input.limit+1])).rows;
     return page(rows,input.limit);
   });
   app.post('/api/board/approvals/proposals/:id/decision',async request=>{

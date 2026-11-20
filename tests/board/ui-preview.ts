@@ -18,11 +18,12 @@ import { nativeOutreachPage } from '../../src/outreach/page.js';
 import { DomainError } from '../../src/shared/api.js';
 import { workspacePage } from '../../src/board/page.js';
 import { ProposalRepository } from '../../src/workflow/proposals.js';
+import { RecordsRepository } from '../../src/workflow/records.js';
 import { TelegramStore } from '../../src/telegram/store.js';
 import { fixtureDatabase } from '../workflow/database.js';
 
 const port = Number(process.env.PREVIEW_PORT ?? 19490);
-const migrations = ['202610250001_outreach_core.sql', '202610260001_outreach_workflow.sql', '202610260002_stable_outreach_sources.sql', '202610270004_operator_intake_approvals.sql', '202610280001_crm_first.sql', '202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql'];
+const migrations = ['202610250001_outreach_core.sql', '202610260001_outreach_workflow.sql', '202610260002_stable_outreach_sources.sql', '202610270004_operator_intake_approvals.sql', '202610280001_crm_first.sql', '202610290001_native_workspace.sql','202610300001_work_task_ownership.sql','202610310001_ticket_headline.sql','202610310002_dedupe_pending_approvals.sql','202611200001_initial_placement_removal.sql','202611200002_workstream_counterparty.sql','202611200003_manual_work_cards.sql','202611200004_manual_crm_cards.sql'];
 const accounts = [
   ['ravi@antseed.com', 'admin', 'Ravi Admin'], ['manager@example.com', 'crm_manager', 'Maya Manager'],
   ['member@example.com', 'member', 'Mohan Member'], ['other@example.com', 'member', 'Olivia Other'], ['viewer@example.com', 'viewer', 'Vera Viewer'],
@@ -58,7 +59,7 @@ const outreach = new OutreachWorkflow(db, { now: () => new Date() }, { provider:
 registerBoard(app, db, outreach, async () => {}, 'Asia/Kolkata', {
   work: new ProposalRepository(db, { subscribe: () => () => {}, enqueueProposal: async () => {} }),
   intake: new TelegramStore(db as never, telegramConfig),
-});
+}, new RecordsRepository(db, { now: () => new Date() }));
 if (!app.hasRoute({ method: 'GET', url: '/approvals' })) app.get('/approvals', async (_req, reply) => reply.type('text/html; charset=utf-8').send(workspacePage));
 
 // Read-only stand-ins for routes the full workflow module registers.

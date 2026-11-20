@@ -7,6 +7,16 @@ export const outreachListSchema = z.strictObject({
     disposition: z.enum(['pipeline', 'context_review']).optional(),
 });
 export const outreachGetSchema = z.strictObject({ id: uuidSchema });
+/** A person creates a CRM card for a company with no imported source. The reason
+ * is required, the card is marked manual, and it invents no enrollment. */
+export const manualRelationshipSchema = z.strictObject({
+  idempotencyKey: z.string().trim().min(1).max(200),
+  companyName: z.string().trim().min(1).max(500),
+  stage: salesStageSchema.default('lead'),
+  summary: z.string().trim().max(16000).optional(),
+  workstream: z.enum(['Buyer', 'Provider', 'Integration', 'Others']).optional(),
+  reason: z.string().trim().min(1).max(4000),
+});
 export const salesProposalSchema = z.strictObject({
     relationshipId: uuidSchema, idempotencyKey: z.string().trim().min(1).max(200),
     expectedEvidenceRevision: z.number().int().nonnegative(), targetStage: salesStageSchema,

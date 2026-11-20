@@ -14,7 +14,7 @@ function decode(result: unknown) { return (result as { structuredContent: Record
 
 describe('Outreach canonical HTTP / official SDK parity', () => {
   it('reads the same persisted relationship/context over both transports with readiness and no write capability', async () => {
-    const db = await fixtureDatabase([new URL('../../db/migrations/202610250001_outreach_core.sql', import.meta.url)]); cleanup.push(() => db.close());
+    const db = await fixtureDatabase([new URL('../../db/migrations/202610250001_outreach_core.sql', import.meta.url), new URL('../../db/migrations/202611200001_initial_placement_removal.sql', import.meta.url), new URL('../../db/migrations/202611200002_workstream_counterparty.sql', import.meta.url),new URL('../../db/migrations/202611200004_manual_crm_cards.sql', import.meta.url)]); cleanup.push(() => db.close());
     await db.query("INSERT INTO tickets(chat_id,kind,company_id) VALUES(-1001,'contact_prospect',NULL)");
     const outreach = new OutreachRepository(db, { now: () => new Date('2026-10-25T00:00:00Z') }); await outreach.reconcile();
     const app = Fastify(); let ready = true;
@@ -48,7 +48,7 @@ describe('Outreach canonical HTTP / official SDK parity', () => {
 
 describe('commercial command HTTP / Hermes contract',()=>{
  it('persists a Hermes recommendation, exposes HTTP-only approval and imports reports without direct tool approval',async()=>{
-  const db=await fixtureDatabase([new URL('../../db/migrations/202610250001_outreach_core.sql',import.meta.url),new URL('../../db/migrations/202610260001_outreach_workflow.sql',import.meta.url)]);cleanup.push(()=>db.close());await db.query("INSERT INTO tickets(chat_id,kind) VALUES(-1001,'contact_prospect')");
+  const db=await fixtureDatabase([new URL('../../db/migrations/202610250001_outreach_core.sql',import.meta.url),new URL('../../db/migrations/202610260001_outreach_workflow.sql',import.meta.url),new URL('../../db/migrations/202611200001_initial_placement_removal.sql',import.meta.url),new URL('../../db/migrations/202611200002_workstream_counterparty.sql',import.meta.url),new URL('../../db/migrations/202611200004_manual_crm_cards.sql',import.meta.url)]);cleanup.push(()=>db.close());await db.query("INSERT INTO tickets(chat_id,kind) VALUES(-1001,'contact_prospect')");
   const {OutreachWorkflow}=await import('../../src/outreach/service.js');const service=new OutreachWorkflow(db,{now:()=>new Date()},{provider:'openai',endpoint:'https://api.openai.com/v1/decisions',model:'gpt-6-luna',apiKey:null,timeoutMs:1000,maxAttempts:1});await service.reconcile();const r=(await service.list({})).items[0]!;
   const app=Fastify();const transport=registerTransports(app,{outreach:service}as unknown as DomainServices,async()=>{});app.addHook('preClose',()=>transport.close());const url=await app.listen({host:'127.0.0.1',port:0});cleanup.push(()=>app.close());const client=await connectClient(url);cleanup.push(()=>client.close());
   const result=decode(await client.callTool({name:'propose_sales_stage',arguments:{relationshipId:r.id,expectedEvidenceRevision:r.evidenceRevision,idempotencyKey:'hermes-sales-contract',targetStage:'qualification',reason:'Source conversation reviewed'}}));expect(result).toMatchObject({state:'pending',origin:'hermes'});expect((await service.get(r.id)).relationship.acceptedStage).toBeNull();

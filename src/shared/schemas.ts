@@ -9,6 +9,25 @@ export const laneSchema = z.enum(LANES);
 export const workstreamSchema = z.enum(WORKSTREAMS);
 export const idempotencyKeySchema = z.string().min(1).max(200);
 export const pageInputSchema = z.strictObject({ cursor: z.string().max(500).optional(), limit: z.number().int().min(1).max(200).optional() });
+
+/** Operator-created Work for a chat or offline conversation the pipeline cannot
+ * admit. The reason is required because this overrides automatic intake. */
+export const manualCardSchema = z.strictObject({
+  idempotencyKey: idempotencyKeySchema,
+  title: z.string().trim().min(1).max(500),
+  chatId: chatIdSchema.optional(),
+  chatTitle: z.string().trim().min(1).max(500).optional(),
+  channel: z.enum(['manual', 'whatsapp', 'email', 'other']).default('manual'),
+  companyId: uuidSchema.optional(),
+  companyName: z.string().trim().min(1).max(500).optional(),
+  workstream: workstreamSchema.nullable().optional(),
+  lane: laneSchema.optional(),
+  ownerId: uuidSchema.optional(),
+  summary: z.string().max(16000).optional(),
+  reason: z.string().trim().min(1).max(500),
+});
+export type ManualCardInput = z.output<typeof manualCardSchema>;
+export type ManualCardRequest = z.input<typeof manualCardSchema>;
 export const proposeLaneSchema = z.strictObject({
   idempotencyKey: idempotencyKeySchema,
   ticketId: uuidSchema,

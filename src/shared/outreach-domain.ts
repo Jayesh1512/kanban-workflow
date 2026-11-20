@@ -38,6 +38,10 @@ export interface OutreachRelationship {
     latestSourceAt: string | null;
     reconciledAt: string | null;
     sourceState: 'current' | 'changed';
+    /** A person created this card without an imported source. */
+    creationOrigin?: 'pipeline' | 'manual';
+    /** The operator's own words for why the card exists. Only on manual cards. */
+    creationNote?: string | null;
 }
 export interface OutreachContact {
     id: string;

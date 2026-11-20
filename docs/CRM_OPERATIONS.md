@@ -1,6 +1,6 @@
 # Integrated Outreach CRM
 
-The `/outreach` page and **AntSeed Outreach** Vikunja project are the CRM and the starting point for business conversations. The flow is **Telegram chat → intake approval in Telegram → CRM relationship → concrete Work proposal → separate Telegram approval → Work ticket**. A CRM relationship does not need a Work ticket to import messages, extract contacts/facts or assess its commercial stage.
+The `/outreach` page and **AntSeed Outreach** Vikunja project are the CRM and the starting point for business conversations. The flow is **Telegram chat → intake approval in Telegram → CRM relationship → concrete Work proposal → separate Telegram approval → Work ticket**. A CRM relationship does not need a Work ticket to import messages, extract contacts/facts or assess its commercial stage. A card can also start without a Telegram source; see [Cards with no imported conversation](#cards-with-no-imported-conversation).
 
 Approved chats are reconciled directly into CRM sources. Chats for the same confirmed company share one relationship; unknown-company prospects remain separate. Source evidence, facts and contact roles are read by chat provenance, independently of operational tickets. Learning a prospect's first company can preserve its relationship ID; equal names alone do not merge companies.
 
@@ -27,6 +27,26 @@ Each approved action creates its own Work ticket, so one CRM relationship or cha
 The migration preserves existing Work cards, stages, remote IDs and CRM relationships, and backfills parent links where they already exist. It does not delete historical cards or convert existing accepted stages.
 
 `POST /api/outreach/relationships/:relationshipId/work` and MCP `propose_crm_work` take `chatId`, `action`, `reason`, `expectedEvidenceRevision` and `idempotencyKey`. They return a pending proposal rather than a ticket. The selected source must currently belong to the accepted CRM relationship. `POST /api/tickets` / `ensure_ticket` cannot bypass this workflow.
+
+## Cards with no imported conversation
+
+Two operator routes cover a company or task that has no approved Telegram source. Both require a reason and both are audited. Neither route invents a source, a Telegram message ID or an approved intake.
+
+**Manual CRM card.** On `/outreach`, a CRM manager or admin selects **New CRM card**, enters the company, a stage, an optional workstream and summary, and a required reason. The card is marked `Manual · no approved source`, it appears in the stage column you chose, and it is excluded from Initial placement. It creates the company when the name is new. If the company already has an unplaced relationship, that relationship is placed instead of creating a duplicate. A second card for a company that already has an accepted stage is refused. The card is otherwise a normal relationship: human stage moves, follow-ups, identity correction and Work proposals all work without a source.
+
+- `POST /api/board/crm/cards` with `idempotencyKey`, `companyName`, `stage`, `reason` and optional `summary` / `workstream`.
+
+**Manual Work card.** On the Overview page, a member with task ownership selects **New card** in the CRM pipeline or Work view. The card becomes a Work ticket in the team feed without a CRM relationship or an accepted stage. It carries `creation_origin='manual'`, a required reason and an operator intake approval, so the feed's source gate is satisfied honestly. A chat that already has a legacy card reuses that card instead of creating a second one.
+
+- `POST /api/board/work/cards` and MCP `create_work_card` / `POST /api/tickets/manual` with `title`, `chatTitle`, `channel`, `reason` and optional `workstream` / `companyName` / `chatId`.
+
+A manual stage change still needs a current `evidenceRevision`. A manual card has no enrolled source, so the source-completeness checks that guard a sourced card do not apply to it.
+
+## Workstream classification
+
+A relationship's workstream comes from the latest completed decision, then from its company. The classifier names the external counterparty and the direction of trade. AntSeed is the seller: a company that buys from AntSeed is **Buyer**; a company that supplies AntSeed is **Provider** (seller); a company that builds on AntSeed is **Integration**. A sourced AntSeed sales enquiry implies **Buyer** only when the model abstains. A weak or ambiguous answer stays unclassified and the UI shows **Not classified**; it is never stored as `Others` from an unknown. `Others` remains a valid curated value.
+
+`tickets.workstream` keeps its `Others` default because it drives the board label. It is not the CRM classification.
 
 ## Email reports
 

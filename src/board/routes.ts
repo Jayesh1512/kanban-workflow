@@ -3,8 +3,8 @@ import { registerDirectory } from './directory.js';
 import { registerApprovals, type ApprovalServices } from './approvals.js';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
-import type { Database } from '../shared/ports.js';
-import { laneSchema } from '../shared/schemas.js';
+import type { Database, RecordsService } from '../shared/ports.js';
+import { laneSchema, manualCardSchema } from '../shared/schemas.js';
 import { DomainError } from '../shared/api.js';
 import { AccessControl, audit, canMoveCrm, canOwnTasks } from '../access/service.js';
 import type { OutreachWorkflow } from '../outreach/service.js';
@@ -23,7 +23,7 @@ const taskFields = {
 const taskSelect = `t.id,t.owner_id,t.title,t.description,t.lane,t.due_date::text,t.version,t.created_at,t.updated_at,
   coalesce(nullif(m.display_name,''),split_part(m.email,'@',1)) AS owner_name`;
 
-export function registerBoard(app: FastifyInstance, db: Database, outreach: OutreachWorkflow, ready: () => Promise<void>, timezone = 'Asia/Kolkata', approvals: ApprovalServices = {}) {
+export function registerBoard(app: FastifyInstance, db: Database, outreach: OutreachWorkflow, ready: () => Promise<void>, timezone = 'Asia/Kolkata', approvals: ApprovalServices = {}, records?: RecordsService) {
   const access = app.workspaceAccess;
   registerTicketDetails(app,db,outreach,ready);
   registerApprovals(app,db,outreach,ready,approvals);
@@ -91,6 +91,13 @@ export function registerBoard(app: FastifyInstance, db: Database, outreach: Outr
       await audit(tx,actor,'task.delete',id,before,null);
       await tx.query('DELETE FROM personal_tasks WHERE id=$1 AND owner_id=$2',[id,actor.id]);return {deleted:true};
     });
+  });
+  app.post('/api/board/work/cards',async request=>{
+    await ready();const actor=access.user(request);
+    if(!canOwnTasks(actor))throw new DomainError('forbidden','Viewers cannot create cards');
+    if(!records)throw new DomainError('not_configured','Card creation is unavailable');
+    const input=manualCardSchema.parse(request.body);
+    return records.createWorkCard({...input,actorId:String(actor.id)});
   });
   app.post('/api/board/crm/:id/move',async request=>{
     await ready();const actor=access.user(request);

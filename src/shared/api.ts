@@ -32,6 +32,7 @@ export const API_OPERATIONS = [
   { method: 'GET', path: '/api/tickets', tool: 'list_tickets', service: 'records.listTickets' },
   { method: 'GET', path: '/api/tickets/:id', tool: 'get_ticket', service: 'records.getTicket' },
   { method: 'POST', path: '/api/tickets', tool: 'ensure_ticket', service: 'records.ensureTicket' },
+  { method: 'POST', path: '/api/tickets/manual', tool: 'create_work_card', service: 'records.createWorkCard' },
   { method: 'GET', path: '/api/tickets/:ticketId/context', tool: 'get_ticket_context', service: 'records.getContext' },
   { method: 'POST', path: '/api/evidence/query', tool: 'get_evidence', service: 'records.getEvidence' },
   { method: 'PUT', path: '/api/tickets/:ticketId/actions', tool: 'update_ticket_actions', service: 'records.updateActions' },

@@ -2,7 +2,7 @@
 
 `createWorkflowModule(platform.services)` registers these transports before any workers start. Both use the existing workflow repositories and the same platform ChatService; transport files contain no SQL, provider clients, scheduler or lane mutation logic.
 
-The canonical catalog is `src/shared/api.ts`: 28 domain HTTP operations and 27 MCP tools. Platform owns all six `/api/chats` HTTP bindings. Workflow owns the other 22 and exposes all 27 tools at `/mcp`, including the six chat tools. HTTP-only proposal decisions have no MCP tool. Stage recommendations create pending proposals; no MCP approval, direct move, arbitrary Telegram send or login tool exists.
+The canonical catalog is `src/shared/api.ts`: 44 domain HTTP operations and 38 MCP tools. Platform owns all six `/api/chats` HTTP bindings. Workflow owns the other 38 and exposes all 38 tools at `/mcp`, including the six chat tools. Six HTTP-only operations have no MCP tool: proposal decisions, email-report imports, mode changes, and operator card creation. Stage recommendations create pending proposals; no MCP approval, direct move, arbitrary Telegram send or login tool exists.
 
 `/mcp` uses the pinned official MCP SDK Streamable HTTP server, stateless JSON responses. POST handles initialize, notifications, tools/list and tools/call; GET/DELETE return 405 with `Allow: POST`. Each request gets its own SDK server/transport. Supported protocol negotiation and malformed-envelope errors come from the SDK. Tool failures return `isError: true` and the canonical error object in text and structured content. Successful text content is the same JSON value HTTP returns; arrays are wrapped as `{items: value}` in structured content because MCP requires an object there.
 

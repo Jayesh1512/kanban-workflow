@@ -5,7 +5,7 @@ import type { Clock, Database, SqlExecutor, RuntimeConfig, ControlMessage } from
 import type { OutreachListInput, OutreachCommands } from '../shared/outreach-domain.js';
 import { SALES_STAGES } from '../shared/outreach-domain.js';
 import { DomainError } from '../shared/api.js';
-import { emailReportSchema, outreachIdentitySchema, outreachActionsSchema, salesAssessmentSchema, salesDecisionSchema, salesProposalListSchema, salesProposalSchema } from '../shared/outreach-schemas.js';
+import { emailReportSchema, outreachIdentitySchema, outreachActionsSchema, salesAssessmentSchema, salesDecisionSchema, salesProposalListSchema, salesProposalSchema, manualRelationshipSchema } from '../shared/outreach-schemas.js';
 import { OutreachRepository } from './repository.js';
 import type { Row } from '../workflow/sql.js';
 import { digest } from './hash.js';
@@ -40,11 +40,7 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
     async listReviewRelationships(raw: OutreachListInput) { return super.list(raw, 'unplaced'); }
     override async get(id: string) {
         const detail = await super.get(id);
-        if (this.nativeBoard) {
-            detail.publication = null;
-            detail.limits = detail.limits.map(limit => limit === 'Data changes and card movements require approval via the matching Telegram control message.'
-                ? 'Human CRM moves save immediately without a Telegram message. Pending suggestions and data changes can be approved in Approvals or Telegram.' : limit);
-        }
+        if (this.nativeBoard) detail.publication = null;
         return detail;
     }
     /** HTTP-only human action. AI/Hermes still create Telegram proposals. */
@@ -65,7 +61,11 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             const m=await this.manifest(tx,input.relationshipId);
             if ((placement==='accepted' && m.r.accepted_stage==null) || (placement==='unplaced' && m.r.accepted_stage!=null))
                 throw new DomainError('conflict','CRM placement changed. Refresh before deciding.');
-            if (Number(m.r.evidence_revision)!==input.expectedEvidenceRevision || !m.eligible.length || m.eligible.some(s=>s.source_revision!==s.current_revision))
+            // A manual card has no enrolled source, so it cannot satisfy the
+            // evidence checks that guard a sourced card. Its operator reason is
+            // the only evidence, and every move is still audited.
+            const manual=m.r.creation_origin==='manual';
+            if (Number(m.r.evidence_revision)!==input.expectedEvidenceRevision || (!manual && (!m.eligible.length || m.eligible.some(s=>s.source_revision!==s.current_revision))))
                 throw new DomainError('stale_proposal','Conversation changed. Refresh before moving this card.');
             const p=await this.insertProposal(tx,input,'manual',m.value,m.hash,context,command,false);
             const d=(await tx.query(`INSERT INTO outreach_sales_decisions(proposal_id,idempotency_key,command_hash,action,reason,source,provenance)
@@ -75,12 +75,86 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
                 WHERE relationship_id=$1 AND source_thread_id=ANY($2::uuid[]) AND enrollment_state='pending'`,[input.relationshipId,m.eligible.map(s=>s.id)]);
             const after=(await tx.query(`UPDATE outreach_relationships SET accepted_stage=$2,
                 stage_version=stage_version+CASE WHEN accepted_stage IS DISTINCT FROM $2 THEN 1 ELSE 0 END,
-                evidence_revision=evidence_revision+1,provisional_stage=NULL,provisional_reason=NULL,disposition='pipeline',updated_at=now()
+                evidence_revision=evidence_revision+1,provisional_stage=NULL,provisional_reason=NULL,disposition='pipeline',placement_removed_at=NULL,updated_at=now()
                 WHERE id=$1 RETURNING *`,[input.relationshipId,input.targetStage])).rows[0]!;
             await tx.query("UPDATE outreach_sales_proposals SET state='stale' WHERE relationship_id=$1 AND state='pending'",[input.relationshipId]);
             await tx.query("UPDATE outreach_control_outbox SET state='cancelled' WHERE proposal_id IN (SELECT id FROM outreach_sales_proposals WHERE relationship_id=$1 AND state='stale') AND state<>'sent'",[input.relationshipId]);
             await audit(tx,actor,'crm.move',input.relationshipId,{stage:m.r.accepted_stage},{stage:after.accepted_stage,decisionId:d.id,reason:input.reason});
             return {...p,state:'approved'};
+        });
+    }
+    /** Remove an unplaced relationship from Initial placement. The source enrollments
+     * stay linked, so a later, separately reviewed placement can approve them again. */
+    async removePlacement(raw: { relationshipId: string; idempotencyKey: string; reason: string }, actor: Member) {
+        if (!this.nativeBoard || !canMoveCrm(actor)) throw new DomainError('forbidden','CRM management permission is required');
+        const input = z.strictObject({ relationshipId: z.uuid(), idempotencyKey: z.string().trim().min(1).max(200), reason: z.string().trim().min(1).max(4000) }).parse(raw);
+        const command = digest({input,actor:actor.id,kind:'human-placement-removal'});
+        return this.database.transaction(async tx => {
+            await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`outreach:command:${input.idempotencyKey}`]);
+            const member=(await tx.query('SELECT role,enabled FROM workspace_members WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
+            if (!member?.enabled || !['admin','crm_manager'].includes(String(member.role))) throw new DomainError('forbidden','CRM management permission is required');
+            const old=(await tx.query('SELECT * FROM outreach_sales_proposals WHERE idempotency_key=$1',[input.idempotencyKey])).rows[0];
+            if (old) {
+                if (old.command_hash!==command) throw new DomainError('conflict','Movement key was reused for another change');
+                return old;
+            }
+            const r=await this.lock(tx,input.relationshipId);
+            if (r.accepted_stage!=null) throw new DomainError('conflict','This relationship already has an accepted stage. Remove it from the CRM board instead.');
+            const stale=(await tx.query(`UPDATE outreach_sales_proposals SET state='stale',decided_at=now() WHERE relationship_id=$1 AND state='pending' RETURNING id`,[input.relationshipId])).rows;
+            if (stale.length) await tx.query("UPDATE outreach_control_outbox SET state='cancelled' WHERE proposal_id=ANY($1::uuid[]) AND state<>'sent'",[stale.map(p=>p.id)]);
+            const p=(await tx.query(`INSERT INTO outreach_sales_proposals(relationship_id,idempotency_key,command_hash,target_stage,reason,origin,manifest,input_hash,context,state)
+                VALUES($1,$2,$3,'lead',$4,'manual','{}','removed','{}','stale') RETURNING *`,[input.relationshipId,input.idempotencyKey,command,input.reason])).rows[0]!;
+            const kept=(await tx.query(`UPDATE outreach_relationship_sources SET enrollment_state='active',version=version+1,updated_at=now()
+                WHERE relationship_id=$1 AND enrollment_state='pending'`,[input.relationshipId])).rowCount;
+            const after=(await tx.query(`UPDATE outreach_relationships SET evidence_revision=evidence_revision+1,provisional_stage=NULL,provisional_reason=NULL,placement_removed_at=now(),updated_at=now()
+                WHERE id=$1 RETURNING accepted_stage`,[input.relationshipId])).rows[0]!;
+            await audit(tx,actor,'crm.placement.remove',input.relationshipId,{acceptedStage:null,reason:input.reason},{acceptedStage:after.accepted_stage,pendingSourcesKept:kept});
+            return {...p,reason:input.reason};
+        });
+    }
+    /** HTTP-only operator action: a CRM card for a company with no imported
+     * source. The reason is required, the card is marked manual, and it invents
+     * no enrollment, chat or Telegram approval. */
+    async createManual(raw: unknown, actor: Member) {
+        if (!this.nativeBoard || !canMoveCrm(actor)) throw new DomainError('forbidden','CRM management permission is required');
+        const input = manualRelationshipSchema.parse(raw);
+        return this.database.transaction(async tx => {
+            await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`outreach:command:${input.idempotencyKey}`]);
+            const member=(await tx.query('SELECT role,enabled FROM workspace_members WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
+            if (!member?.enabled || !['admin','crm_manager'].includes(String(member.role))) throw new DomainError('forbidden','CRM management permission is required');
+            const previous=(await tx.query('SELECT * FROM outreach_relationships WHERE creation_key=$1',[input.idempotencyKey])).rows[0];
+            if (previous) {
+                if (String(previous.display_name)!==input.companyName || String(previous.accepted_stage)!==input.stage)
+                    throw new DomainError('conflict','Card creation key was reused for another company or stage');
+                return { id: String(previous.id), displayName: String(previous.display_name), acceptedStage: previous.accepted_stage as string | null };
+            }
+            const company=(await tx.query('SELECT * FROM companies WHERE lower(btrim(canonical_name))=lower(btrim($1)) ORDER BY created_at,id LIMIT 1',[input.companyName])).rows[0]
+                ?? (await tx.query('INSERT INTO companies(canonical_name) VALUES($1) RETURNING *',[input.companyName])).rows[0]!;
+            const companyId=String(company.id), workstream=input.workstream ?? (company.workstream as string | null) ?? null;
+            const existing=(await tx.query(`SELECT * FROM outreach_relationships WHERE company_id=$1 OR identity_key=$2
+                ORDER BY retained DESC,created_at,id LIMIT 1 FOR UPDATE`,[companyId,`company:${companyId}`])).rows[0];
+            if (existing?.retained && existing.accepted_stage != null)
+                throw new DomainError('conflict','This company already has a CRM card. Open it to change the stage.');
+            const summary=input.summary??'';
+            // A relationship that already carries source enrollments is not a
+            // manual card: keep its origin honest and only place it.
+            const sourced=(existing?.id && (await tx.query('SELECT 1 FROM outreach_relationship_sources WHERE relationship_id=$1 LIMIT 1',[existing.id])).rows.length>0)||false;
+            const origin=sourced?'pipeline':'manual';
+            const row=existing
+                ? (await tx.query(`UPDATE outreach_relationships SET retained=true,kind='company',company_id=$2,display_name=$3,summary=$4,
+                    workstream=coalesce($5,workstream),accepted_stage=$6,
+                    stage_version=stage_version+CASE WHEN accepted_stage IS DISTINCT FROM $6 THEN 1 ELSE 0 END,
+                    evidence_revision=evidence_revision+1,provisional_stage=NULL,provisional_reason=NULL,disposition='pipeline',
+                    placement_removed_at=NULL,creation_origin=$7,creation_key=$8,creation_note=$9,updated_at=now()
+                    WHERE id=$1 RETURNING *`,[existing.id,companyId,String(company.canonical_name),summary,workstream,input.stage,origin,input.idempotencyKey,input.reason])).rows[0]!
+                : (await tx.query(`INSERT INTO outreach_relationships(identity_key,kind,company_id,display_name,summary,workstream,accepted_stage,
+                    stage_version,evidence_revision,disposition,creation_origin,creation_key,creation_note)
+                    VALUES($1,'company',$2,$3,$4,$5,$6,1,1,'pipeline','manual',$7,$8) RETURNING *`,
+                    [`company:${companyId}`,companyId,String(company.canonical_name),summary,workstream,input.stage,input.idempotencyKey,input.reason])).rows[0]!;
+            await audit(tx,actor,existing?'crm.manual.place':'crm.manual.create',String(row.id),
+                existing?{retained:existing.retained,stage:existing.accepted_stage}:null,
+                {companyId,companyName:String(company.canonical_name),stage:input.stage,workstream,reason:input.reason});
+            return { id: String(row.id), displayName: String(row.display_name), acceptedStage: row.accepted_stage as string | null };
         });
     }
     /** Chat locks precede relationship/proposal rows, matching exclusion/ingestion. */
@@ -314,6 +388,9 @@ export class OutreachWorkflow extends OutreachRepository implements OutreachComm
             return;
         }
         if (command.kind === 'work') {
+            // The legacy tickets row requires a Workstream for the Vikunja board
+            // label. Keep its historical default when the CRM direction is
+            // unknown; the relationship and company own the real classification.
             const chat = (await tx.query('SELECT * FROM chats WHERE id=$1', [command.payload.chatId])).rows[0]!;
             const same = (await tx.query(`SELECT id FROM tickets WHERE crm_relationship_id=$1 AND chat_id=$2 AND lower(btrim(next_action))=lower(btrim($3)) AND lane NOT IN ('Completed','Archived') ORDER BY created_at LIMIT 1`,
                 [r.id, chat.id, command.payload.action])).rows[0];

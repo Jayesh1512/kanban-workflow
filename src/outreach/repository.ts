@@ -68,11 +68,19 @@ export class OutreachRepository implements OutreachService {
         await tx.query(`UPDATE outreach_relationships SET identity_key=$1,company_id=$2,kind='company',display_name=$4,identity_version=identity_version+1
           WHERE id=$3 AND kind='contact_prospect'`, [key, i.company_id, previous.relationship_id,i.canonical_name||i.title]);
       }
+      // Workstream follows the direction of trade for THIS relationship. The
+      // latest completed decision covers title-derived companies, and contact
+      // prospects that have no company row at all. "Others" from the legacy view
+      // means unclassified, so keep it null and let the UI say Not classified.
+      const decidedWorkstream = (await tx.query(`SELECT decision->>'workstream' AS workstream FROM analysis_jobs
+        WHERE chat_id=$1 AND decision->>'workstream' IS NOT NULL ORDER BY updated_at DESC,id DESC LIMIT 1`, [chatId])).rows[0]?.workstream ?? null;
+      const companyWorkstream = i.company_id ? (await tx.query('SELECT workstream FROM companies WHERE id=$1', [i.company_id])).rows[0]?.workstream ?? null : null;
+      const workstream = decidedWorkstream ?? companyWorkstream ?? null;
       const r = (await tx.query(`INSERT INTO outreach_relationships(identity_key,kind,company_id,display_name,summary,workstream)
         VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(identity_key) DO UPDATE SET
-        display_name=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.display_name ELSE EXCLUDED.display_name END,summary=EXCLUDED.summary,workstream=EXCLUDED.workstream,retained=true
+        display_name=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.display_name ELSE EXCLUDED.display_name END,summary=EXCLUDED.summary,workstream=coalesce(EXCLUDED.workstream,outreach_relationships.workstream),retained=true
         RETURNING id,accepted_stage`, [key, i.company_id ? 'company' : 'contact_prospect', i.company_id,
-        i.canonical_name || i.title || 'Unnamed contact', '', i.workstream])).rows[0]!;
+        i.canonical_name || i.title || 'Unnamed contact', '', workstream])).rows[0]!;
       const source = (await tx.query(`INSERT INTO outreach_source_threads(kind,source_key,chat_id,ticket_id,source_revision,observed_at,reconciled_at)
         VALUES('telegram',$1,$2,$3,$4,$5,$6) ON CONFLICT(source_key) DO UPDATE SET
         ticket_id=EXCLUDED.ticket_id,source_revision=EXCLUDED.source_revision,observed_at=EXCLUDED.observed_at,reconciled_at=EXCLUDED.reconciled_at RETURNING id`,
@@ -120,9 +128,10 @@ export class OutreachRepository implements OutreachService {
     return this.db.transaction(async (tx) => {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
       const rows = (await tx.query(`SELECT r.* FROM outreach_relationships r WHERE r.retained
-        AND ($5::text='all' OR ($5='accepted' AND r.accepted_stage IS NOT NULL) OR ($5='unplaced' AND r.accepted_stage IS NULL))
+        AND ($5::text='all' OR ($5='accepted' AND r.accepted_stage IS NOT NULL) OR ($5='unplaced' AND r.accepted_stage IS NULL AND r.placement_removed_at IS NULL))
         AND ($1::uuid IS NULL OR r.id>$1) AND ($2::text IS NULL OR strpos(lower(r.display_name),lower($2))>0)
-        AND EXISTS(SELECT 1 ${joins} WHERE rs.relationship_id=r.id AND rs.enrollment_state IN ('active','pending') AND ${eligible} AND ${identityMatches})
+        AND (EXISTS(SELECT 1 ${joins} WHERE rs.relationship_id=r.id AND rs.enrollment_state IN ('active','pending') AND ${eligible} AND ${identityMatches})
+          OR (r.creation_origin='manual' AND r.accepted_stage IS NOT NULL))
         AND ($3::text IS NULL OR coalesce(r.accepted_stage,r.provisional_stage)=$3)
         ORDER BY r.id LIMIT $4`, [input.cursor ?? null, input.query || null, input.stage ?? null, input.limit + 1, placement])).rows;
       const page = rows.slice(0, input.limit);
@@ -187,7 +196,9 @@ export class OutreachRepository implements OutreachService {
       stageVersion: Number(r.stage_version), evidenceRevision: Number(r.evidence_revision), identityVersion:Number(r.identity_version),actionsVersion:Number(r.actions_version),
       disposition: stage ? 'pipeline' : 'context_review', sourceCount: sources.length,
       pendingSourceCount: sources.filter((s) => s.enrollment_state === 'pending').length,
-      latestSourceAt: latest('observed_at'), reconciledAt: latest('reconciled_at'), sourceState: current ? 'current' : 'changed' };
+      latestSourceAt: latest('observed_at'), reconciledAt: latest('reconciled_at'), sourceState: current ? 'current' : 'changed',
+      creationOrigin: r.creation_origin === 'manual' ? 'manual' : 'pipeline',
+      creationNote: r.creation_origin === 'manual' ? (r.creation_note as string | null) : null };
   }
 
   async get(id: string): Promise<OutreachDetail> {
@@ -226,7 +237,7 @@ export class OutreachRepository implements OutreachService {
         AND c.inclusion='included' AND NOT c.is_control AND c.company_id IS NOT DISTINCT FROM $2::uuid
         AND t.company_id IS NOT DISTINCT FROM $2::uuid AND ${approvedChatSourceSql('c')} ORDER BY t.created_at,t.id`, [id, r.company_id])).rows.map(t => ({ id: String(t.id), action: t.next_action as string | null, lane: t.lane as import('../shared/domain.js').Lane, vikunjaTaskId: t.vikunja_task_id == null ? null : String(t.vikunja_task_id) })) : [];
       return {actions,workTickets,publication:published?{state:String(published.state),lastError:published.last_error as string|null,observedStage:published.observed_stage as string|null}:null, relationship: await this.relationship(tx, r), activeSources, pendingSources, suspendedSources,
-        limits: ['Approved Telegram conversations feed the CRM first. Work tickets require a separately approved concrete action.', 'Data changes and card movements require approval via the matching Telegram control message.', 'Stored email-report context is reference-only and never creates a CRM card.', 'Operational lanes do not establish commercial stages.'] };
+        limits: [] };
     });
   }
 

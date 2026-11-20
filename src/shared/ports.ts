@@ -159,6 +159,9 @@ export interface RecordsService {
   listTickets(input: PageInput & { companyId?: UUID; lane?: Lane }): Promise<Page<Ticket>>;
   getTicket(id: UUID): Promise<Ticket>;
   ensureTicket(chatId: TelegramChatId): Promise<Ticket>; // legacy only; CRM-first mode requires a Telegram-approved concrete action
+  /** Operator-created Work for a conversation the pipeline cannot admit. Records
+   * an explicit reason and never fabricates a Telegram approval. */
+  createWorkCard(input: import('./schemas.js').ManualCardRequest & { actorId?: UUID }): Promise<Ticket>;
   getContext(input: { ticketId: UUID; limit: number }): Promise<{ ticket: Ticket; chat: Chat; company: Company | null; contacts: ContactDetail[]; evidence: Evidence[]; messages: Message[]; facts: BusinessFact[]; outreach?: import('./domain.js').OutreachContext }>;
   getEvidence(ids: UUID[]): Promise<Evidence[]>;
   updateActions(input: UpdateActionsInput): Promise<Ticket>;
