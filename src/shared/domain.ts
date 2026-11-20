@@ -17,7 +17,7 @@ export type Inclusion = 'undecided' | 'included' | 'excluded';
 
 export interface Chat {
   id: TelegramChatId;
-  kind: 'user' | 'group' | 'supergroup' | 'channel';
+  kind: 'user' | 'group' | 'supergroup' | 'channel' | 'email';
   title: string;
   username: string | null;
   archived: boolean;

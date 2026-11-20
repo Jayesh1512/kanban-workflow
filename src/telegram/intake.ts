@@ -58,7 +58,7 @@ export class ChatIntake {
       if (!control) return null;
       // Five unresolved delivered requests maximum; new live activity/manual
       // requests are prioritized. At most one new request each thirty seconds.
-      const item = (await tx.query(`SELECT r.*,c.title,c.kind,c.username FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id
+      const item = (await tx.query(`SELECT r.*,CASE WHEN et.subject IS NULL THEN c.title ELSE c.title||' — '||et.subject END AS title,c.kind,c.username FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id LEFT JOIN email_threads et ON et.chat_id=c.id
         WHERE r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
         AND (r.attempts<10 OR r.control_chat_id IS DISTINCT FROM $1) AND (r.lease_until IS NULL OR r.lease_until<now())
         AND (r.delivery_state<>'sent' OR r.control_chat_id IS DISTINCT FROM $1)
@@ -70,7 +70,7 @@ export class ChatIntake {
       const changed = String(item['control_chat_id']) !== String(control['id']);
       let randomId = String(item['random_id']);
       if (changed && item['control_chat_id'] != null) { let next = 0n; while(next === 0n) next = randomBytes(8).readBigInt64BE(); randomId = next.toString(); }
-      const text = changed || !item['text'] ? `Add this chat to AntSeed CRM?\n\n${String(item['title']).replace(/[\r\n]/g,' ').slice(0,200)}\nType: ${item['kind']} · Chat ID: ${item['chat_id']}\n${item['username'] ? `@${String(item['username']).slice(0,64)}\n` : ''}\nReply to THIS message with approve to add this CRM conversation and start import/analysis.\nReply reject to leave it out. No reply = not imported.\nThis creates no Work ticket. CRM stage changes and concrete Work actions need separate Telegram approval.\n\n[antseed-intake:${item['id']}]` : String(item['text']);
+      const text = changed || !item['text'] ? `Add this ${item['kind']==='email'?'email thread':'chat'} to AntSeed CRM?\n\n${String(item['title']).replace(/[\r\n]/g,' ').slice(0,200)}\nType: ${item['kind']} · Chat ID: ${item['chat_id']}\n${item['username'] ? `@${String(item['username']).slice(0,64)}\n` : ''}\nReply to THIS message with approve to add this CRM conversation and start import/analysis.\nReply reject to leave it out. No reply = not imported.\nThis creates no Work ticket. CRM stage changes and concrete Work actions need separate Telegram approval.\n\n[antseed-intake:${item['id']}]` : String(item['text']);
       await tx.query(`UPDATE chat_intake_requests SET delivery_state='sending',control_chat_id=$2,text=$3,random_id=$6,
         message_id=CASE WHEN $5 THEN NULL ELSE message_id END,claim_token=$4,lease_until=now()+interval '30 seconds',attempts=CASE WHEN $5 THEN 1 ELSE attempts+1 END WHERE id=$1`, [item['id'], control['id'], text, token, changed, randomId]);
       await tx.query("INSERT INTO app_settings(key,value) VALUES('telegram:intake:last-send',jsonb_build_object('at',now())) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value");

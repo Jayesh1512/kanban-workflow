@@ -1,0 +1,22 @@
+# Upload only what the web role builds from. Secrets live in Vercel env vars, never in files.
+.local/
+.env
+.env.*
+**/credentials.env
+**/database.env
+**/access.env
+*.crt
+*.session
+node_modules/
+dist/
+artifacts/
+assets/
+docs/
+postman/
+tests/
+deploy/*
+!deploy/vercel/
+compose*.yaml
+Dockerfile
+*.log
+*.patch

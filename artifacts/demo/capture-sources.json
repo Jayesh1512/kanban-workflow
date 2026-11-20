@@ -2,7 +2,7 @@
   "board": {
     "id": "675d7f86-acfd-4669-b9af-91caf5a8ee02-fbd3158f-c6d6-4b5f-ace7-4b93bee7d23f-mp4",
     "tabId": "tab_p_baadb078-428d-4e2a-bd25-b6bdca32816b",
-    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-fbd3158f-c6d6-4b5f-ace7-4b93bee7d23f-mp4.mp4",
+    "path": "/home/dev/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-fbd3158f-c6d6-4b5f-ace7-4b93bee7d23f-mp4.mp4",
     "mimeType": "video/mp4",
     "sizeBytes": 39457,
     "createdAt": "2026-10-16T23:56:44.813Z",
@@ -14,7 +14,7 @@
   "task": {
     "id": "675d7f86-acfd-4669-b9af-91caf5a8ee02-554a4c1b-0c32-4dd3-ade9-f7b31f440894-mp4",
     "tabId": "tab_p_baadb078-428d-4e2a-bd25-b6bdca32816b",
-    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-554a4c1b-0c32-4dd3-ade9-f7b31f440894-mp4.mp4",
+    "path": "/home/dev/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-554a4c1b-0c32-4dd3-ade9-f7b31f440894-mp4.mp4",
     "mimeType": "video/mp4",
     "sizeBytes": 218650,
     "createdAt": "2026-10-16T23:57:22.518Z",
@@ -26,7 +26,7 @@
   "status": {
     "id": "675d7f86-acfd-4669-b9af-91caf5a8ee02-10da58c3-754c-4f1c-962b-9c58e1ade7a1-mp4",
     "tabId": "tab_p_baadb078-428d-4e2a-bd25-b6bdca32816b",
-    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-10da58c3-754c-4f1c-962b-9c58e1ade7a1-mp4.mp4",
+    "path": "/home/dev/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-10da58c3-754c-4f1c-962b-9c58e1ade7a1-mp4.mp4",
     "mimeType": "video/mp4",
     "sizeBytes": 803070,
     "createdAt": "2026-10-16T23:58:04.306Z",
@@ -38,7 +38,7 @@
   "proposal": {
     "id": "675d7f86-acfd-4669-b9af-91caf5a8ee02-2ce44f09-4f47-43ca-bb21-59d7338b71b1-mp4",
     "tabId": "tab_p_baadb078-428d-4e2a-bd25-b6bdca32816b",
-    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-2ce44f09-4f47-43ca-bb21-59d7338b71b1-mp4.mp4",
+    "path": "/home/dev/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-2ce44f09-4f47-43ca-bb21-59d7338b71b1-mp4.mp4",
     "mimeType": "video/mp4",
     "sizeBytes": 87588,
     "createdAt": "2026-10-16T23:58:21.302Z",
@@ -50,7 +50,7 @@
   "approval": {
     "id": "675d7f86-acfd-4669-b9af-91caf5a8ee02-a016a44d-55de-46d1-937e-9de1775a071a-mp4",
     "tabId": "tab_p_baadb078-428d-4e2a-bd25-b6bdca32816b",
-    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-a016a44d-55de-46d1-937e-9de1775a071a-mp4.mp4",
+    "path": "/home/dev/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-a016a44d-55de-46d1-937e-9de1775a071a-mp4.mp4",
     "mimeType": "video/mp4",
     "sizeBytes": 111718,
     "createdAt": "2026-10-16T23:59:00.647Z",
@@ -62,7 +62,7 @@
   "priorities": {
     "id": "675d7f86-acfd-4669-b9af-91caf5a8ee02-e53898f9-fa87-4644-83c5-c4d0211fd3f9-mp4",
     "tabId": "tab_p_baadb078-428d-4e2a-bd25-b6bdca32816b",
-    "path": "/Users/jys/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-e53898f9-fa87-4644-83c5-c4d0211fd3f9-mp4.mp4",
+    "path": "/home/dev/.t3/userdata/attachments/675d7f86-acfd-4669-b9af-91caf5a8ee02-e53898f9-fa87-4644-83c5-c4d0211fd3f9-mp4.mp4",
     "mimeType": "video/mp4",
     "sizeBytes": 219852,
     "createdAt": "2026-10-16T23:59:33.557Z",

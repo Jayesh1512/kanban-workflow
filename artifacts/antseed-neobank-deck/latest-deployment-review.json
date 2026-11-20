@@ -1,0 +1,23 @@
+{
+  "source_commit": "436200d",
+  "slides": 13,
+  "offline_render_errors": 0,
+  "offline_render_warnings": 0,
+  "pdf_pages": 13,
+  "copy": "User-authored changes preserved.",
+  "changes": [
+    "User model-family count changed to 6",
+    "Mobile copy aligned",
+    "Deploy helper pulls source before publishing and regenerates PDF"
+  ],
+  "html_sha256": "306d8d0cfe342d2ddded4098661cc9baa1b780838df3d529bb6976851bc1d231",
+  "stats_display": [
+    "920+",
+    "269+",
+    "24,800+",
+    "825.8B+"
+  ],
+  "current_source_commit": "93cef1f",
+  "current_html_sha256": "9e34cec0d0adba2613203ab2a6b0d3614ef6f9cad0444ef4e430845cbba0a702",
+  "navigation_fix": "Removed dangling merge-conflict marker from navigation script."
+}

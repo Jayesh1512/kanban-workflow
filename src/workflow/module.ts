@@ -23,6 +23,8 @@ import { OutreachPublisher } from '../outreach/publisher.js';
 import { outreachPage, nativeOutreachPage } from '../outreach/page.js';
 import { NativeProposalWorkflow } from '../board/native-workflow.js';
 import { registerBoard } from '../board/routes.js';
+import { registerScopedMcp } from '../hermes/scoped.js';
+import { EmailIngest } from '../email/ingest.js';
 
 export function createWorkflowServices(platform: PlatformServices) {
   const native = platform.config.boardBackend === 'native';
@@ -55,7 +57,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
   let outreachFailed = false;
   const analysisTasks = new Set<Promise<void>>(), analysisTimers = new Set<ReturnType<typeof setTimeout>>();
   const analysisFailed = [false, false];
-  let transports: ReturnType<typeof registerTransports> | null = null;
+  let transports: ReturnType<typeof registerTransports> | null = null, scoped: ReturnType<typeof registerScopedMcp> | null = null;
   let unsubscribe: (() => void) | null = null; const replies = new Set<Promise<void>>(); const abort = new AbortController();
   let state: ServiceStatus = { state: 'connecting', code: 'not_started', detail: 'Workflow has not started', checkedAt: platform.clock.now().toISOString() };
   async function migrationsReady(): Promise<'pending' | 'ready' | 'drift'> {
@@ -164,7 +166,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
     try { unsubscribe?.(); } catch (error) { errors.push(error); } finally { unsubscribe = null; }
     // Publish one shutdown promise for preClose, root onClose and direct callers.
     // All captured work drains even if an earlier cleanup action fails.
-    stopping = Promise.allSettled([transports?.close(), task, outreachTask, ...analysisTasks, ...replies]).then((results) => {
+    stopping = Promise.allSettled([transports?.close(), scoped?.close(), task, outreachTask, ...analysisTasks, ...replies]).then((results) => {
       for (const result of results) if (result.status === 'rejected') errors.push(result.reason);
       if (errors.length) throw new AggregateError(errors, 'Workflow shutdown failed');
     });
@@ -179,7 +181,8 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
       app.addHook('preClose', stop);
       app.get('/outreach', async (_request, reply) => reply.header('Cache-Control', 'no-store').type('text/html').send(platform.config.boardBackend === 'native' ? nativeOutreachPage : outreachPage));
       if (platform.config.boardBackend === 'native') registerBoard(app,platform.db,services.outreach,requireDatabaseReady,platform.config.timezone,{work:services.proposalRecords,intake:platform.chats as TelegramStore},services.records);
-      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach }, requireDatabaseReady);
+      transports = registerTransports(app, { chats: platform.chats, records: services.records, proposals: services.proposals, analysis: services.analysis, outreach: services.outreach, email: new EmailIngest(platform.db, platform.chats as TelegramStore) }, requireDatabaseReady);
+      if (platform.config.boardBackend === 'native') scoped = registerScopedMcp(app, platform.db, services.outreach, requireDatabaseReady, platform.config);
       registerStatus(app, async () => {
         const safe = async (read: () => Promise<ServiceStatus>): Promise<ServiceStatus> => {
           try { return await read(); } catch (error) {
@@ -191,6 +194,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         const sales=await safe(async()=>{const s=await services.outreach.status();return {state:s.unresolved_requests!=='0'&&Number(s.unresolved_requests)>0?'degraded':s.mode==='publish'&&s.state==='ready'?'ready':'connecting',code:Number(s.unresolved_requests)>0?'publication_unresolved':s.mode!=='publish'?'observe_only':null,detail:`Sales board ${s.state}; ${s.pending_proposals} proposals; ${s.pending_publications} publications; ${s.unresolved_requests} unresolved requests`,checkedAt:platform.clock.now().toISOString()};});
         return { workflow: { ...state }, extraction, jev, outreach:sales };
       });
+      if (platform.config.role === 'web') return; // Control replies are consumed by the primary process.
       const operational = async (message:import('../shared/ports.js').ControlMessage) => {
         if (stopped) throw new Error('Workflow stopping; retain inbox reply');
         if (platform.config.boardBackend === 'native' && !(await platform.db.query("SELECT 1 FROM workspace_members WHERE telegram_user_id=$1 AND enabled AND role IN ('admin','crm_manager')",[message.senderId])).rowCount) return;
@@ -203,7 +207,7 @@ export async function createWorkflowModule(platform: PlatformServices): Promise<
         unsubscribe=()=>{offSales();offWork();};
       }else unsubscribe=platform.control.subscribe(operational);
     },
-    async start() { if (started || stopped) return; started = true; schedule(); scheduleOutreach(); scheduleAnalysis(0); scheduleAnalysis(1); },
+    async start() { if (started || stopped) return; started = true; if (platform.config.role === 'web') { state = { state: 'ready', code: null, detail: 'Web role: workers run on the primary process', checkedAt: platform.clock.now().toISOString() }; return; } schedule(); scheduleOutreach(); scheduleAnalysis(0); scheduleAnalysis(1); },
     stop,
     async status() { return { ...state }; },
   };

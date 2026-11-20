@@ -50,7 +50,11 @@ export function registerApprovals(app: FastifyInstance, db: Database, outreach: 
       JOIN outreach_relationships r ON r.id=p.relationship_id WHERE p.state='pending' AND r.retained
         AND NOT ((p.command_kind IS NULL OR p.command_kind='stage') AND r.placement_removed_at IS NOT NULL)
         AND ($1::uuid IS NULL OR p.id>$1) ORDER BY p.id LIMIT $2`,[input.cursor??null,input.limit+1])).rows;
-    return page(rows,input.limit);
+    // A suggestion built on a conversation that has since changed cannot be approved. Retire it here so it never sits
+    // in the list as a button that only errors; the relationship falls back to a manual stage pick.
+    const current:Record<string,unknown>[]=[];
+    for(const row of rows){let fresh=true;try{fresh=await outreach.isProposalCurrent(String(row.id));}catch{fresh=true;}if(fresh)current.push(row);}
+    return page(current,input.limit);
   });
   app.post('/api/board/approvals/proposals/:id/decision',async request=>{
     const actor=await reviewer(request),id=idSchema.parse(request.params).id;
@@ -73,8 +77,8 @@ export function registerApprovals(app: FastifyInstance, db: Database, outreach: 
   });
   app.get('/api/board/approvals/intake',async request=>{
     await reviewer(request,true);const input=pageSchema.parse(request.query);
-    const rows=(await db.query(`SELECT r.id,r.chat_id,c.title,c.kind,c.username,r.created_at,r.policy_version
-      FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id
+    const rows=(await db.query(`SELECT r.id,r.chat_id,CASE WHEN et.subject IS NULL THEN c.title ELSE c.title||' — '||et.subject END AS title,c.kind,c.username,r.created_at,r.policy_version
+      FROM chat_intake_requests r JOIN chats c ON c.id=r.chat_id LEFT JOIN email_threads et ON et.chat_id=c.id
       WHERE r.decision='pending' AND c.inclusion='undecided' AND NOT c.is_control AND c.policy_version=r.policy_version
       AND ($1::uuid IS NULL OR r.id>$1) ORDER BY r.id LIMIT $2`,[input.cursor??null,input.limit+1])).rows;
     return page(rows,input.limit);

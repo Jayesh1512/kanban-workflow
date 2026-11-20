@@ -1,0 +1,111 @@
+{
+  "pages": [
+    {
+      "page": 1,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 138
+    },
+    {
+      "page": 2,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 377
+    },
+    {
+      "page": 3,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 529
+    },
+    {
+      "page": 4,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 654
+    },
+    {
+      "page": 5,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 474
+    },
+    {
+      "page": 6,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 566
+    },
+    {
+      "page": 7,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 210
+    },
+    {
+      "page": 8,
+      "size": [
+        960.0,
+        540.0
+      ],
+      "text_chars": 315
+    }
+  ],
+  "fonts": [
+    "Geist-Regular (Type0, embedded)",
+    "Geist-Medium (Type0, embedded)",
+    "GeistMono-Regular (Type0, embedded)",
+    "Geist Pixel custom-axis glyphs (Type3 outlines, embedded)"
+  ],
+  "metadata_credit": true,
+  "source_pdf_sha256": "65e75068ff4810a4e48355b3bf08c105f9a8eb6829003a163b54b55141573bf8",
+  "slide4_flow_verified": [
+    "Your request",
+    "Provider A failed",
+    "Automatic reroute",
+    "Provider B retry",
+    "Back to the edit"
+  ],
+  "page_count": 8,
+  "final_pdf_sha256": "88f1a874ec51e7f07ce3319310992cbadce10be016d7a2fcbcc6e395c4f9226c",
+  "metadata": {
+    "Producer": "Skia/PDF via Chrome",
+    "Title": "Antseed for creators · 8 slides",
+    "Author": "Antseed",
+    "Subject": "AntSeedStats data: CC BY 4.0. Read 16 November 2026 at 13:30 UTC. Roles may overlap; tokens include paid and free usage.",
+    "Keywords": "Antseed, creators, video, image, voice, AI models, Gateway, AntSeedStats",
+    "Creator": "Antseed"
+  },
+  "stats_credit_visible": true,
+  "closing_cards_verified": true,
+  "page_numbers": {
+    "1": false,
+    "2": true,
+    "3": true,
+    "4": true,
+    "5": true,
+    "6": true,
+    "7": true,
+    "8": true
+  },
+  "benefit_grid_verified": true,
+  "closing_copy": {
+    "step_2": "Pilot using Antseed",
+    "reward_card": false,
+    "book_call": "Book a call"
+  }
+}

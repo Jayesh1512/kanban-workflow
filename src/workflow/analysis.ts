@@ -249,7 +249,8 @@ export class SqlAnalysisQueue implements AnalysisQueue {
           await tx.query('UPDATE facts SET ticket_id=$2 WHERE job_id=$1', [jobId, ticket.id]);
           await links(tx, 'ticket_evidence', 'ticket_id', ticket.id, evidenceIds, false);
           const latest = extraction.substantive ? input.messages.filter((m) => evidenceIds.some((id) => input.evidence.some((e) => e.id === id && e.messageId === m.id))).map((m) => m.sentAt).sort().at(-1) ?? null : null;
-          await tx.query(`UPDATE tickets SET summary=$2,workstream=COALESCE($3,workstream),latest_substantive_at=GREATEST(latest_substantive_at,$4::timestamptz),updated_at=now() WHERE id=$1`, [ticket.id, extraction.summary, decision.workstream, latest]);
+          // A person's edits (actions_source='manual') keep their summary and workstream.
+          await tx.query(`UPDATE tickets SET summary=CASE WHEN actions_source='manual' THEN summary ELSE $2 END,workstream=CASE WHEN actions_source='manual' THEN workstream ELSE COALESCE($3,workstream) END,latest_substantive_at=GREATEST(latest_substantive_at,$4::timestamptz),updated_at=now() WHERE id=$1`, [ticket.id, extraction.summary, decision.workstream, latest]);
           await refreshInferredActions(tx, ticket.id);
           if (this.hooks.onDecision && (!crmFirst || await workParentIsCurrent(tx, ticket.id)))
             await this.hooks.onDecision(tx, { jobId, ticketId: ticket.id, expectedStageVersion: input.ticket?.stageVersion ?? 0, decision });

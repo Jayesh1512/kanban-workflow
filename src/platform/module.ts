@@ -11,7 +11,7 @@ import { MtcuteAdapter } from '../telegram/adapter.js';
 import { ControlSetupManager, DurableControlBus } from '../telegram/control.js';
 import { TelegramStore } from '../telegram/store.js';
 import { TelegramSync } from '../telegram/sync.js';
-import { onboardingPage } from './page.js';
+import { nativeConnectionsPage, onboardingPage } from './page.js';
 import { AccessControl } from '../access/service.js';
 
 const loginInput = z.discriminatedUnion('step', [
@@ -31,7 +31,7 @@ const safeCount = (raw: unknown): number => {
 };
 
 export async function createPlatformModule(config: RuntimeConfig): Promise<PlatformModule> {
-  const native = config.boardBackend === 'native';
+  const native = config.boardBackend === 'native', web = config.role === 'web';
   // Constructors allocate no open connection, session, timer or remote action.
   const db = new PgDatabase(config.databaseUrl), store = new TelegramStore(db, config.telegram), telegram = new MtcuteAdapter(config.telegram, store), vikunja = new VikunjaAdapter(config.vikunja, db);
   const migrationsReady = await createMigrationGate(db);
@@ -39,8 +39,9 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
   const control = new DurableControlBus(db, telegram, store, requireDatabaseReady, config.boardBackend === 'native'), sync = new TelegramSync(db, store, telegram, control, config.telegram.historyBatchSize, requireDatabaseReady);
   let telegramStarted = false, telegramTask: Promise<void> | null = null;
   let dbState = state('connecting', 'database_pending', 'Waiting for database and migrations');
-  let boardState: ServiceStatus | null = null;
-  let migrationsDone = false, boardDone = false, stopped = false, started = false, permanentFailure = false;
+  // The web role never migrates; its readiness gate still verifies the full checksum ledger written by the primary.
+  let boardState: ServiceStatus | null = web ? state('ready',null,'Built-in board uses PostgreSQL directly') : null;
+  let migrationsDone = web, boardDone = false, stopped = false, started = false, permanentFailure = false;
   let task: Promise<void> | null = null, timer: ReturnType<typeof setTimeout> | null = null;
   async function requireDatabaseReady(): Promise<void> {
     if (!migrationsDone) throw new DomainError('upstream_unavailable', 'Database initialization is pending', true);
@@ -117,7 +118,7 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
         await access.register(app);
         app.decorate('workspaceAccess',access);
       }
-      sync.register(); // subscriptions installed before any module starts
+      if (!web) sync.register(); // subscriptions installed before any module starts
       const ready = requireDatabaseReady;
       const chatParams = z.strictObject({ chatId: chatIdSchema });
       app.get('/api/chats', async (req) => { await ready(); const input = z.strictObject({ cursor: z.string().max(500).optional(), limit: z.coerce.number().int().min(1).max(200).optional() }).parse(req.query); return store.list({ ...(input.cursor !== undefined ? { cursor: input.cursor } : {}), ...(input.limit !== undefined ? { limit: input.limit } : {}) }); });
@@ -127,22 +128,22 @@ export async function createPlatformModule(config: RuntimeConfig): Promise<Platf
       app.get('/api/chats/:chatId/mapping', async (req) => { await ready(); return store.mappingCandidates(chatParams.parse(req.params).chatId); });
       app.put('/api/chats/:chatId/mapping', async (req) => { await ready(); return store.correctMapping(correctMappingSchema.parse({ ...(req.body as object), ...chatParams.parse(req.params), source: 'http' })); });
       app.get('/', async (_req, reply) => native ? reply.redirect('/dashboard') : reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').send(onboardingPage));
-      if (native) app.get('/connections',async (_req,reply)=>reply.type('text/html; charset=utf-8').send(onboardingPage
-        .replace('the Vikunja board','the built-in board')
-        .replace('<a href="/outreach">Outreach pipeline</a>','<a href="/dashboard">Workspace overview</a> · <a href="/outreach">CRM</a> · <a href="/team">Access</a>')));
+      if (native) app.get('/connections',async (_req,reply)=>reply.type('text/html; charset=utf-8').send(nativeConnectionsPage));
       app.get('/api/status', async (_req, reply) => reply.header('Cache-Control', 'no-store').send(await operationsStatus()));
+      if (web) return; // Telegram login and control setup belong to the primary process.
       app.get('/api/telegram/login', async () => telegram.loginState());
       app.post('/api/telegram/login', async (req) => { const input = loginInput.parse(req.body); await ready(); return telegram.submitLogin(input); });
       app.post('/api/telegram/control-setup', async (req) => { await ready(); return telegram.configureControlChat(setupInput.parse(req.body)); });
       app.post('/api/telegram/control-setup/:operationKey/reconcile', async (req) => { await ready(); return telegram.reconcileControlSetup(z.strictObject({ operationKey: idempotencyKeySchema }).parse(req.params).operationKey); });
     },
-    async start() { if (started || stopped) return; started = true; schedule(); },
+    async start() { if (started || stopped) return; started = true; if (!web) schedule(); },
     async stop() { if (stopped) return; stopped = true; if (timer) clearTimeout(timer); await sync.stop(); await telegram.stop(); await telegramTask; await task; await db.close(); },
     async status() {
       if (migrationsDone) { try { await requireDatabaseReady(); } catch { return dbState; } }
       if (dbState.state !== 'ready') return dbState;
       const board = boardState ?? (native ? state('connecting','database_pending','Board awaits database initialization') : await vikunja.status());
       if (board.state !== 'ready') return state('degraded', board.code, board.detail);
+      if (web) return state('ready', null, 'Web role: database ledger verified; Telegram and workers run on the primary process');
       const tg = await telegram.status();
       if (tg.state !== 'ready') return state('degraded', tg.code, tg.detail);
       const worker = sync.status();

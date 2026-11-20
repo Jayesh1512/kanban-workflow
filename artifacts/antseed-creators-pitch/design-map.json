@@ -1,0 +1,140 @@
+{
+  "authority": "Current Antseed brand kit v1 (12 November 2026) plus the supplied 15-page Solid case-study PDF, checked 16 November 2026; measured Creators Pitch PDF/PPTX compositions and explicit user overrides.",
+  "canvas": [
+    1280,
+    720
+  ],
+  "pdf_points": [
+    960,
+    540
+  ],
+  "fonts": {
+    "heading": "AntseedGeistPixelGrid-Regular.ttf / 34px / 36px",
+    "item_heading": "Geist Pixel variable, ELSH20, 24px/28px",
+    "body": "Geist-Regular.ttf / 16px",
+    "label": "Geist-Regular.ttf / 13px",
+    "mono": "GeistMono-Regular.ttf",
+    "cover": "GeistPixel-VariableFont_ELSH.ttf, ELSH 11",
+    "story_label": "Geist 13px/18px, secondary text tone with the kit green dot",
+    "figure": "Geist Pixel variable, ELSH20, 36px/44px, tabular",
+    "section": "Geist Pixel variable, ELSH40, 34px/36px, -.04em",
+    "page_number": "Geist 12px/16px, tabular"
+  },
+  "colors": {
+    "primary": "#30382c",
+    "secondary": "#929292",
+    "green": "#4f7a24",
+    "muted": "#66746b",
+    "body": "#56656f",
+    "night_text": "#eceee9",
+    "night_secondary": "#9ba49e",
+    "night_green": "#98c463",
+    "night_page": "#0f1312",
+    "night_rail": "#181d1b"
+  },
+  "measurements": {
+    "outer_frame": 16,
+    "left_rail": 80,
+    "right_rail": 1200,
+    "source_panel": [
+      714.67,
+      40,
+      525.33,
+      640
+    ],
+    "dot_pitch": 8
+  },
+  "assets": "Unchanged text-free illustrations extracted from native supplied PPTX, re-encoded WebP. Native text overlays; no source text flattened.",
+  "masters": [
+    "Studio platform cover",
+    "Four studio backend problems",
+    "Three model-access cards",
+    "Compatible-provider failover",
+    "Gateway account controls",
+    "Six studio benefits",
+    "Live network figures",
+    "Three-step studio pilot"
+  ],
+  "adaptations": [
+    "Cover keeps the vision-deck meadow, typography and assets with a general creator-facing product title and short video/image/voice descriptor.",
+    "Original illustrated catalog-card art is reused inside taller cards to make room for selected source prices.",
+    "Night source master and source font roles retained. Mobile reflows cards and the shared workspace.",
+    "Stats values are rebuilt as native text over the approved night illustration rather than embedding the supplied screenshot.",
+    "Slide 4 uses native dark framing and an unchanged transparent ant asset instead of a watercolor background.",
+    "The closing illustration is clipped independently of its old master so removed buttons do not leave empty baked backgrounds.",
+    "All three solution pages share a 2am submission deadline. The workflow shows 01:48 and an illustrative Provider A-to-B reroute; cards and Gateway keep their reference compositions.",
+    "Current kit tokens/components are bundled. Only the font URL in tokens.css is rebased for offline packaging.",
+    "16px margins use the kit\u2019s 2px/8px round-dot matrix and rails; dark pages use local theme variables so system theme cannot recolor the light slides.",
+    "Compact 34px/36px section titles and 46px/48px cover retained for PDF fidelity. Storyline labels are short non-link labels, not documentation-link eyebrows.",
+    "The three-line stats footer remains removed; one compact visible CC BY 4.0 credit sits at the foot of the stats slide.",
+    "Slide 4 now uses four native workflow nodes and labeled downward connectors. It depicts one request, not multiple models or a Gateway product interface.",
+    "Model-access intro sits at y192; cards move to y240 with their existing sizes and artwork. Mobile intro reflows above stacked cards.",
+    "Closing provider-network claim replaces the removed demo intro, using 18px/27px Geist 500 at y208. Slide 4 diagram header describes deadline pressure in plain language rather than clock readings; a lock icon marks the privacy feature.",
+    "Solid reference shared components applied: gray Geist eyebrows with green dot, ELSH40 section titles, ELSH20 card titles, Geist page numbers.",
+    "Closing steps use the Solid page-14 card pattern; the label is Your turn and the CTA is Book a call.",
+    "The stats line now visibly credits AntSeedStats under CC BY 4.0 with the read date and time.",
+    "A dedicated Value Prop page sits between Gateway and Network Stats. It follows Solid page 4: three columns and two rows, green 24px pixel icons, dotted row rules, 18px/24px benefit headings, 15px/22px body copy and a single mascot at the upper right. Prompt privacy and conditional Antseed Points are the final cells, not a footnote.",
+    "Slide 3 cards moved up to y250 and shortened to 360px with 140px art to make room for one filled Visit antseed.com button at y618. Slide 4 copy changed to approaching close; the payoff eyebrow is Value Prop.",
+    "Closing step 2 reads Pilot using Antseed; the Creator rewards card is removed and Book a call moves up to y520. The third tile is intentionally unchanged for the proposed Scale with your team card."
+  ],
+  "cover_reference": {
+    "url": "https://antseed-vision-deck.vercel.app",
+    "art_inset": 16,
+    "logo": [
+      32,
+      32,
+      123,
+      59
+    ],
+    "copy_top": 80,
+    "heading": "46px / 50px, ELSH 11, -.08em tracking, .82 opacity",
+    "mascots": {
+      "phone": [
+        448,
+        526,
+        104,
+        158
+      ],
+      "carrier": [
+        648,
+        482,
+        116,
+        196
+      ]
+    },
+    "assets": "Unchanged current live reference meadow, phone/carrier mascots and lockup."
+  },
+  "stats_reference": {
+    "source": "https://antseedstats.com/",
+    "board": [
+      1280,
+      720
+    ],
+    "left_art": [
+      18,
+      22,
+      552,
+      656
+    ],
+    "copy": [
+      628,
+      132,
+      572
+    ],
+    "metrics": "Native 2\u00d72 figures, 36px Pixel values, dotted top rules",
+    "snapshot_date": "2026-11-16",
+    "retrieved_at": "2026-11-16T13:30:47.978Z"
+  },
+  "audience_revision": {
+    "date": "2026-11-18",
+    "approach": "Copy revision within the eight approved masters. Friendly watercolor system with a technical studio-operations story.",
+    "preserved": [
+      "Canvas, typography, tokens, artwork, dark technical pages, navigation, live stats and PDF download."
+    ],
+    "adaptations": [
+      "Cover body copy width is 700px.",
+      "Failover copy width is 520px.",
+      "Benefit rows use a 166px desktop minimum and a 24px gap."
+    ]
+  }
+}

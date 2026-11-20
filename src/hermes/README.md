@@ -23,3 +23,23 @@ mcp_servers:
 ```
 
 Use the installed `hermes -p <isolated-project-profile> mcp test antseed` to check discovery. Restrict an agent demo to `-t antseed` and a small turn/time budget. Never replace the user's unrelated servers or profile. `replay_analysis` is explicitly documented as recovery that can permit future paid provider calls; discovery/read operations do not clear the Jev pause.
+
+## Scoped connections with personal keys
+
+`src/hermes/scoped.ts` adds two more stateless MCP endpoints on the same server (both roles, including `APP_ROLE=web`). They accept only personal keys (`Authorization: Bearer ask_…`), created on **Connections → MCP connections**. Keys are random 32-byte values; only their SHA-256 hash, prefix, owner, level and last use (written at most once a minute) are stored in `mcp_keys`. Each request rechecks revocation, the member's enabled flag and current role.
+
+- `/mcp/crm`: `search_deals`, `get_deal`, `follow_ups_due`, `pipeline_summary`, plus `move_deal`, `edit_deal` and `add_note` for non-viewers. At level `propose` (every member's default) changes become pending proposals in Approvals/Telegram (`details` is the proposal kind for notes/workstream). At level `full` with an admin or CRM-manager role they save directly through the audited web code. Viewers are read-only.
+- `/mcp/tasks`: pinned to the `WORKSPACE_ADMIN_EMAIL` member. `list_tasks`, `get_task`, `due_today_overdue`; level `full` adds `create_task`, `update_task`, `complete_task`, `delete_task` and `update_work_ticket`. Only an admin creates Tasks keys (`full` for Hermes, `read` to share).
+- `/mcp` (admin catalog) still accepts an admin's Supabase token and also `admin` keys. A non-admin requests one (or full CRM level for an existing key) on Connections. The admin is emailed Approve/Deny links to `/mcp-approval` (signed-in admin, same-origin POST, single-use token, 48h expiry); requests also appear in Approvals. Email uses Resend when `RESEND_API_KEY` is set (`MCP_EMAIL_FROM` optional); otherwise the request is kept and shown as "email not configured".
+
+Every MCP mutation writes `workspace_audit` with the key's member as actor and `source: mcp`.
+
+```yaml
+mcp_servers:
+  antseed-crm:
+    url: https://<app>/mcp/crm
+    headers:
+      Authorization: "Bearer ask_…"
+    enabled: true
+    timeout: 20
+```

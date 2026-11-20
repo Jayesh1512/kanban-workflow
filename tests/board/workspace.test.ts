@@ -24,7 +24,7 @@ afterEach(async()=>{for(const close of cleanup.splice(0).reverse())await close()
 async function setup(){
   const db=await fixtureDatabase(names.map(name=>new URL(`../../db/migrations/${name}`,import.meta.url)));cleanup.push(()=>db.close());
   const identities=new Map<string,{id:string;email:string;email_confirmed_at:string|null}>();
-  for(const email of ['ravi@antseed.com','member@example.com','other@example.com','viewer@example.com','manager@example.com','intruder@example.com'])
+  for(const email of ['ravi@antseed.com','member@example.com','other@example.com','viewer@example.com','manager@example.com','intruder@example.com','newbie@antseed.com','spoof@antseed.com.evil.io'])
     identities.set(email,{id:randomUUID(),email,email_confirmed_at:'2026-10-29T00:00:00Z'});
   let providerFailure=false;
   let userRequests=0;
@@ -73,7 +73,7 @@ async function setup(){
   const sign=async(who='member',options:{issuer?:string;audience?:string;expires?:string}={})=>new SignJWT({email:`${who}@example.com`,user_metadata:{role:'admin'}})
     .setProtectedHeader({alg:'ES256',kid:'synthetic-jwt-key'}).setSubject(identities.get(`${who}@example.com`)!.id)
     .setIssuer(options.issuer??`${origin}/auth/v1`).setAudience(options.audience??'authenticated').setIssuedAt().setExpirationTime(options.expires??'5m').sign(keys.privateKey);
-  return {db,app,access,outreach,work,intake,members,headers,task,identities,sign,bootstrapTelegramId,userRequests:()=>userRequests,failProvider:()=>{providerFailure=true;}};
+  return {db,app,access,outreach,work,intake,members,headers,task,identities,sign,bootstrapTelegramId,origin,userRequests:()=>userRequests,failProvider:()=>{providerFailure=true;}};
 }
 describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQL engine)',()=>{
   it('creates one manual Work card for an excluded conversation and lists it in the team feed',async()=>{
@@ -201,7 +201,7 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     for(const id of [a.id,dupe.id])expect((await h.app.inject({method:'POST',url:`/api/board/approvals/proposals/${id}/decision`,headers:h.headers('manager'),payload:{action:'approve',reason:'ok',idempotencyKey:'dedupe-'+id}})).statusCode).toBe(200);
     expect((await h.db.query("SELECT 1 FROM tickets WHERE crm_relationship_id=$1 AND next_action='Prepare the integration plan'",[r.id])).rowCount).toBe(1);
   });
-  it('lets every signed-in role read the company directory, and only approved company conversations appear',async()=>{
+  it('lets every signed-in role read the company directory straight from the companies/contacts tables; only approved conversations are listed',async()=>{
     const h=await setup();
     const co=(await h.db.query("INSERT INTO companies(canonical_name,domains) VALUES('Acme Robotics','{acme.example}'),('Hidden Co','{hidden.example}') RETURNING id,canonical_name")).rows;
     const acme=co.find(c=>c.canonical_name==='Acme Robotics')!,hidden=co.find(c=>c.canonical_name==='Hidden Co')!;
@@ -210,6 +210,8 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,1,555,'2026-10-20T10:00:00Z','Hello'),(71,2,555,'2026-10-25T10:00:00Z','Pricing?')");
     const person=(await h.db.query("INSERT INTO contacts(names,usernames,emails,phones,affiliation) VALUES('{Jane Doe}','{janedoe}','{jane@acme.example}','{+15550100}','external') RETURNING id")).rows[0]!;
     const staff=(await h.db.query("INSERT INTO contacts(names,affiliation) VALUES('{Our Teammate}','internal') RETURNING id")).rows[0]!;
+    await h.db.query("INSERT INTO outreach_relationships(identity_key,kind,company_id,display_name,accepted_stage) VALUES('company:acme','company',$1,'Acme Robotics','qualification')",[acme.id]);
+    await h.db.query("UPDATE companies SET outreach_tier='A — target now' WHERE id=$1",[hidden.id]);
     await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(555,$1)",[person.id]);
     // Teammates are recognised by an "Antseed" display name; an explicit external mark overrides that.
     const sam=(await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Sam | Antseed\"}','{samseed}','unknown') RETURNING id")).rows[0]!;
@@ -218,22 +220,29 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     // Pinned by Telegram ID in settings: stays on the team page even though the extractor rewrites affiliation.
     const javier=(await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Javier Privado Id\"}','{ajgonzal}','unknown') RETURNING id")).rows[0]!;
     await h.db.query("INSERT INTO contact_telegram_ids(telegram_user_id,contact_id) VALUES(557,$1)",[javier.id]);
-    await h.db.query("INSERT INTO app_settings(key,value) VALUES('directory:team','{\"telegramUserIds\":[\"557\"]}')");
+    await h.db.query("INSERT INTO contacts(names,usernames,affiliation) VALUES('{\"Nate S\"}','{Natron0}','unknown')");
+    await h.db.query("INSERT INTO contacts(names,emails,affiliation) VALUES('{\"Kim Lee\"}','{kim@AntSeed.com}','unknown')");
+    await h.db.query("INSERT INTO app_settings(key,value) VALUES('directory:team','{\"telegramUserIds\":[\"557\"],\"usernames\":[\"@natron0\"]}')");
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,4,557,'2026-10-27T10:00:00Z','Hi')");
     await h.db.query("INSERT INTO messages(chat_id,id,sender_id,sent_at,text) VALUES(71,3,556,'2026-10-26T10:00:00Z','From our side')");
     await h.db.query("INSERT INTO contact_company_roles(contact_id,company_id,role) VALUES($1,$2,'Partner lead')",[pat.id,acme.id]);
+    // A sheet-imported prospect: no chat at all, linked to its company only through contacts.company_id.
+    await h.db.query("INSERT INTO contacts(names,emails,affiliation,company_id,title,linkedin) VALUES('{Hana Hidden}','{hana@hidden.example}','external',$1,'Co-Founder & CEO','https://www.linkedin.com/in/hana-hidden')",[hidden.id]);
+    await h.db.query("UPDATE companies SET source='openrouter_apps',funding='$4.5M' WHERE id=$1",[hidden.id]);
     await h.db.query("INSERT INTO contact_company_roles(contact_id,company_id,role) VALUES($1,$3,'CTO'),($2,$3,'Partnerships')",[person.id,staff.id,acme.id]);
     for(const who of ['admin','manager','member','viewer']){
       const items=(await h.app.inject({url:'/api/board/directory',headers:h.headers(who)})).json().items;
-      expect(items.map((c:{name:string})=>c.name)).toEqual(['Acme Robotics']);
+      expect(items.map((c:{name:string})=>c.name)).toEqual(['Acme Robotics','Hidden Co']);
+      const by=(n:string)=>items.find((c:{name:string})=>c.name===n);expect([by('Acme Robotics').outreach,by('Acme Robotics').reachedVia,by('Hidden Co').outreach]).toEqual(['reached',['CRM · Qualification'],'planned']);
       expect(items[0]).toMatchObject({domains:['acme.example'],conversations:[{title:'Acme x AntSeed'}]});
+      expect(items[1]).toMatchObject({source:'openrouter_apps',funding:'$4.5M',conversations:[],people:[{names:['Hana Hidden'],title:'Co-Founder & CEO',linkedin:'https://www.linkedin.com/in/hana-hidden'}]});
       expect(items[0].people.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Jane Doe','Pat Antseed Partner']);
       const jane=items[0].people.find((x:{names:string[]})=>x.names[0]==='Jane Doe');
       expect(jane).toMatchObject({names:['Jane Doe'],usernames:['janedoe'],emails:['jane@acme.example'],phones:['+15550100'],roles:['CTO']});
       expect(new Date(jane.last_contacted).toISOString()).toBe('2026-10-25T10:00:00.000Z');
       const team=(await h.app.inject({url:'/api/board/directory/team',headers:h.headers(who)})).json().items;
-      expect(team.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Javier Privado Id','Our Teammate','Sam | Antseed']);
-      expect(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed')).toMatchObject({companies:['Acme Robotics'],usernames:['samseed']});
+      expect(team.map((x:{names:string[]})=>x.names[0]).sort()).toEqual(['Javier Privado Id','Kim Lee','Nate S','Our Teammate','Sam | Antseed']);
+      expect(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed')).toMatchObject({usernames:['samseed']});
       expect(new Date(team.find((x:{names:string[]})=>x.names[0]==='Sam | Antseed').last_active).toISOString()).toBe('2026-10-26T10:00:00.000Z');
       for(const url of ['/directory','/antseed-team'])expect((await h.app.inject({url,headers:h.headers(who)})).statusCode).toBe(200);
     }
@@ -328,6 +337,19 @@ describe('native workspace permissions (real local Auth HTTP, isolated PostgreSQ
     h.identities.get('member@example.com')!.email_confirmed_at=null;
     await expect(h.access.identify('member@example.com')).rejects.toMatchObject({code:'unauthenticated'});
     expect((await h.db.query("SELECT email,role FROM workspace_members WHERE role='admin'")).rows).toEqual([{email:'ravi@antseed.com',role:'admin'}]);
+  });
+  it('lets confirmed addresses on the auto-join domain in as viewers, once, and never other domains',async()=>{
+    const h=await setup();
+    await expect(h.access.identify('newbie@antseed.com')).rejects.toMatchObject({code:'forbidden'});
+    const auto=new AccessControl(h.db,{supabaseUrl:h.origin,publishableKey:'synthetic-public-key',adminEmail:'ravi@antseed.com',autoDomain:'antseed.com',autoRole:'viewer',appUrl:'http://localhost:19490',crmApproval:'direct'});
+    expect(await auto.identify('newbie@antseed.com')).toMatchObject({email:'newbie@antseed.com',role:'viewer'});
+    expect(await auto.identify('newbie@antseed.com')).toMatchObject({role:'viewer'});
+    expect((await h.db.query("SELECT count(*)::int n FROM workspace_audit WHERE action='member.auto_join'")).rows[0]).toEqual({n:1});
+    await expect(auto.identify('spoof@antseed.com.evil.io')).rejects.toMatchObject({code:'forbidden'});
+    await h.db.query("UPDATE workspace_members SET enabled=false WHERE email='newbie@antseed.com'");
+    await expect(auto.identify('newbie@antseed.com')).rejects.toMatchObject({code:'forbidden'});
+    h.identities.set('fresh@antseed.com',{id:randomUUID(),email:'fresh@antseed.com',email_confirmed_at:null});
+    await expect(auto.identify('fresh@antseed.com')).rejects.toMatchObject({code:'unauthenticated'});
   });
   it('creates only the authenticated owner’s task and rejects ownership injection',async()=>{
     const h=await setup(),input=h.task();

@@ -10,6 +10,8 @@ import { approvedChatSourceSql } from '../shared/source-approval.js';
 import { crmFirstEnabled } from '../shared/crm-first.js';
 import { resolveTitleCompany } from '../workflow/title-company.js';
 import { prospectDisplayName } from '../shared/company-title.js';
+import { telegramChatUrl } from '../shared/telegram-link.js';
+import { internalContactSql } from '../shared/team.js';
 
 const joins = `FROM outreach_relationship_sources rs JOIN outreach_source_threads s ON s.id=rs.source_thread_id
  LEFT JOIN outreach_telegram_inputs i ON i.chat_id=s.chat_id`;
@@ -50,7 +52,13 @@ export class OutreachRepository implements OutreachService {
 
   async reconcileChat(chatId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await tx.query('SELECT id FROM chats WHERE id=$1 FOR UPDATE', [chatId]);
+      // A Telegram group upgrade links a basic group (predecessor) to its supergroup
+      // (successor). Lock both chats in ID order before tickets and relationships.
+      const links = (await tx.query("SELECT to_regclass(quote_ident(current_schema())||'.chat_migrations') AS name")).rows[0]?.name
+        ? (await tx.query('SELECT predecessor_chat_id::text AS predecessor,successor_chat_id::text AS successor FROM chat_migrations WHERE $1 IN (predecessor_chat_id,successor_chat_id)', [chatId])).rows : [];
+      const predecessorId = links.find((l) => l.successor === chatId)?.predecessor as string | undefined;
+      const successorId = links.find((l) => l.predecessor === chatId)?.successor as string | undefined;
+      await tx.query('SELECT id FROM chats WHERE id=ANY($1::bigint[]) ORDER BY id FOR UPDATE', [[chatId, ...(predecessorId ? [predecessorId] : []), ...(successorId ? [successorId] : [])]]);
       await tx.query('SELECT id FROM tickets WHERE chat_id=$1 FOR UPDATE', [chatId]);
       if (await crmFirstEnabled(tx)) await resolveTitleCompany(tx, chatId);
       const i = (await tx.query('SELECT * FROM outreach_telegram_inputs WHERE chat_id=$1', [chatId])).rows[0];
@@ -59,9 +67,18 @@ export class OutreachRepository implements OutreachService {
         FROM outreach_source_threads s JOIN outreach_relationship_sources rs ON rs.source_thread_id=s.id
         JOIN outreach_relationships r ON r.id=rs.relationship_id WHERE s.chat_id=$1`, [chatId])).rows[0];
       const isApproved = (await tx.query(`SELECT ${approvedChatSourceSql('c')} AS approved FROM chats c WHERE c.id=$1`, [chatId])).rows[0]?.approved === true;
-      const isEligible = isApproved && i.inclusion === 'included' && !i.is_control && i.tracking_state === 'active' && i.mapping_status !== 'non_company';
+      // A predecessor stops being a live source once its successor's source has joined
+      // the predecessor's relationship (or, before it has one, exists at all).
+      const superseded = successorId != null && Boolean((await tx.query(`SELECT 1 FROM outreach_source_threads s JOIN outreach_relationship_sources rs ON rs.source_thread_id=s.id
+        WHERE s.chat_id=$1 AND ($2::uuid IS NULL OR rs.relationship_id=$2)`, [successorId, previous?.relationship_id ?? null])).rowCount);
+      const isEligible = isApproved && i.inclusion === 'included' && !i.is_control && i.tracking_state === 'active' && i.mapping_status !== 'non_company' && !superseded;
       if (await crmFirstEnabled(tx) && !isEligible && !previous) return;
-      const key = i.company_id ? `company:${i.company_id}` : previous?.identity_key?.toString().startsWith('prospect:') ? String(previous.identity_key) : i.ticket_id ? `prospect:${i.ticket_id}` : `prospect:chat:${chatId}`;
+      // A successor without its own company continues the predecessor's prospect relationship.
+      const inherited = predecessorId ? (await tx.query(`SELECT s.id AS source_id,rs.enrollment_state,rs.relationship_id,r.identity_key
+        FROM outreach_source_threads s JOIN outreach_relationship_sources rs ON rs.source_thread_id=s.id
+        JOIN outreach_relationships r ON r.id=rs.relationship_id WHERE s.chat_id=$1`, [predecessorId])).rows[0] : undefined;
+      const inheritedKey = inherited?.identity_key?.toString().startsWith('prospect:') ? String(inherited.identity_key) : null;
+      const key = i.company_id ? `company:${i.company_id}` : inheritedKey ?? (previous?.identity_key?.toString().startsWith('prospect:') ? String(previous.identity_key) : i.ticket_id ? `prospect:${i.ticket_id}` : `prospect:chat:${chatId}`);
       // A previously unknown, pending prospect can acquire its first confirmed
       // company without losing its relationship ID. Published merges come later.
       if (previous && i.company_id && !(await tx.query('SELECT id FROM outreach_relationships WHERE identity_key=$1', [key])).rows.length) {
@@ -78,7 +95,9 @@ export class OutreachRepository implements OutreachService {
       const workstream = decidedWorkstream ?? companyWorkstream ?? null;
       const r = (await tx.query(`INSERT INTO outreach_relationships(identity_key,kind,company_id,display_name,summary,workstream)
         VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(identity_key) DO UPDATE SET
-        display_name=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.display_name ELSE EXCLUDED.display_name END,summary=EXCLUDED.summary,workstream=coalesce(EXCLUDED.workstream,outreach_relationships.workstream),retained=true
+        display_name=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.display_name ELSE EXCLUDED.display_name END,
+        summary=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.summary ELSE EXCLUDED.summary END,
+        workstream=CASE WHEN outreach_relationships.identity_version>0 THEN outreach_relationships.workstream ELSE coalesce(EXCLUDED.workstream,outreach_relationships.workstream) END,retained=true
         RETURNING id,accepted_stage`, [key, i.company_id ? 'company' : 'contact_prospect', i.company_id,
         i.canonical_name || i.title || 'Unnamed contact', '', workstream])).rows[0]!;
       const source = (await tx.query(`INSERT INTO outreach_source_threads(kind,source_key,chat_id,ticket_id,source_revision,observed_at,reconciled_at)
@@ -95,8 +114,13 @@ export class OutreachRepository implements OutreachService {
         && previous.enrollment_state === 'suspended' && r.accepted_stage != null;
       // CRM rejection is an operator decision, independent of Telegram intake.
       // Discovery, source edits and temporary exclusion must not enroll it again.
-      const state = previous?.enrollment_state === 'rejected' && !changedIdentity ? 'rejected'
+      // A successor joining its predecessor's relationship takes over that source's
+      // enrollment, so an accepted deal is neither re-placed nor duplicated.
+      const joinsPredecessor = inherited != null && String(inherited.relationship_id) === String(r.id);
+      const handoff = joinsPredecessor && (!previous || changedIdentity) ? String(inherited.enrollment_state) : null;
+      const state = (previous?.enrollment_state === 'rejected' && !changedIdentity) || handoff === 'rejected' ? 'rejected'
         : !isEligible ? 'suspended'
+        : handoff === 'active' || handoff === 'pending' ? handoff
         : restoresAcceptedRelationship ? 'active'
         : !previous || changedIdentity || previous.enrollment_state === 'suspended' ? 'pending'
         : previous.enrollment_state;
@@ -105,6 +129,8 @@ export class OutreachRepository implements OutreachService {
         generation=outreach_relationship_sources.generation+CASE WHEN outreach_relationship_sources.relationship_id<>EXCLUDED.relationship_id THEN 1 ELSE 0 END,
         version=outreach_relationship_sources.version+CASE WHEN outreach_relationship_sources.relationship_id<>EXCLUDED.relationship_id OR outreach_relationship_sources.enrollment_state<>EXCLUDED.enrollment_state THEN 1 ELSE 0 END,
         updated_at=EXCLUDED.updated_at`, [source.id, r.id, state]);
+      if (joinsPredecessor && isEligible && ['active', 'pending'].includes(String(inherited.enrollment_state)))
+        await tx.query(`UPDATE outreach_relationship_sources SET enrollment_state='suspended',version=version+1,updated_at=now() WHERE source_thread_id=$1`, [inherited.source_id]);
       if (await crmFirstEnabled(tx)) await tx.query(`UPDATE tickets SET tracking_state='suspended',updated_at=now()
         WHERE chat_id=$1 AND creation_proposal_id IS NOT NULL AND crm_relationship_id IS DISTINCT FROM $2::uuid AND tracking_state<>'suspended'`, [chatId, r.id]);
       if (!previous || previous.source_revision !== i.source_revision || changedIdentity || previous.enrollment_state !== state) {
@@ -121,6 +147,20 @@ export class OutreachRepository implements OutreachService {
       if (changedIdentity) await tx.query(`UPDATE outreach_relationships SET retained=false WHERE id=$1 AND accepted_stage IS NULL
         AND NOT EXISTS(SELECT 1 FROM outreach_relationship_sources WHERE relationship_id=$1)`, [previous.relationship_id]);
     });
+  }
+
+  /** Funnel counts over exactly the relationships the native board lists, archived excluded, so cards always match the lanes. */
+  async funnel() {
+    const f = (await this.db.query(`SELECT count(*)::int AS all_deals,
+        count(DISTINCT coalesce(r.company_id::text,lower(r.display_name)))::int AS unique_companies,
+        count(*) FILTER (WHERE r.accepted_stage='lead')::int AS lead,
+        count(*) FILTER (WHERE r.accepted_stage='qualification')::int AS qualification,
+        count(*) FILTER (WHERE r.accepted_stage='negotiation')::int AS negotiation,
+        count(*) FILTER (WHERE r.accepted_stage='won')::int AS won
+      FROM outreach_relationships r WHERE r.retained AND r.accepted_stage IS NOT NULL AND r.accepted_stage<>'archived'
+        AND EXISTS(SELECT 1 ${joins} WHERE rs.relationship_id=r.id AND rs.enrollment_state IN ('active','pending') AND ${eligible} AND ${identityMatches})`)).rows[0] ?? {};
+    return { allDeals: Number(f.all_deals ?? 0), uniqueCompanies: Number(f.unique_companies ?? 0), lead: Number(f.lead ?? 0),
+      qualification: Number(f.qualification ?? 0), negotiation: Number(f.negotiation ?? 0), won: Number(f.won ?? 0) };
   }
 
   async list(raw: OutreachListInput, placement: 'all' | 'accepted' | 'unplaced' = 'all') {
@@ -147,10 +187,11 @@ export class OutreachRepository implements OutreachService {
       const actions = actionsTable && ids.length ? (await tx.query(`SELECT DISTINCT ON (relationship_id) relationship_id,text,precision,local_date::text AS local_date,instant FROM outreach_actions
         WHERE relationship_id=ANY($1::uuid[]) AND actor='antseed' AND state='open'
         ORDER BY relationship_id,local_date NULLS LAST,instant NULLS LAST,id`, [ids])).rows : [];
+      const pending = await this.pendingSuggestions(tx, ids);
       const companies = await this.companies(tx);
       const items = page.map((row) => this.relationshipFromRows(row,
         linked.filter((source) => String(source.relationship_id) === String(row.id)),
-        actions.find((action) => String(action.relationship_id) === String(row.id)), companies));
+        actions.find((action) => String(action.relationship_id) === String(row.id)), companies, pending.get(String(row.id)) ?? 0));
       return { items: items.filter((r) => (!input.stage || r.displayStage === input.stage) && (!input.disposition || r.disposition === input.disposition)),
         nextCursor: rows.length > input.limit ? String(page.at(-1)!.id) : null };
     });
@@ -162,14 +203,22 @@ export class OutreachRepository implements OutreachService {
       ${joins} WHERE rs.relationship_id=$1`, [r.id, r.company_id])).rows;
     const actionsTable = (await tx.query("SELECT to_regclass(quote_ident(current_schema())||'.outreach_actions') AS name")).rows[0]?.name;
     const action = actionsTable ? (await tx.query("SELECT text,precision,local_date::text AS local_date,instant FROM outreach_actions WHERE relationship_id=$1 AND actor='antseed' AND state='open' ORDER BY local_date NULLS LAST,instant NULLS LAST,id LIMIT 1", [r.id])).rows[0] : null;
-    return this.relationshipFromRows(r, linked, action, await this.companies(tx));
+    return this.relationshipFromRows(r, linked, action, await this.companies(tx), (await this.pendingSuggestions(tx, [String(r.id)])).get(String(r.id)) ?? 0);
+  }
+
+  /** Pending AI (non-manual) proposals per relationship, for the board's "pending AI suggestion" filter. One indexed query; absent table means none. */
+  private async pendingSuggestions(tx: SqlExecutor, ids: unknown[]) {
+    const table = ids.length ? (await tx.query("SELECT to_regclass(quote_ident(current_schema())||'.outreach_sales_proposals') AS name")).rows[0]?.name : null;
+    const rows = table ? (await tx.query(`SELECT relationship_id,count(*)::int AS n FROM outreach_sales_proposals
+      WHERE relationship_id=ANY($1::uuid[]) AND state='pending' AND origin<>'manual' GROUP BY relationship_id`, [ids])).rows : [];
+    return new Map(rows.map((row) => [String(row.relationship_id), Number(row.n)]));
   }
 
   private async companies(tx: SqlExecutor) {
     return (await tx.query('SELECT canonical_name,aliases FROM companies')).rows.map(c => ({ canonicalName: String(c.canonical_name), aliases: (c.aliases as string[] | null) ?? [] }));
   }
 
-  private relationshipFromRows(r: Row, linked: Row[], action: Row | null | undefined, companies: { canonicalName: string; aliases: string[] }[]): OutreachRelationship {
+  private relationshipFromRows(r: Row, linked: Row[], action: Row | null | undefined, companies: { canonicalName: string; aliases: string[] }[], pendingSuggestionCount = 0): OutreachRelationship {
     const name = r.kind === 'contact_prospect' && r.company_id == null && Number(r.identity_version) === 0 ? prospectDisplayName(String(r.display_name), companies) : String(r.display_name);
     // Assess the complete source set before hiding ineligible context. Excluding
     // even one contributor invalidates its saved assessment immediately.
@@ -188,15 +237,17 @@ export class OutreachRepository implements OutreachService {
     const nextAction = knownAction || (accepted ? 'Next action not recorded' : 'Review initial placement');
     return { id: String(r.id), kind: r.kind as OutreachRelationship['kind'], companyId: r.company_id as string | null,
       displayName: name, title: ticketTitle({ identity: name, description, nextAction, eta }), nextStep: `Next: ${nextAction} · ETA: ${eta}`,
-      // Shared company summaries can contain excluded/pending-source claims.
-      // M1 has no provenance-bound accepted aggregate summary writer yet.
-      summary: '', workstream: r.workstream as OutreachRelationship['workstream'], acceptedStage: accepted,
+      // Shared company summaries can contain excluded/pending-source claims, so only
+      // notes a person wrote on this relationship (identity_version>0) are shown.
+      summary: Number(r.identity_version) > 0 ? String(r.summary ?? '') : '', workstream: r.workstream as OutreachRelationship['workstream'], acceptedStage: accepted,
       displayStage: stage, stageBasis: accepted ? 'accepted' : provisional ? 'provisional' : 'unknown',
       stageReason: provisional ? r.provisional_reason as string | null : null,
       stageVersion: Number(r.stage_version), evidenceRevision: Number(r.evidence_revision), identityVersion:Number(r.identity_version),actionsVersion:Number(r.actions_version),
       disposition: stage ? 'pipeline' : 'context_review', sourceCount: sources.length,
       pendingSourceCount: sources.filter((s) => s.enrollment_state === 'pending').length,
       latestSourceAt: latest('observed_at'), reconciledAt: latest('reconciled_at'), sourceState: current ? 'current' : 'changed',
+      followUpDate: action?.precision === 'date' && action.local_date ? String(action.local_date).slice(0, 10) : action?.precision === 'instant' && action.instant ? iso(action.instant).slice(0, 10) : null,
+      createdAt: nullableIso(r.created_at), pendingSuggestionCount,
       creationOrigin: r.creation_origin === 'manual' ? 'manual' : 'pipeline',
       creationNote: r.creation_origin === 'manual' ? (r.creation_note as string | null) : null };
   }
@@ -245,8 +296,9 @@ export class OutreachRepository implements OutreachService {
     const evidence = (await tx.query(`SELECT e.*,m.sender_id,m.sender_snapshot,m.forward_metadata,m.sent_at,(SELECT self_user_id FROM telegram_account LIMIT 1) AS self_id FROM evidence e JOIN messages m ON m.chat_id=e.chat_id AND m.id=e.message_id
       WHERE e.chat_id=$1 AND e.invalidated_at IS NULL AND m.deleted_at IS NULL AND e.message_version=m.version ORDER BY e.observed_at DESC,e.id LIMIT 101`, [source.chatId])).rows;
     const ids = evidence.slice(0, 100).map((e) => String(e.id));
+    // Our own team is never listed as a contact at the company (see /antseed-team).
     const people = (await tx.query(`SELECT p.* FROM contacts p
-      WHERE EXISTS(SELECT 1 FROM contact_evidence ce WHERE ce.contact_id=p.id AND ce.evidence_id=ANY($1::uuid[])) ORDER BY p.id`, [ids])).rows;
+      WHERE EXISTS(SELECT 1 FROM contact_evidence ce WHERE ce.contact_id=p.id AND ce.evidence_id=ANY($1::uuid[])) AND NOT ${internalContactSql('p',{members:false})} ORDER BY p.id`, [ids])).rows;
     const contacts: OutreachContact[] = [];
     for (const p of people) {
       const roles = (await tx.query<{ role: string }>(`SELECT r.role FROM contact_company_roles r WHERE r.contact_id=$1 AND r.company_id=$2
@@ -273,7 +325,10 @@ export class OutreachRepository implements OutreachService {
         localDate: d.local_date == null ? null : String(d.local_date), precision: d.date_precision as DateFact['precision'],
         ambiguous: Boolean(d.ambiguous), evidenceIds: citations.filter((c) => c.fact_id === d.id).map((c) => c.evidence_id) }));
     }
-    return { ...source, contacts, facts: hydrated,
+    const chat = source.chatId ? (await tx.query('SELECT kind,username FROM chats WHERE id=$1', [source.chatId])).rows[0] : null;
+    const latest = source.chatId ? (await tx.query('SELECT max(id) AS id FROM messages WHERE chat_id=$1 AND deleted_at IS NULL', [source.chatId])).rows[0] : null;
+    const telegramUrl = chat && source.chatId ? telegramChatUrl({ id: source.chatId, kind: String(chat.kind), username: chat.username as string | null }, latest?.id == null ? null : Number(latest.id)) : null;
+    return { ...source, telegramUrl, chatKind: chat ? String(chat.kind) : null, contacts, facts: hydrated,
       evidence: evidence.slice(0, 100).map((e) => ({ id: String(e.id), excerpt: String(e.excerpt), sourceUrl: e.source_url as string | null, observedAt: nullableIso(e.observed_at)!,sentAt:iso(e.sent_at),author:{id:e.sender_id==null?null:String(e.sender_id),party:e.sender_id!=null&&String(e.sender_id)===String(e.self_id)?'antseed' as const:'unknown' as const,names:(e.sender_snapshot as {names?:string[]})?.names??[]},forward:e.forward_metadata as import('../shared/domain.js').ForwardProvenance })),
       coverage: { evidenceLimit: 100, factLimit: 100, truncated: evidence.length > 100 || facts.length > 100 } };
   }

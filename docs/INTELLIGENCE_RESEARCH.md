@@ -12,7 +12,7 @@ Researched 2026-10-17 by Builder B against `PROJECT_BRIEF.md`. This is a bounded
 
 ## Private configuration inspection
 
-Read `/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env` in process memory only. Key values were never printed, copied to repository files, passed as shell command arguments, or written to probe fixtures. No key fingerprints are recorded.
+Read `/run/antseed/ai.env` in process memory only. Key values were never printed, copied to repository files, passed as shell command arguments, or written to probe fixtures. No key fingerprints are recorded.
 
 Observed non-secret settings:
 

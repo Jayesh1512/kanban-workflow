@@ -32,6 +32,8 @@ const stageGuidance: Record<SalesStage, { meaning: string; exit: string }> = {
 };
 
 const uniq = <T>(items: T[]) => [...new Set(items)];
+/** An email thread is chat-backed, so its source kind is 'telegram'; the chat kind says what it really is. */
+export const sourceLabel = (source: { kind: string; chatKind?: string | null }) => source.chatKind === 'email' ? 'email thread' : source.kind === 'telegram' ? 'Telegram' : 'email report';
 const facts = (sources: OutreachSourceContext[]) => {
   const seen = new Set<string>();
   return sources.flatMap(source => source.facts).filter(fact => !seen.has(fact.id) && seen.add(fact.id));
@@ -84,12 +86,12 @@ export function salesCard({ snapshot, stage, action, marker, generation }: Sales
   const closeDate = timeline.find(fact => /\b(close|closing|sign|signed|contract|agreement|purchase|go live|launch)\b/i.test(fact.text));
   const decisionContacts = allContacts.filter(contact => contact.roles.some(role => /\b(founder|owner|ceo|cto|chief|vp|vice president|director|head|procurement|finance|decision)\b/i.test(role)));
   const contacts = allContacts.length ? `<ul>${allContacts.map(contact => `<li><strong>${esc(contact.names.join(', ') || contact.usernames.join(', ') || 'Unnamed contact')}</strong> — ${esc(contact.roles.join(', ') || 'Role unknown')} (${esc(contact.affiliation)})${contact.emails?.length ? `<br>Email: ${esc(contact.emails.join(', '))}` : ''}${contact.phones?.length ? `<br>Phone: ${esc(contact.phones.join(', '))}` : ''}</li>`).join('')}</ul>` : esc(UNKNOWN);
-  const sourceLabels = uniq(sources.map(source => `${source.title} (${source.kind === 'telegram' ? 'Telegram' : 'email report'})`));
+  const sourceLabels = uniq(sources.map(source => `${source.title} (${sourceLabel(source)})`));
   const openActions = (snapshot.actions ?? []).filter(item => item.state === 'open');
   const titleAction = openActions.find(item => item.actor === 'antseed' && item.text.trim() === action.trim())
     ?? openActions.find(item => item.actor === 'antseed');
   const actionRows = openActions.length ? `<ul>${openActions.map(item => `<li><strong>${esc(item.actor === 'antseed' ? 'AntSeed' : item.actor)}:</strong> ${esc(item.text)}<br><strong>Deadline:</strong> ${esc(actionDeadline(item))}</li>`).join('')}</ul>` : `<p>${esc(action)} — owner: AntSeed; deadline: not established</p>`;
-  const evidence = sources.map(source => `<h3>${esc(source.title)} · ${esc(source.kind === 'telegram' ? 'Telegram' : 'email report')}</h3>${source.reportSummary ? `<p>${esc(source.reportSummary)}</p>` : ''}${source.evidence.length ? source.evidence.map(item => `<blockquote>${esc(item.excerpt)}${item.sourceUrl ? `<br><a href="${esc(item.sourceUrl)}">Open source</a>` : ''}</blockquote>`).join('') : `<p>${esc(UNKNOWN)}</p>`}`).join('');
+  const evidence = sources.map(source => `<h3>${esc(source.title)} · ${esc(sourceLabel(source))}</h3>${source.reportSummary ? `<p>${esc(source.reportSummary)}</p>` : ''}${source.evidence.length ? source.evidence.map(item => `<blockquote>${esc(item.excerpt)}${item.sourceUrl ? `<br><a href="${esc(item.sourceUrl)}">Open source</a>` : ''}</blockquote>`).join('') : `<p>${esc(UNKNOWN)}</p>`}`).join('');
 
   const description = [
     '<h2>Opportunity summary</h2>',

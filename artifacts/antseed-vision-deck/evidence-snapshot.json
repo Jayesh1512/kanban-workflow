@@ -1,0 +1,35 @@
+{
+  "captured_at": "2026-11-14T09:08:38.000Z",
+  "attribution": "AntSeedStats (antseedstats.com), CC BY 4.0",
+  "network_summary": {
+    "source": "https://antseedstats.com/api/v1/network/summary",
+    "as_of_block": 57280596,
+    "as_of_ts": "2026-11-14T08:55:06.000Z",
+    "gross_settled_usd_lifetime": "386039.21",
+    "protocol_fees_usd_lifetime": "15355.03",
+    "requests_lifetime": 23636957,
+    "buyers_lifetime": 1675,
+    "sellers_lifetime": 270,
+    "paid_usage_24h": {
+      "requests": 344212,
+      "tokens": 24695680128,
+      "images": 659,
+      "videos": 970,
+      "free_requests": 73189,
+      "model_coverage": 0.9493078175895765
+    }
+  },
+  "models": {
+    "source": "https://antseedstats.com/api/v1/models?view=organic&period=24h&sort=tokens&limit=6",
+    "models_on_sale": 933
+  },
+  "referrals": {
+    "source": "https://antseedstats.com/api/v1/referrals?limit=10",
+    "live": false,
+    "epoch": 31,
+    "buyers_referred_epoch": 0,
+    "buyers_referred_all_time": 0,
+    "active_referrers": 0,
+    "total": 0
+  }
+}

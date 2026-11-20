@@ -1,0 +1,36 @@
+{
+  "authority": "The supplied PDF, exact-reference route. No web brand refresh.",
+  "source_canvas_pt": [
+    960,
+    540
+  ],
+  "html_canvas_px": [
+    1280,
+    720
+  ],
+  "mapping_factor": 1.3333333333333333,
+  "fonts": {
+    "body": "Geist 400/500, original local embedded fonts",
+    "headings": "Geist Pixel Var ELSH 40; cover ELSH 11; card headings/figures ELSH 20",
+    "terminal": "Geist Mono"
+  },
+  "type_sizes_css_px": {
+    "cover": 46,
+    "section": 34,
+    "body": 16,
+    "card_body": 15,
+    "topic": 13,
+    "page_number": 12
+  },
+  "reference_measurements": "Source glyph origins and original illustrations measured per slide. Source backgrounds retain artwork, chart geometry, rails and surfaces.",
+  "artwork_provenance": "Antseed - AI agents for neobanks (Solid case study).pdf",
+  "slide_10_adaptation": {
+    "row_y_pt": 438,
+    "column_x_pt": [
+      475.2,
+      622.8,
+      770.4
+    ]
+  },
+  "mobile": "Artwork crop followed by reading-order text, 16px body, 30px headline; native controls sticky below."
+}

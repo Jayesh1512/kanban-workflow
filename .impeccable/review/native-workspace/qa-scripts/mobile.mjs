@@ -1,7 +1,7 @@
 import { chromium } from 'playwright-core';
 import { writeFileSync } from 'node:fs';
 const exe = process.env.HOME + '/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
-const out = '/Users/jys/.t3/projects/kanban/.impeccable/review/native-workspace/', base = 'http://localhost:19490';
+const out = '/home/dev/.t3/projects/kanban/.impeccable/review/native-workspace/', base = 'http://localhost:19490';
 const b = await chromium.launch({ executablePath: exe }), res = [];
 for (const [email, name, expected] of [['manager@example.com', 'manager', 3], ['ravi@antseed.com', 'admin', 4]]) {
   const ctx = await b.newContext({ viewport: { width: 375, height: 812 } }), page = await ctx.newPage();

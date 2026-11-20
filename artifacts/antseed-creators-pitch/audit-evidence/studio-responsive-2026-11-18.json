@@ -1,0 +1,750 @@
+{
+  "matrix": [
+    {
+      "width": 1440,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 1440,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 1440,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 1440,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 1440,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 1440,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 1440,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 1440,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 1366,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 1366,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 1366,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 1366,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 1366,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 1366,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 1366,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 1366,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 1024,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 1024,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 1024,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 1024,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 1024,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 1024,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 1024,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 1024,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 768,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 768,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 768,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 768,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 768,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 768,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 768,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 768,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 760,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 760,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 760,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 760,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 760,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 760,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 760,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 760,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 640,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 640,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 640,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 640,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 640,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 640,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 640,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 640,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 390,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 390,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 390,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 390,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 390,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 390,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 390,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 390,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    },
+    {
+      "width": 320,
+      "slide": 1,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your creative platform\nOne model network"
+    },
+    {
+      "width": 320,
+      "slide": 2,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your studio grows.\nSo do model costs."
+    },
+    {
+      "width": 320,
+      "slide": 3,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Video. Image. Voice.\nBehind your studio."
+    },
+    {
+      "width": 320,
+      "slide": 4,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A provider fails.\nYour studio retries."
+    },
+    {
+      "width": 320,
+      "slide": 5,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "One studio integration.\nControl access and spend."
+    },
+    {
+      "width": 320,
+      "slide": 6,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Your product experience.\nMore control underneath."
+    },
+    {
+      "width": 320,
+      "slide": 7,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "A network behind\nyour studio."
+    },
+    {
+      "width": 320,
+      "slide": 8,
+      "bodyOverflow": false,
+      "readingOverflow": false,
+      "activeCount": 1,
+      "inactiveInert": true,
+      "controlsOverlap": false,
+      "missingImages": 0,
+      "heading": "Test one studio workflow.\nThen plan the rollout."
+    }
+  ],
+  "errors": [],
+  "requests": [],
+  "fonts": [
+    {
+      "family": "Geist Pixel Var",
+      "status": "unloaded"
+    },
+    {
+      "family": "Geist",
+      "status": "loaded"
+    },
+    {
+      "family": "Geist",
+      "status": "loaded"
+    },
+    {
+      "family": "Pixel",
+      "status": "unloaded"
+    },
+    {
+      "family": "Round",
+      "status": "unloaded"
+    },
+    {
+      "family": "Mono",
+      "status": "loaded"
+    },
+    {
+      "family": "CoverPixel",
+      "status": "loaded"
+    },
+    {
+      "family": "PixelVar",
+      "status": "loaded"
+    }
+  ],
+  "keyboard": {
+    "arrow": true,
+    "home": true,
+    "end": true
+  },
+  "offline": true
+}

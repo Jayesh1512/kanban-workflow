@@ -7,7 +7,7 @@ related_targets: ["src/board/ticket-details.ts", "src/board/page.ts", "src/outre
 
 # Shared ticket detail panel
 
-Mode: Operate. A scoped extension of the native workspace's neutral/green visual system. The user selected a large panel and explicitly retained Jayesh as Viewer.
+Mode: Operate. A scoped extension of the native workspace's neutral/green visual system. The user selected a large panel and explicitly retained the existing teammate as Viewer.
 
 ## Direction contract
 

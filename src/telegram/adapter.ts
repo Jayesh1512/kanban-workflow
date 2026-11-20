@@ -6,7 +6,7 @@ import type { Message as MtcuteMessage } from '@mtcute/node';
 import { DomainError } from '../shared/api.js';
 import type { ServiceStatus } from '../shared/domain.js';
 import type { ControlSetup, HistoryBatch, RuntimeConfig, TelegramDialog, TelegramEvent, TelegramLoginInput, TelegramLoginState, TelegramMessageInput, TelegramPort } from '../shared/ports.js';
-import { normalizeDialog, normalizeMessage, peerNumber, decimalId } from './normalize.js';
+import { normalizeDialog, normalizeMessage, peerNumber, decimalId, markedBasicGroupId } from './normalize.js';
 import { AwaitedQueue } from './queue.js';
 import type { TelegramStore } from './store.js';
 
@@ -253,7 +253,13 @@ export class MtcuteAdapter implements TelegramPort {
   async describe(chatId: string): Promise<TelegramDialog> {
     const dialog = (await this.requireLive().getPeerDialogs(peerNumber(chatId)))[0];
     if (!dialog) throw new DomainError('not_found', 'Telegram dialog is not accessible');
-    return normalizeDialog(dialog.peer, dialog.isArchived);
+    const described = normalizeDialog(dialog.peer, dialog.isArchived);
+    if (described.kind !== 'supergroup') return described;
+    // A newly seen supergroup may be an upgraded basic group; only full channel
+    // info carries migrated_from_chat_id. One RPC, only for undiscovered chats; a
+    // failure never blocks ingestion (the old group's migratedTo links it later).
+    const from = (await this.requireLive().getFullChat(dialog.peer.id).catch(() => null))?.migratedFrom;
+    return from ? { ...described, migratedFromId: markedBasicGroupId(from.chatId) } : described;
   }
   async conversationStart(chatId: string, cutoff: string): Promise<import('./automatic-intake.js').ConversationStart> {
     const client=this.requireLive();

@@ -1,0 +1,357 @@
+{
+  "revision": "Exact 13-slide reference restoration",
+  "reference_url": "https://antseed-neobanks-presentation.vercel.app/",
+  "html_matches_reference": true,
+  "offline_render": {
+    "slides": 13,
+    "errors": 0,
+    "warnings": 0
+  },
+  "responsive": {
+    "checks": [
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 1,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 2,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 3,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 4,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 5,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 6,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 7,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 8,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 9,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 10,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 11,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 12,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 13,
+        "width": 320
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 1,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 2,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 3,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 4,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 5,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 6,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 7,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 8,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 9,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 10,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 11,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 12,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 13,
+        "width": 390
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 1,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 2,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 3,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 4,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 5,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 6,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 7,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 8,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 9,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 10,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 11,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 12,
+        "width": 1280
+      },
+      {
+        "missing": 0,
+        "overflow": false,
+        "slide": 13,
+        "width": 1280
+      }
+    ],
+    "errors": []
+  },
+  "pdf": [
+    {
+      "page": 1,
+      "text_characters": 188,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 2,
+      "text_characters": 460,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 3,
+      "text_characters": 464,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 4,
+      "text_characters": 758,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 5,
+      "text_characters": 761,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 6,
+      "text_characters": 429,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 7,
+      "text_characters": 563,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 8,
+      "text_characters": 810,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 9,
+      "text_characters": 185,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 10,
+      "text_characters": 430,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 11,
+      "text_characters": 397,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 12,
+      "text_characters": 401,
+      "size": [
+        960.0,
+        540.0
+      ]
+    },
+    {
+      "page": 13,
+      "text_characters": 81,
+      "size": [
+        960.0,
+        540.0
+      ]
+    }
+  ],
+  "visual_review": "All final PDF pages rendered; contact sheet and Solid case-study page checked against the reference.",
+  "scope": "Exact restoration, retaining reference copy and historical figures; supersedes the previous 14-slide factual-review report."
+}

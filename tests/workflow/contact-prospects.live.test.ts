@@ -37,9 +37,9 @@ describe.skipIf(!project)('contact prospects: actual isolated PostgreSQL17/Vikun
   it('creates a real unknown-company card, applies only after approval, then upgrades the same remote task without resetting its lane',async()=>{
     await fixture();let instant=Date.now();const clock={now:()=>new Date(instant)};
     const store=new TelegramStore(db,config.telegram);await store.bindAccount('99');await store.upsertDialog({id:'7',kind:'user',title:'Synthetic Harsh',username:'synthetic_harsh',archived:false});
-    const original=outbound().messages[0]!;original.sender.names=['Jayesh'];original.peer.names=['Harsh'];original.peer.usernames=['harsh'];
+    const original=outbound().messages[0]!;original.sender.names=['Sam'];original.peer.names=['Harsh'];original.peer.usernames=['harsh'];
     const send=async(id:number,sender:string,text:string)=>{instant+=1000;await store.ingest({type:'message',message:{chatId:'7',id,senderId:sender,sentAt:new Date(instant).toISOString(),editedAt:null,text,replyToId:null,sourceUrl:null,sender:sender==='99'?original.sender:original.peer,peer:original.peer,forward:original.forward}});};
-    await send(1,'99','Hi Harsh, Jayesh here from AntSeed. Would you like to try our API services?');
+    await send(1,'99','Hi Harsh, Sam here from AntSeed. Would you like to try our API services?');
     const records=new RecordsRepository(db,clock),repo=new ProposalRepository(db,{} as ControlBus,clock),queue=new SqlAnalysisQueue(db,clock,'Asia/Kolkata',{onDecision:(tx,input)=>repo.recordAnalysisDecisionTx(tx,input)});
     const adapter=new VikunjaAdapter({...config.vikunja,projectTitle:'Owned prospect regression '+schema},db);const board=await adapter.ensureBoard(),projector=new TicketProjector(db,adapter,records,clock);
     try{

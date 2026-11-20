@@ -1,0 +1,11 @@
+{
+  "source_url": "https://antseed-neobanks-presentation.vercel.app/",
+  "restored_at": "2026-11-17T12:15:03.202720+00:00",
+  "html_sha256": "5ae54f700008722028022f6502e01d936b815665fc484f9d8b19e5755e09ceee",
+  "slides": 13,
+  "prior_version_commit": "dd59746a233a7d7e6c539ced11c869f0a7240027",
+  "current_source_commit": "93cef1f",
+  "current_html_sha256": "9e34cec0d0adba2613203ab2a6b0d3614ef6f9cad0444ef4e430845cbba0a702",
+  "note": "User model-family count changed to 6; mobile copy aligned. Browser-editor changes must be pulled before deploying.",
+  "navigation_fix": "Removed dangling merge-conflict marker from navigation script."
+}

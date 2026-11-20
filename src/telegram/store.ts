@@ -4,6 +4,7 @@ import { command } from '../workflow/sql.js';
 import { automaticPolicy } from '../shared/automatic-policy.js';
 import { crmFirstEnabled } from '../shared/crm-first.js';
 import { queueIntake } from './intake.js';
+import { dropPendingEmail, promotePendingEmail } from '../email/pending.js';
 import { createHash } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
 import { DomainError } from '../shared/api.js';
@@ -12,6 +13,7 @@ import type { ChatService, HistoryBatch, IngestionStore, RuntimeConfig, SqlExecu
 import type { PgDatabase } from '../platform/database.js';
 import { chatIdSchema, correctMappingSchema, setInclusionSchema } from '../shared/schemas.js';
 import { enqueueAnalysisWindows, type AnalysisSourceRow } from '../shared/analysis-windows.js';
+import { approvedChatSourceSql } from '../shared/source-approval.js';
 
 type Row = QueryResultRow;
 const iso = (v: unknown): string | null => v == null ? null : new Date(v as string | Date).toISOString();
@@ -46,18 +48,52 @@ export class TelegramStore implements IngestionStore, ChatService {
     chatIdSchema.parse(dialog.id);
     return this.db.transaction(async (tx) => {
       await this.account(tx);
-      const row = (await tx.query(`INSERT INTO chats(id,kind,title,username,archived,inclusion) VALUES($1,$2,$3,$4,$5,'undecided')
-        ON CONFLICT(id) DO UPDATE SET kind=$2,title=$3,username=$4,archived=$5,updated_at=now() RETURNING *`, [dialog.id, dialog.kind, dialog.title, dialog.username, dialog.archived])).rows[0]!;
+      await tx.query(`INSERT INTO chats(id,kind,title,username,archived,inclusion) VALUES($1,$2,$3,$4,$5,'undecided')
+        ON CONFLICT(id) DO UPDATE SET kind=$2,title=$3,username=$4,archived=$5,updated_at=now()`, [dialog.id, dialog.kind, dialog.title, dialog.username, dialog.archived]);
       await tx.query(`INSERT INTO telegram_conversation_starts(chat_id,latest_message_at) VALUES($1,$2)
         ON CONFLICT(chat_id) DO UPDATE SET latest_message_at=GREATEST(telegram_conversation_starts.latest_message_at,EXCLUDED.latest_message_at)`, [dialog.id,dialog.latestMessageAt??null]);
       await this.initCursor(tx, dialog.id);
-      return toChat(row);
+      if (dialog.migratedToId) await this.linkMigration(tx, dialog.id, dialog.migratedToId, 'dialog');
+      else if (dialog.migratedFromId) await this.linkMigration(tx, dialog.migratedFromId, dialog.id, 'full_chat');
+      else await this.applyMigrations(tx, dialog.id);
+      // Re-read: an upgrade link may have changed this chat's admission or mapping.
+      return toChat((await tx.query('SELECT * FROM chats WHERE id=$1', [dialog.id])).rows[0]!);
     });
   }
+  private async migrationsTable(tx: SqlExecutor): Promise<boolean> {
+    return Boolean((await tx.query("SELECT to_regclass(quote_ident(current_schema())||'.chat_migrations') AS name")).rows[0]?.['name']);
+  }
+  /** Record a basic group -> supergroup upgrade, then apply it. Idempotent; either chat may be seen first. */
+  async linkMigration(tx: SqlExecutor, predecessorId: string, successorId: string, via: 'dialog' | 'full_chat' | 'service_message'): Promise<void> {
+    chatIdSchema.parse(predecessorId); chatIdSchema.parse(successorId);
+    if (predecessorId === successorId || !await this.migrationsTable(tx)) return;
+    await tx.query('INSERT INTO chat_migrations(predecessor_chat_id,successor_chat_id,detected_via) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [predecessorId, successorId, via]);
+    await this.applyMigrations(tx, successorId);
+  }
+  /** The successor inherits the predecessor's mapping and admission decision while it is
+   * still undecided; the predecessor's pending intake is withdrawn. Chats lock in ID order. */
+  private async applyMigrations(tx: SqlExecutor, chatId: string): Promise<void> {
+    if (!await this.migrationsTable(tx)) return;
+    const link = (await tx.query('SELECT predecessor_chat_id::text AS predecessor,successor_chat_id::text AS successor FROM chat_migrations WHERE $1 IN (predecessor_chat_id,successor_chat_id)', [chatId])).rows[0];
+    if (!link) return;
+    const rows = (await tx.query('SELECT * FROM chats WHERE id IN ($1,$2) ORDER BY id FOR UPDATE', [link['predecessor'], link['successor']])).rows.map(toChat);
+    const from = rows.find((c) => c.id === link['predecessor']); let to = rows.find((c) => c.id === link['successor']);
+    if (!from || !to || from.isControl || to.isControl) return;
+    await tx.query("UPDATE chat_intake_requests SET decision='cancelled',decided_at=now() WHERE chat_id=$1 AND decision='pending'", [from.id]);
+    if (to.mappingStatus === 'unresolved' && from.mappingStatus !== 'unresolved')
+      to = await this.applyMapping(tx, to, from.companyId, from.mappingStatus, `Inherited from upgraded Telegram group ${from.id}`, 'telegram', []);
+    if (to.inclusion !== 'undecided' || from.inclusion === 'undecided') return;
+    await tx.query("UPDATE chat_intake_requests SET decision='cancelled',decided_at=now() WHERE chat_id=$1 AND decision='pending'", [to.id]);
+    const approval = from.inclusion === 'included' ? (await tx.query(`SELECT id FROM chats c WHERE c.id=$1 AND ${approvedChatSourceSql('c')}`, [from.id])).rowCount : 0;
+    // Provenance: the predecessor's approval carries over as an audited, non-Telegram decision.
+    if (approval) await tx.query(`INSERT INTO chat_intake_requests(chat_id,policy_version,decision,decision_origin,operator_reason,decided_at)
+      VALUES($1,$2,'approved','operator',$3,now())`, [to.id, to.policyVersion, `Telegram group upgrade: inherited approval of chat ${from.id}`]);
+    await this.changeInclusion(tx, to, from.inclusion);
+  }
   private async initCursor(tx: SqlExecutor, chatId: string): Promise<void> {
-    await tx.query("INSERT INTO history_cursors(chat_id,status) SELECT id,CASE WHEN inclusion='included' AND NOT is_control THEN 'pending' ELSE 'paused' END FROM chats WHERE id=$1 ON CONFLICT DO NOTHING", [chatId]);
-    await tx.query("INSERT INTO live_checkpoints(chat_id,replay_required) SELECT id,(inclusion='included' AND NOT is_control) FROM chats WHERE id=$1 ON CONFLICT DO NOTHING", [chatId]);
-    await tx.query("INSERT INTO telegram_history_requests(chat_id,batch_size,remaining_batches) SELECT id,$2,CASE WHEN inclusion='included' AND NOT is_control THEN $3 ELSE 0 END FROM chats WHERE id=$1 ON CONFLICT DO NOTHING", [chatId, this.config.historyBatchSize, this.config.historyMaxBatches]);
+    await tx.query("INSERT INTO history_cursors(chat_id,status) SELECT id,CASE WHEN inclusion='included' AND NOT is_control THEN 'pending' ELSE 'paused' END FROM chats WHERE id=$1 AND kind<>'email' ON CONFLICT DO NOTHING", [chatId]);
+    await tx.query("INSERT INTO live_checkpoints(chat_id,replay_required) SELECT id,(inclusion='included' AND NOT is_control) FROM chats WHERE id=$1 AND kind<>'email' ON CONFLICT DO NOTHING", [chatId]);
+    await tx.query("INSERT INTO telegram_history_requests(chat_id,batch_size,remaining_batches) SELECT id,$2,CASE WHEN inclusion='included' AND NOT is_control THEN $3 ELSE 0 END FROM chats WHERE id=$1 AND kind<>'email' ON CONFLICT DO NOTHING", [chatId, this.config.historyBatchSize, this.config.historyMaxBatches]);
   }
   async lockedChat(tx: SqlExecutor, chatId: string): Promise<Chat> {
     const row = (await tx.query('SELECT * FROM chats WHERE id=$1 FOR UPDATE', [chatId])).rows[0];
@@ -162,7 +198,7 @@ export class TelegramStore implements IngestionStore, ChatService {
       await tx.query(`UPDATE tickets SET tracking_state=CASE WHEN $2::boolean AND
         ($3::text='confirmed' OR (kind='contact_prospect' AND company_id IS NULL AND $3 IN ('unresolved','ambiguous')))
         THEN 'active' ELSE 'suspended' END,updated_at=now() WHERE chat_id=$1`, [chat.id, inclusion === 'included', chat.mappingStatus]);
-      if (inclusion === 'included') await this.enqueue(tx, toChat(row));
+      if (inclusion === 'included') { await promotePendingEmail(tx, chat.id); await this.enqueue(tx, toChat(row)); } else await dropPendingEmail(tx, chat.id);
       return toChat(row);
   }
 
@@ -178,16 +214,19 @@ export class TelegramStore implements IngestionStore, ChatService {
           WHERE e.id=ANY($1::uuid[]) AND e.chat_id=$2 AND e.invalidated_at IS NULL AND m.deleted_at IS NULL AND m.version=e.message_version`, [input.evidenceIds, chat.id]);
         if (valid.rowCount !== new Set(input.evidenceIds).size) throw new DomainError('conflict', 'Mapping evidence is stale or outside this chat');
       }
-      const row = (await tx.query('UPDATE chats SET company_id=$2,mapping_status=$3,mapping_version=mapping_version+1,updated_at=now() WHERE id=$1 RETURNING *', [chat.id, input.companyId, input.status])).rows[0]!;
-      const history = (await tx.query('INSERT INTO mapping_history(chat_id,company_id,mapping_status,version,reason,source) VALUES($1,$2,$3,$4,$5,$6) RETURNING id', [chat.id, input.companyId, input.status, row['mapping_version'], input.reason, input.source])).rows[0]!;
-      for (const evidenceId of new Set(input.evidenceIds)) await tx.query('INSERT INTO mapping_history_evidence(history_id,evidence_id) VALUES($1,$2)', [history['id'], evidenceId]);
+      return this.applyMapping(tx, chat, input.companyId, input.status, input.reason, input.source, input.evidenceIds);
+    });
+  }
+  private async applyMapping(tx: SqlExecutor, chat: Chat, companyId: string | null, status: Chat['mappingStatus'], reason: string, source: string, evidenceIds: string[]): Promise<Chat> {
+      const row = (await tx.query('UPDATE chats SET company_id=$2,mapping_status=$3,mapping_version=mapping_version+1,updated_at=now() WHERE id=$1 RETURNING *', [chat.id, companyId, status])).rows[0]!;
+      const history = (await tx.query('INSERT INTO mapping_history(chat_id,company_id,mapping_status,version,reason,source) VALUES($1,$2,$3,$4,$5,$6) RETURNING id', [chat.id, companyId, status, row['mapping_version'], reason, source])).rows[0]!;
+      for (const evidenceId of new Set(evidenceIds)) await tx.query('INSERT INTO mapping_history_evidence(history_id,evidence_id) VALUES($1,$2)', [history['id'], evidenceId]);
       await this.invalidateChat(tx, chat.id, 'chat_mapping_changed');
       await tx.query(`UPDATE tickets SET company_id=COALESCE($2::uuid,company_id),kind=CASE WHEN $2::uuid IS NOT NULL THEN 'company' ELSE kind END,
         tracking_state=CASE WHEN $3::boolean AND ($4::text='confirmed' OR (kind='contact_prospect' AND company_id IS NULL AND $4 IN ('unresolved','ambiguous')))
-        THEN 'active' ELSE 'suspended' END,updated_at=now() WHERE chat_id=$1`, [chat.id, input.companyId, chat.inclusion === 'included', input.status]);
+        THEN 'active' ELSE 'suspended' END,updated_at=now() WHERE chat_id=$1`, [chat.id, companyId, chat.inclusion === 'included', status]);
       if (allowed(toChat(row))) await this.enqueue(tx, toChat(row));
       return toChat(row);
-    });
   }
   async mappingCandidates(chatId: string): Promise<CompanyCandidate[]> {
     const rows = (await this.db.query(`SELECT c.*,COALESCE(array_agg(e.evidence_id) FILTER(WHERE e.evidence_id IS NOT NULL),'{}') AS evidence_ids
@@ -268,6 +307,10 @@ export class TelegramStore implements IngestionStore, ChatService {
         }
         return;
       }
+      // Upgrade service messages link the chats before this event is fenced.
+      const link = event.message;
+      if (link.migratedToId) await this.linkMigration(tx, link.chatId, link.migratedToId, 'service_message');
+      else if (link.migratedFromId) await this.linkMigration(tx, link.migratedFromId, link.chatId, 'service_message');
       const chat = await this.lockedChat(tx, event.message.chatId);
       // Operational routing precedes the mandatory business exclusion.
       if (chat.isControl) {

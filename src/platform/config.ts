@@ -18,7 +18,7 @@ async function readEnv(path: string): Promise<Record<string, string> | null> {
 /** File parsing only; never shell-source, mutate process.env, or log credentials. */
 export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Promise<RuntimeConfig> {
   const runtime = env['RUNTIME_ENV_PATH'] ? await readEnv(env['RUNTIME_ENV_PATH']) : null;
-  const aiEnvPath = env['AI_ENV_PATH'] ?? '/Users/jys/Documents/Projects/hello/.local-preview-20261012/ai.env';
+  const aiEnvPath = env['AI_ENV_PATH'] ?? '/run/antseed/ai.env';
   const ai = await readEnv(aiEnvPath);
   const database = env['DATABASE_ENV_PATH'] ? await readEnv(env['DATABASE_ENV_PATH']) : null;
   const access = env['ACCESS_ENV_PATH'] ? await readEnv(env['ACCESS_ENV_PATH']) : null;
@@ -55,12 +55,17 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
   catch { throw new Error('Invalid TIMEZONE'); }
   const config: RuntimeConfig = {
     boardBackend: str('BOARD_BACKEND', 'native') as 'native' | 'vikunja',
+    role: str('APP_ROLE', 'all') as 'all' | 'web',
     access: {
       supabaseUrl: nonblank(values['SUPABASE_URL']),
       publishableKey: nonblank(values['SUPABASE_PUBLISHABLE_KEY']) ?? nonblank(values['SUPABASE_ANON_KEY']),
       adminEmail: nonblank(values['WORKSPACE_ADMIN_EMAIL'])?.toLowerCase() ?? null,
+      // Confirmed addresses on this domain join on first sign-in with the default role (viewer unless set to member).
+      autoDomain: nonblank(values['WORKSPACE_AUTO_DOMAIN'])?.toLowerCase().replace(/^@/, '') ?? null,
+      autoRole: str('WORKSPACE_AUTO_ROLE', 'viewer') as 'viewer' | 'member',
       appUrl: url('APP_URL', `http://localhost:${str('PORT', '3000')}`, ['http:', 'https:']).replace(/\/$/, ''),
       crmApproval: str('CRM_APPROVAL', 'direct') as 'direct' | 'telegram',
+      resendApiKey: nonblank(values['RESEND_API_KEY']), emailFrom: str('MCP_EMAIL_FROM', 'AntSeed <onboarding@resend.dev>'),
     },
     http: { host: str('HOST', '127.0.0.1'), port: int('PORT', 3000, 65535) },
     databaseUrl: url('DATABASE_URL', 'postgresql://antseed:antseed@127.0.0.1:5432/antseed', ['postgres:', 'postgresql:']),
@@ -83,7 +88,11 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     jev: { provider, endpoint, model, apiKey: provider === 'openai' ? nonblank(values['OPENAI_API_KEY']) : nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },
   };
   if (!['native', 'vikunja'].includes(config.boardBackend!)) throw new Error('Invalid BOARD_BACKEND');
+  if (!['all', 'web'].includes(config.role!)) throw new Error('Invalid APP_ROLE');
+  if (config.role === 'web' && config.boardBackend !== 'native') throw new Error('APP_ROLE=web requires the native board');
   if (!['direct', 'telegram'].includes(config.access!.crmApproval)) throw new Error('Invalid CRM_APPROVAL');
+  if (!['viewer', 'member'].includes(config.access!.autoRole!)) throw new Error('WORKSPACE_AUTO_ROLE must be viewer or member');
+  if (config.access!.autoDomain && !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(config.access!.autoDomain)) throw new Error('Invalid WORKSPACE_AUTO_DOMAIN');
   if (config.access!.supabaseUrl) {
     const authUrl = new URL(config.access!.supabaseUrl);
     if (authUrl.protocol !== 'https:' || authUrl.username || authUrl.password || authUrl.pathname !== '/' || authUrl.search || authUrl.hash)

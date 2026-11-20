@@ -1,0 +1,113 @@
+{
+  "errors": [],
+  "checks": [
+    {
+      "requestedWidth": 320,
+      "slide": 6,
+      "width": 320,
+      "viewport": {},
+      "scrollWidth": 320,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 320,
+      "slide": 7,
+      "width": 320,
+      "viewport": {},
+      "scrollWidth": 320,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 320,
+      "slide": 8,
+      "width": 320,
+      "viewport": {},
+      "scrollWidth": 320,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 390,
+      "slide": 6,
+      "width": 390,
+      "viewport": {},
+      "scrollWidth": 390,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 390,
+      "slide": 7,
+      "width": 390,
+      "viewport": {},
+      "scrollWidth": 390,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 390,
+      "slide": 8,
+      "width": 390,
+      "viewport": {},
+      "scrollWidth": 390,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 760,
+      "slide": 6,
+      "width": 760,
+      "viewport": {},
+      "scrollWidth": 760,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 760,
+      "slide": 7,
+      "width": 760,
+      "viewport": {},
+      "scrollWidth": 760,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 760,
+      "slide": 8,
+      "width": 760,
+      "viewport": {},
+      "scrollWidth": 760,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 1280,
+      "slide": 6,
+      "width": 1280,
+      "viewport": {},
+      "scrollWidth": 1280,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 1280,
+      "slide": 7,
+      "width": 1280,
+      "viewport": {},
+      "scrollWidth": 1280,
+      "outside": [],
+      "missing": 0
+    },
+    {
+      "requestedWidth": 1280,
+      "slide": 8,
+      "width": 1280,
+      "viewport": {},
+      "scrollWidth": 1280,
+      "outside": [],
+      "missing": 0
+    }
+  ]
+}

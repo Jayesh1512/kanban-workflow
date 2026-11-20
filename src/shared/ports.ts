@@ -8,6 +8,7 @@ import type {
 } from './domain.js';
 import type { CorrectMappingInput, DecideProposalInput, ProposeLaneInput, SetInclusionInput, UpdateActionsInput, UpdateFactInput } from './schemas.js';
 import type { OutreachService } from './outreach-domain.js';
+import type { EmailService } from '../email/ingest.js';
 
 export interface Clock { now(): Date }
 export interface SqlExecutor {
@@ -22,7 +23,9 @@ export interface Database extends SqlExecutor {
 }
 export interface RuntimeConfig {
   boardBackend?: 'native' | 'vikunja';
-  access?: { supabaseUrl: string | null; publishableKey: string | null; adminEmail: string | null; appUrl: string; crmApproval: 'direct' | 'telegram' };
+  /** `web` serves the workspace HTTP surface only: no migrations, Telegram, workers or control consumers. */
+  role?: 'all' | 'web';
+  access?: { supabaseUrl: string | null; publishableKey: string | null; adminEmail: string | null; autoDomain?: string | null; autoRole?: 'viewer' | 'member'; appUrl: string; crmApproval: 'direct' | 'telegram'; resendApiKey?: string | null; emailFrom?: string };
   http: { host: string; port: number };
   databaseUrl: string;
   timezone: string;
@@ -61,8 +64,10 @@ export type TelegramLoginState =
   | { state: 'password_required'; hint: string | null }
   | { state: 'error'; code: string; detail: string; retryAt: ISODateTime | null };
 export type TelegramLoginInput = { step: 'phone'; phone: string } | { step: 'code'; code: string } | { step: 'password'; password: string };
-export interface TelegramDialog { id: TelegramChatId; kind: Chat['kind']; title: string; username: string | null; archived: boolean; latestMessageAt?: ISODateTime | null }
-export type TelegramMessageInput = Omit<Message, 'version' | 'deletedAt'>;
+/** Basic group -> supergroup upgrade links, as marked chat IDs. Present only when Telegram exposed them. */
+export interface TelegramChatMigration { migratedToId?: TelegramChatId; migratedFromId?: TelegramChatId }
+export interface TelegramDialog extends TelegramChatMigration { id: TelegramChatId; kind: Chat['kind']; title: string; username: string | null; archived: boolean; latestMessageAt?: ISODateTime | null }
+export type TelegramMessageInput = Omit<Message, 'version' | 'deletedAt'> & TelegramChatMigration;
 export type TelegramEvent =
   | { type: 'message' | 'edit'; message: TelegramMessageInput }
   | { type: 'delete'; chatId: TelegramChatId | null; messageIds: TelegramMessageId[]; observedAt: ISODateTime }
@@ -212,7 +217,7 @@ export interface MutationStore {
   confirmRemote(id: UUID, actualBucketId: RemoteId): Promise<Mutation>;
   commit(id: UUID): Promise<Proposal>; // atomic ticket/version+proposal+mutation; idempotent
 }
-export interface DomainServices { chats: ChatService; records: RecordsService; proposals: ProposalService; analysis: AnalysisQueue; outreach: OutreachService }
+export interface DomainServices { chats: ChatService; records: RecordsService; proposals: ProposalService; analysis: AnalysisQueue; outreach: OutreachService; email: EmailService }
 export interface IdempotencyStore {
   run<T extends Json>(scope: string, key: string, request: Json, work: (tx: SqlExecutor) => Promise<T>): Promise<T>;
 }

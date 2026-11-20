@@ -1,0 +1,6 @@
+These are the brand fonts used by the editable Antseed Creators Pitch.
+They are already installed on the Mac where this deck was created.
+On another computer, install the TTF files before opening the PowerPoint.
+The PDF preserves the intended appearance without installing fonts.
+Fonts are licensed under the included SIL Open Font License files.
+Geist Pixel Grid and Round are static instances of the brand kit font at ELSH 40 and 20.

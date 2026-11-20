@@ -1,0 +1,50 @@
+[
+  {
+    "file": "Geist-Regular.ttf",
+    "weight": 400,
+    "family": "Geist",
+    "sha256": "1c3b0f7c0435e28fed76c81423067fae713d0635bfda033110ca608ab844ae40",
+    "axis": "static"
+  },
+  {
+    "file": "Geist-Medium.ttf",
+    "weight": 500,
+    "family": "Geist",
+    "sha256": "1b0a94c04f5df35f6ef949419b6d4e2de3e6f6befec6cd8dc3871c12f97af343",
+    "axis": "static"
+  },
+  {
+    "file": "GeistMono-Regular.ttf",
+    "weight": 400,
+    "family": "Geist Mono",
+    "sha256": "46ab607d5ea688077444302bf04b3917c96b55a3c5da70fba41948bd9f73709c",
+    "axis": "static"
+  },
+  {
+    "file": "AntseedGeistPixelGrid-Regular.ttf",
+    "weight": 400,
+    "family": "Antseed Geist Pixel Grid",
+    "sha256": "cb6787dd8e7a1460fd6fe2336f4d1d6d8c48359e3bb696e40a509e032dc1f901",
+    "axis": "static"
+  },
+  {
+    "file": "AntseedGeistPixelRound-Regular.ttf",
+    "weight": 400,
+    "family": "Antseed Geist Pixel Round",
+    "sha256": "dde643e0a7125013162f06d21aac254a3d39975e8924ec14871aece3977c49f0",
+    "axis": "static"
+  },
+  {
+    "file": "GeistPixel-VariableFont_ELSH.ttf",
+    "weight": 400,
+    "family": "Geist Pixel",
+    "sha256": "61dc924de79b30f29fc1e3be84f47b9a8e2efcefe8d1cb839de4ef6624e77650",
+    "axis": [
+      [
+        "ELSH",
+        0.0,
+        100.0
+      ]
+    ]
+  }
+]

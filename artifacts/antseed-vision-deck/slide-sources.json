@@ -1,0 +1,340 @@
+{
+  "1": [
+    {
+      "id": "FM-003",
+      "title": "What BitTorrent did for files, we want to do for AI inference.",
+      "url": "https://x.com/AmosMeiri/status/2107459165207593046",
+      "date": "2026-10-06",
+      "kind": "founder-posted launch/explainer video",
+      "note": "Amos’s launch statement establishes the BitTorrent analogy, provider competition and buyer control. Primary strategic source."
+    },
+    {
+      "id": "FM-005",
+      "title": "Why we’re building Antseed as a network",
+      "url": "https://x.com/AmosMeiri/status/2115130422694723878",
+      "date": "2026-10-27",
+      "kind": "founder-authored X article",
+      "note": "Founder-authored explanation of a shared network, direct connections, portability and scrutiny of adoption claims."
+    }
+  ],
+  "2": [
+    {
+      "id": "FM-002",
+      "title": "BASECAST/004: BUILDING A DECENTRALIZED AI INFERENCE NETWORK",
+      "url": "https://x.com/BasedIndia/status/2104881372783677841",
+      "date": "2026-09-29",
+      "kind": "video interview",
+      "note": "The catalog verifies Amos’s BASECAST interview. Full speech was not independently audited; detailed claims on this slide are supported by the founder articles."
+    },
+    {
+      "id": "FM-003",
+      "title": "What BitTorrent did for files, we want to do for AI inference.",
+      "url": "https://x.com/AmosMeiri/status/2107459165207593046",
+      "date": "2026-10-06",
+      "kind": "founder-posted launch/explainer video",
+      "note": "Founder’s public launch thread explains buyer choice, local routing and provider participation."
+    },
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "The founder article discusses dependence on platform permission, commercial terms and provider selection. Privacy depends on the chosen providers and route."
+    }
+  ],
+  "3": [
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "Founder’s architecture explanation: discovery, provider choice and pay-per-use settlement."
+    },
+    {
+      "id": "FM-005",
+      "title": "Why we’re building Antseed as a network",
+      "url": "https://x.com/AmosMeiri/status/2115130422694723878",
+      "date": "2026-10-27",
+      "kind": "founder-authored X article",
+      "note": "Explains routes that can be shared across different providers, gateways and applications."
+    },
+    {
+      "title": "AI Infrastructure Is BitTorrent, Not Spotify",
+      "url": "https://antseed.com/blog/ai-infrastructure-bittorrent-not-spotify/",
+      "kind": "Antseed Team blog",
+      "note": "Supports the agent and payments points: agents cannot renew subscriptions or pass CAPTCHAs, and Antseed settles payments in USDC directly between agent and provider."
+    },
+    {
+      "title": "Payments and metering",
+      "url": "https://antseed.com/docs/payments/",
+      "kind": "Supporting product documentation",
+      "note": "Current documentation describes deposits, buyer-signed cumulative payment authorizations and seller settlement on Base."
+    }
+  ],
+  "4": [
+    {
+      "title": "The Antseed Foundation Has Raised $2.4M. Here's How to Participate and Earn.",
+      "url": "https://antseed.com/blog/antseed-foundation-raises-2-4m/",
+      "date": "2026-10-06",
+      "kind": "Antseed Team blog",
+      "note": "Primary source for the round: $2.4M token round led by Spark Capital, with Collider, DCG, North Island Ventures, Reciprocal Ventures, Relayer Capital and Venice.ai."
+    },
+    {
+      "id": "FM-003",
+      "title": "What BitTorrent did for files, we want to do for AI inference.",
+      "url": "https://x.com/AmosMeiri/status/2107459165207593046",
+      "date": "2026-10-06",
+      "kind": "founder-posted launch/explainer video",
+      "note": "Amos Meiri’s launch post on X, linked from the announcement. Explains the vision behind the raise."
+    },
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "The founder article explicitly describes Mainline DHT discovery, direct connections, provider pricing, USDC settlement on Base and a self-run compatible gateway."
+    },
+    {
+      "id": "FM-005",
+      "title": "Why we’re building Antseed as a network",
+      "url": "https://x.com/AmosMeiri/status/2115130422694723878",
+      "date": "2026-10-27",
+      "kind": "founder-authored X article",
+      "note": "Explains why adding onchain payments alone does not make a centralized proxy a peer-to-peer network."
+    },
+    {
+      "title": "Payments and metering",
+      "url": "https://antseed.com/docs/payments/",
+      "kind": "Supporting product documentation",
+      "note": "Current documentation describes deposits, buyer-signed cumulative payment authorizations and seller settlement on Base."
+    },
+    {
+      "title": "Antseed homepage announcement",
+      "url": "https://antseed.com/blog/antseed-foundation-raises-2-4m/",
+      "kind": "Antseed homepage",
+      "note": "The homepage announcement reads “We raised $2.4M, led by Spark Capital”. A company announcement, not an audited financial record."
+    }
+  ],
+  "5": [
+    {
+      "title": "Funding and the authorized wallet",
+      "url": "https://antseed.com/docs/gateway/funding/",
+      "kind": "Supporting product documentation",
+      "note": "Source for the ways to pay: card (Crossmint, with Apple Pay and Google Pay), US card via Outerfound, USDC on Base, and USDC from other chains via Meridian. Per-payment limits and regional availability are listed there."
+    },
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "Founder’s architecture explanation: discovery, provider choice and pay-per-use settlement."
+    },
+    {
+      "title": "Discovery",
+      "url": "https://antseed.com/docs/discovery/",
+      "kind": "Supporting product documentation",
+      "note": "Provider announcements and Mainline DHT discovery."
+    },
+    {
+      "title": "Payments and metering",
+      "url": "https://antseed.com/docs/payments/",
+      "kind": "Supporting product documentation",
+      "note": "A cumulative SpendingAuth can cover multiple requests. Sellers periodically settle; not every request or token requires an onchain transaction."
+    },
+    {
+      "title": "Reputation",
+      "url": "https://antseed.com/docs/reputation/",
+      "kind": "Supporting product documentation",
+      "note": "Buyer-computed routing scores use public protocol inputs and policy outcomes."
+    },
+    {
+      "title": "The gateway",
+      "url": "https://antseed.com/docs/gateway/",
+      "kind": "Supporting product documentation",
+      "note": "Gateway keys, budgets and routing policies; people sign in to the console on your own gateway."
+    }
+  ],
+  "6": [
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "The founder explicitly credits OpenRouter’s accessible interface and contrasts platform-selected providers with permissionless market entry. This is an architectural comparison, not a benchmark."
+    },
+    {
+      "id": "FM-005",
+      "title": "Why we’re building Antseed as a network",
+      "url": "https://x.com/AmosMeiri/status/2115130422694723878",
+      "date": "2026-10-27",
+      "kind": "founder-authored X article",
+      "note": "Explains routes that can be shared across different providers, gateways and applications."
+    },
+    {
+      "id": "FM-028",
+      "title": "Antseed pi extension: /model across the network",
+      "url": "https://x.com/kotevcode/status/2053545021345771897",
+      "date": "2026-05-10",
+      "kind": "authored illustrated technical post",
+      "note": "Shahaf’s authored pi integration post describes peer metadata, reputation-sorted service routes and a pinned provider per request. Supporting integration evidence, not an installation tutorial."
+    },
+    {
+      "title": "Antseed vs OpenRouter",
+      "url": "https://antseed.com/vs/openrouter/",
+      "kind": "Supporting product documentation",
+      "note": "Official product comparison. Used for operating-model specifics, not as the source of the founder narrative."
+    }
+  ],
+  "7": [
+    {
+      "title": "Model verification: the fingerprint swarm",
+      "url": "https://antseed.com/blog/model-verification-fingerprint-swarm",
+      "kind": "Antseed Team blog",
+      "note": "Describes signed response authentication: the seller signs what it served and cannot later deny serving those exact bytes."
+    },
+    {
+      "title": "The Antseed Verification Layer is Live",
+      "url": "https://antseed.com/blog/antseed-verification-layer",
+      "kind": "Antseed Team blog",
+      "note": "Independent auditors check the model itself. Results count for one to two weeks and providers are checked again every week."
+    },
+    {
+      "title": "Reputation",
+      "url": "https://antseed.com/docs/reputation",
+      "kind": "Supporting product documentation",
+      "note": "Each buyer computes a 0–100 trust score per seller from public records and stake. There is no central reputation authority."
+    },
+    {
+      "title": "Model verification",
+      "url": "https://antseed.com/docs/model-verification/",
+      "kind": "Supporting product documentation",
+      "note": "KBF is statistical evidence. SAME means no evidence of substitution, not proof of identity for every response."
+    }
+  ],
+  "8": [
+    {
+      "title": "Claude Code Pricing: When $20 Stops Being Cheap",
+      "url": "https://antseed.com/blog/claude-code-pricing-breakeven/",
+      "kind": "Antseed Team blog",
+      "note": "Explains subscription usage limits and when pay-per-use market pricing makes sense. The post also says a $20 subscription is the better choice for light, cache-heavy use."
+    },
+    {
+      "title": "Integrations",
+      "url": "https://antseed.com/integrations/",
+      "kind": "Supporting product documentation",
+      "note": "Lists agents and tools that can point at an Antseed gateway, including Claude Code, Codex, OpenCode, Hermes and OpenClaw."
+    }
+  ],
+  "9": [
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "Founder description of provider competition and per-use USDC pricing."
+    },
+    {
+      "id": "FM-005",
+      "title": "Why we’re building Antseed as a network",
+      "url": "https://x.com/AmosMeiri/status/2115130422694723878",
+      "date": "2026-10-27",
+      "kind": "founder-authored X article",
+      "note": "Founder explanation of $ANTS staking, qualifying usage, USDC provider payments and portable public evidence."
+    },
+    {
+      "id": "FM-013",
+      "title": "AIP-2: Recognized Usage Trust",
+      "url": "https://aips.antseed.com/aip-2",
+      "date": "2026-07-08",
+      "kind": "authored technical proposal",
+      "note": "Published recognized-usage standard for seller pools, policy shaping and capped emissions."
+    },
+    {
+      "title": "Tokenomics: The Trust Layer for Antseed",
+      "url": "https://antseed.com/blog/seller-pools-reputation-tokenomics/",
+      "kind": "Supporting product documentation",
+      "note": "Antseed Team product supplement. Separates emission burns from fee-driven market buy-and-burn, whose final rates and activation depend on contracts and governance. No unconditional burn percentage or investment return is claimed."
+    },
+    {
+      "title": "Introducing ANTS Staking",
+      "url": "https://antseed.com/blog/ants-staking/",
+      "kind": "Supporting product documentation",
+      "note": "Official staking mechanics and variable reward context. Stake does not guarantee service quality or fixed returns."
+    }
+  ],
+  "10": [
+    {
+      "title": "AntSeedStats",
+      "url": "https://antseedstats.com/",
+      "kind": "Third-party on-chain analytics (CC BY 4.0)",
+      "date": "2026-11",
+      "note": "Figures on this slide are as supplied by the Antseed team from antseedstats.com, retrieved November 2026: gross volume settled, active participants, models on sale, sellers settling, tokens consumed, median saving and service health. They change continuously, so re-check before quoting. The source labels the 82 as DIEM stakers."
+    },
+    {
+      "title": "Network summary API",
+      "url": "https://antseedstats.com/api/v1/network/summary",
+      "kind": "Third-party on-chain analytics (CC BY 4.0)",
+      "date": "2026-11",
+      "note": "Lifetime settled USDC, buyers and sellers with on-chain settlement, and token counts."
+    },
+    {
+      "title": "Antseed ecosystem",
+      "url": "https://antseed.com/ecosystem/",
+      "kind": "Antseed ecosystem directory",
+      "note": "Lists AntSeedStats as the metrics and intelligence layer of the Antseed ecosystem."
+    }
+  ],
+  "11": [
+    {
+      "title": "Quickstart",
+      "url": "https://antseed.com/docs/quickstart/",
+      "kind": "Supporting product documentation",
+      "note": "Buyer setup. Documentation says requests are paid from your own balance, funded by card or with USDC on Base."
+    },
+    {
+      "title": "Integrations",
+      "url": "https://antseed.com/integrations/",
+      "kind": "Supporting product documentation",
+      "note": "Claude Code, Codex, OpenCode, Hermes, LangChain, Vercel AI SDK and other tools that can point at an Antseed gateway."
+    },
+    {
+      "title": "Provide on Antseed",
+      "url": "https://antseed.com/docs/provide/",
+      "kind": "Supporting product documentation",
+      "note": "Provider setup: listing a model or service, setting prices and earning USDC."
+    },
+    {
+      "title": "Provider API",
+      "url": "https://antseed.com/docs/provider-api/",
+      "kind": "Supporting product documentation",
+      "note": "Provider API reference."
+    },
+    {
+      "title": "Antseed",
+      "url": "https://antseed.com/",
+      "kind": "Antseed homepage",
+      "note": "States access to 700+ AI models. The count changes as providers join and leave."
+    },
+    {
+      "title": "The Antseed Foundation Has Raised $2.4M. Here's How to Participate and Earn.",
+      "url": "https://antseed.com/blog/antseed-foundation-raises-2-4m/",
+      "date": "2026-10-06",
+      "kind": "Antseed Team blog",
+      "note": "Source of the closing idea: choose which models your agents use, who serves them, and what you pay."
+    },
+    {
+      "id": "FM-004",
+      "title": "The freedom to build: Antseed’s vision",
+      "url": "https://x.com/AmosMeiri/status/2107829515002998914",
+      "date": "2026-10-07",
+      "kind": "founder-authored X article",
+      "note": "Founder’s gateway and tools vision; individual API keys and spending limits."
+    }
+  ]
+}

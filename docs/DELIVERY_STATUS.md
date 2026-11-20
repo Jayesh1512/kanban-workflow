@@ -4,7 +4,7 @@ This is the project-manager checkout. The user explicitly authorized architectur
 
 ## Team
 
-- Project manager: `675d7f86-acfd-4669-b9af-91caf5a8ee02`, main checkout `/Users/jys/.t3/projects/kanban`, branch `main`.
+- Project manager: `675d7f86-acfd-4669-b9af-91caf5a8ee02`, main checkout `/home/dev/.t3/projects/kanban`, branch `main`.
 - Architecture Builder: `mcp:c651aaa3-8edd-4561-8b4b-2cb7e1aebef3`, branch `antseed/architecture`.
 - Builder A — Platform & Telegram: `mcp:b09bccca-9a2a-45ad-8ac4-b2539566c557`, branch `antseed/builder-platform`.
 - Builder B — Intelligence & Hermes: `mcp:b8112e15-d80a-4a32-97bb-c3e32184de07`, branch `antseed/builder-intelligence`.
@@ -48,7 +48,7 @@ These are ordinary top-level T3 chats requested by the user, not delegate_task c
 - M4: independent code/local and actual installed-Hermes proposal-only PASS, QA report/tests integrated5d2603d. Both lifecycle and HTTP checksum-readiness P1s closed. No unresolved release-critical M4 finding in bounded scope. Live Telegram and successful Jev remain separate.
 - M5: fresh canonical deployment independently PASS, report/tests integrated84ec0c9. PM actual demo application/readback verified;169s narrated1080p/30fps export and captions independently reviewed PASS. Local implementation/deployment/demo delivered. Live authenticated Telegram and successful Jev remain outstanding.
 - Final demo video: recorded actual board/status/task/evidence/priorities and approved backend movement after local acceptance, with persistent synthetic-input labels and separately labelled recorded installed-Hermes evidence. Export artifacts/demo/antseed-kanban-demo.mp4, captions/SRT, evidence manifest and independent QA_REVIEW.md. Generated MP4/intermediates are ignored by Git and remain available in this workspace.
-- Existing Hermes terminal access explicitly authorized by user. `/Users/jys/.local/bin/hermes`, v0.21.3/upstream6cd25026; owner actual MCP discovery and context/list calls succeeded using an isolated profile, now cleaned. Default profile unchanged; independent/final pending-proposal check remains.
+- Existing Hermes terminal access explicitly authorized by user. `/home/dev/.local/bin/hermes`, v0.21.3/upstream6cd25026; owner actual MCP discovery and context/list calls succeeded using an isolated profile, now cleaned. Default profile unchanged; independent/final pending-proposal check remains.
 
 ## M0 review disposition
 
@@ -123,7 +123,7 @@ M3.1 standalone repairs integrated: source identity/precision `d2d4269` as `e0fb
 
 Independent QA: previous source safety negatives and legitimate external positives now green; actual SQL lock and transient40001 regressions plus prior twelve actual PostgreSQL cases and actual Vikunja304 pass (62 checks). Expansion found valid rel030/032 Hindi/Hinglish times rejected, prompting multilingual follow-up above; unchanged QA rows must rerun on final candidate. Final M3.1 report/commit still pending; fixes are not closed solely by owner/PM tests. QA then proceeds committed M2 slice rather than waiting idle. Architect M2 review finished, no additional implementation owner changes.
 
-Telegram reference supplied configuration-only source paths in `/Users/jys/Documents/Projects/hello/kanban/src/connectors/telegram/application-profile.ts` and `mtcute-client.ts` for published `tdl` application profile with fresh onboarding. A assigned minimal config-only follow-up after priority repairs, preserving custom API overrides and this app's own session volume. No old sealed session/database/keys/history exported, no original app permission/ownership/reconfirmation gates copied. Source consultation is separate from user login/account setup and live acceptance.
+Telegram reference supplied configuration-only source paths in `/home/dev/Documents/Projects/hello/kanban/src/connectors/telegram/application-profile.ts` and `mtcute-client.ts` for published `tdl` application profile with fresh onboarding. A assigned minimal config-only follow-up after priority repairs, preserving custom API overrides and this app's own session volume. No old sealed session/database/keys/history exported, no original app permission/ownership/reconfirmation gates copied. Source consultation is separate from user login/account setup and live acceptance.
 
 ## Independent M3.1 repair verification / M2 recovery candidate
 

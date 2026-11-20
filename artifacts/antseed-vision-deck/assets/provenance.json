@@ -1,0 +1,22 @@
+{
+  "origin": "Existing Antseed vision deck assets reused without pixel changes",
+  "update_date": "2026-11-15",
+  "new_generated_images": false,
+  "original_brand_reference": "https://antseed-home.vercel.app/brand/#blocks",
+  "illustrations_added": {
+    "source": "https://antseed-home.vercel.app/brand/assets.json (records with status live), files reused unchanged",
+    "paintings": [
+      "v04 (sea shore)",
+      "v02 (tall grass and clover)",
+      "v05 (ferns and broad leaves)",
+      "v01 (wheat), v07 (hills), v09 (pond), v10 (golden field): header vignettes",
+      "v11 (calm horizon band, status spare): header vignette"
+    ],
+    "mascot": [
+      "you (day + night files)",
+      "incognito (day file, night via --filter-character)",
+      "token-ant (day file, night via --filter-character)"
+    ],
+    "note": "No image was generated or edited. Existing hero, v03, v08, v10 and v01 files are unchanged."
+  }
+}

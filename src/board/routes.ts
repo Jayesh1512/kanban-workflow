@@ -13,6 +13,7 @@ import { workspacePage, loginPage } from './page.js';
 import { approvedChatSourceSql } from '../shared/source-approval.js';
 import { registerTicketDetails } from './ticket-details.js';
 import { workTitle } from './headline.js';
+import { registerRecordEdits } from './record-edits.js';
 
 declare module 'fastify' { interface FastifyInstance { workspaceAccess: AccessControl } }
 
@@ -28,6 +29,7 @@ export function registerBoard(app: FastifyInstance, db: Database, outreach: Outr
   registerTicketDetails(app,db,outreach,ready);
   registerApprovals(app,db,outreach,ready,approvals);
   registerDirectory(app,db,ready);
+  registerRecordEdits(app,db,ready,approvals.intake);
   app.get('/login',async (_request,reply)=>reply.type('text/html; charset=utf-8').send(loginPage));
   app.get('/work',async (request,reply)=>access.myTasks(access.user(request))?reply.type('text/html; charset=utf-8').send(workspacePage):reply.redirect('/dashboard'));
   for (const path of ['/dashboard','/team','/approvals']) app.get(path,async (_request,reply)=>reply.type('text/html; charset=utf-8').send(workspacePage));
@@ -36,18 +38,18 @@ export function registerBoard(app: FastifyInstance, db: Database, outreach: Outr
     const input=z.strictObject({scope:z.enum(['mine','team']).default('mine'),limit:z.coerce.number().int().min(1).max(200).default(100),cursor:z.uuid().optional()}).parse(request.query);
     if(input.scope==='mine'&&!access.myTasks(member))throw new DomainError('forbidden','My tasks is not available for this account');
     const rows=(await db.query(`WITH tasks AS (
-      SELECT ${taskSelect},'personal'::text AS kind,NULL::text AS company,NULL::text AS next_action,NULL::text AS headline FROM personal_tasks t JOIN workspace_members m ON m.id=t.owner_id
+      SELECT ${taskSelect},'personal'::text AS kind,NULL::text AS company,NULL::text AS next_action,NULL::text AS headline,NULL::text AS actions_source,NULL::int AS actions_version,NULL::text AS workstream FROM personal_tasks t JOIN workspace_members m ON m.id=t.owner_id
       UNION ALL
       SELECT t.id,t.owner_id,t.next_action AS title,
         t.summary AS description,t.lane,(LEAST(t.eta_at,t.follow_up_at) AT TIME ZONE $4)::date::text AS due_date,
         t.stage_version AS version,t.created_at,t.updated_at,
         coalesce(nullif(m.display_name,''),split_part(m.email,'@',1),'Unassigned') AS owner_name,'work'::text AS kind,
-        coalesce(co.canonical_name,c.title) AS company,t.next_action,t.headline
+        coalesce(co.canonical_name,c.title) AS company,t.next_action,t.headline,t.actions_source,t.actions_version,coalesce(co.workstream,t.workstream) AS workstream
       FROM tickets t JOIN chats c ON c.id=t.chat_id LEFT JOIN companies co ON co.id=t.company_id
       LEFT JOIN workspace_members m ON m.id=t.owner_id WHERE ${visibleWorkSql}
     ) SELECT * FROM tasks WHERE ($1::uuid IS NULL OR owner_id=$1) AND ($2::uuid IS NULL OR id>$2)
       ORDER BY id LIMIT $3`,[input.scope==='mine'?member.id:null,input.cursor??null,input.limit+1,timezone])).rows;
-    const items=rows.slice(0,input.limit).map(({next_action,headline,...row})=>row.kind==='work'?{...row,title:workTitle(next_action as string|null,headline as string|null),description:''}:row);
+    const items=rows.slice(0,input.limit).map(({next_action,headline,actions_source,...row})=>row.kind==='work'?{...row,title:workTitle(next_action as string|null,headline as string|null,actions_source==='manual'),description:''}:row);
     return {items,nextCursor:rows.length>input.limit?String(rows[input.limit-1]!.id):null};
   });
   app.post('/api/board/tasks',async request => {

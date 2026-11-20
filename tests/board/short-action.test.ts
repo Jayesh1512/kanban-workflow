@@ -12,6 +12,8 @@ it('uses the stored headline when there is no clear action, and a neutral prompt
   expect(workTitle('Ravi requested feedback on their integration experience; no feedback is supplied.', 'Wary of switching AI spend')).toBe('Wary of switching AI spend');
   expect(workTitle('Ravi said he would pay from his own wallet for now.', 'Onboarding transfer')).toBe('Pay from own wallet');
   expect(workTitle(null, null)).toBe('Review conversation');
+  expect(workTitle('Ravi said he would pay from his own wallet for now.', 'Onboarding transfer', true)).toBe('Onboarding transfer');
+  expect(workTitle('Ravi said he would pay from his own wallet for now.', '  ', true)).toBe('Pay from own wallet');
 });
 
 it('does not treat a request Ravi made of someone else as Ravi’s own task', async () => {

@@ -38,6 +38,11 @@ export interface OutreachRelationship {
     latestSourceAt: string | null;
     reconciledAt: string | null;
     sourceState: 'current' | 'changed';
+    /** Earliest open AntSeed follow-up as YYYY-MM-DD, when one is dated. */
+    followUpDate?: string | null;
+    createdAt?: string | null;
+    /** Pending AI (non-manual) proposals awaiting approval. */
+    pendingSuggestionCount?: number;
     /** A person created this card without an imported source. */
     creationOrigin?: 'pipeline' | 'manual';
     /** The operator's own words for why the card exists. Only on manual cards. */
@@ -66,6 +71,10 @@ export interface OutreachSource {
     eligible: boolean;
     sourceRevision: string;
     latestSourceAt: string | null;
+    /** Opens this conversation in the Telegram app; null for email threads and reports. */
+    telegramUrl?: string | null;
+    /** Kind of the backing chat ('email' for a mail thread); the source kind stays 'telegram' for any chat-backed source. */
+    chatKind?: string | null;
 }
 export interface OutreachSourceContext extends OutreachSource {
     reportSummary?: string;
