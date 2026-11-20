@@ -69,7 +69,14 @@ describe('runtime configuration and M1 status', () => {
   it.each([
     { JEV_ENDPOINT: 'https://direct.example/v1/systemone' }, { PORT: '3000oops' },
     { OPENAI_TIMEOUT_MS: '-1' }, { TELEGRAM_HISTORY_BATCH_SIZE: '101' }, { TIMEZONE: 'Mars/Unknown' },
+    { REPLY_AGENT_INTERVAL_MS: 'soon' }, { REPLY_AGENT_DIGEST_CHAT: 'saved messages' }, { REPLY_AGENT_OWNER_NAMES: ',' },
   ])('rejects invalid configuration without exposing its value: %j', async (input) => {
     await expect(loadRuntimeConfig({ BOARD_BACKEND: 'vikunja', AI_ENV_PATH: '/missing', ...input })).rejects.toThrow();
+  });
+  it('defaults the reply agent to an hourly Saved Messages digest and accepts overrides', async () => {
+    const defaults = await loadRuntimeConfig({ BOARD_BACKEND: 'vikunja', AI_ENV_PATH: '/missing' });
+    expect(defaults.reply).toEqual({ enabled: true, intervalMs: 3_600_000, maxChats: 25, contextMessages: 15, windowMinutes: 60, ownerNames: ['Ravi', 'Ravikant'], digestChatId: 'self' });
+    const custom = await loadRuntimeConfig({ BOARD_BACKEND: 'vikunja', AI_ENV_PATH: '/missing', REPLY_AGENT_ENABLED: 'off', REPLY_AGENT_INTERVAL_MS: '900000', REPLY_AGENT_MAX_CHATS: '5', REPLY_AGENT_CONTEXT_MESSAGES: '30', REPLY_AGENT_WINDOW_MINUTES: '120', REPLY_AGENT_OWNER_NAMES: ' Ravi , Ravikant , ' , REPLY_AGENT_DIGEST_CHAT: '-1001234567890' });
+    expect(custom.reply).toEqual({ enabled: false, intervalMs: 900_000, maxChats: 5, contextMessages: 30, windowMinutes: 120, ownerNames: ['Ravi', 'Ravikant'], digestChatId: '-1001234567890' });
   });
 });

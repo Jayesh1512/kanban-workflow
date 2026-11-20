@@ -35,6 +35,13 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     if (!Number.isSafeInteger(n) || n < 1 || n > max) throw new Error(`Invalid ${key}: expected a positive integer`);
     return n;
   };
+  const bool = (key: string, fallback: boolean) => {
+    const raw = nonblank(values[key])?.toLowerCase();
+    if (raw == null) return fallback;
+    if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
+    if (['0', 'false', 'no', 'off'].includes(raw)) return false;
+    throw new Error(`Invalid ${key}: expected true or false`);
+  };
   const url = (key: string, fallback: string, protocols: string[]) => {
     const raw = str(key, fallback);
     try { const u = new URL(raw); if (!protocols.includes(u.protocol)) throw new Error(); }
@@ -86,11 +93,23 @@ export async function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env): P
     },
     extraction: { provider: 'openai', model: str('OPENAI_MODEL', 'gpt-6.1-sol'), apiKey: nonblank(values['OPENAI_API_KEY']), timeoutMs: int('OPENAI_TIMEOUT_MS', 30_000), maxAttempts: int('OPENAI_MAX_ATTEMPTS', 2, 10), maxOutputTokens: int('OPENAI_MAX_OUTPUT_TOKENS', 4096, 100_000) },
     jev: { provider, endpoint, model, apiKey: provider === 'openai' ? nonblank(values['OPENAI_API_KEY']) : nonblank(values['JEV_API_KEY']) ?? nonblank(values['AI_GATEWAY_API_KEY']), timeoutMs: int('JEV_TIMEOUT_MS', 10_000), maxAttempts: int('JEV_MAX_ATTEMPTS', 1, 10) },
+    reply: {
+      enabled: bool('REPLY_AGENT_ENABLED', true),
+      intervalMs: int('REPLY_AGENT_INTERVAL_MS', 3_600_000, 86_400_000),
+      maxChats: int('REPLY_AGENT_MAX_CHATS', 25, 200),
+      contextMessages: int('REPLY_AGENT_CONTEXT_MESSAGES', 15, 100),
+      windowMinutes: int('REPLY_AGENT_WINDOW_MINUTES', 60, 1_440),
+      ownerNames: str('REPLY_AGENT_OWNER_NAMES', 'Ravi,Ravikant').split(',').map((name) => name.trim()).filter(Boolean),
+      digestChatId: str('REPLY_AGENT_DIGEST_CHAT', 'self'),
+    },
   };
   if (!['native', 'vikunja'].includes(config.boardBackend!)) throw new Error('Invalid BOARD_BACKEND');
   if (!['all', 'web'].includes(config.role!)) throw new Error('Invalid APP_ROLE');
   if (config.role === 'web' && config.boardBackend !== 'native') throw new Error('APP_ROLE=web requires the native board');
   if (!['direct', 'telegram'].includes(config.access!.crmApproval)) throw new Error('Invalid CRM_APPROVAL');
+  if (!config.reply!.ownerNames.length) throw new Error('REPLY_AGENT_OWNER_NAMES must list at least one name');
+  if (!['self', 'off'].includes(config.reply!.digestChatId) && !/^-?[1-9]\d*$/.test(config.reply!.digestChatId))
+    throw new Error('REPLY_AGENT_DIGEST_CHAT must be self, off or a Telegram chat ID');
   if (!['viewer', 'member'].includes(config.access!.autoRole!)) throw new Error('WORKSPACE_AUTO_ROLE must be viewer or member');
   if (config.access!.autoDomain && !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(config.access!.autoDomain)) throw new Error('Invalid WORKSPACE_AUTO_DOMAIN');
   if (config.access!.supabaseUrl) {

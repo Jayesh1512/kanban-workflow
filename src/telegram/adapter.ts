@@ -300,6 +300,14 @@ export class MtcuteAdapter implements TelegramPort {
     const message = await this.requireLive().sendText(peerNumber(input.chatId), input.text, { randomId: Long.fromString(input.randomId), disableWebPreview: true, ...(input.replyToMessageId ? { replyTo: input.replyToMessageId, mustReply: true } : {}), abortSignal: AbortSignal.timeout(15_000) });
     return { messageId: message.id };
   }
+  async sendText(input: { chatId: string; text: string; randomId: string }): Promise<{ messageId: number }> {
+    // Saved Messages uses the authorized self user ID; any explicit peer stays allowed.
+    if (!/^-?[1-9]\d*$/.test(input.chatId)) throw new DomainError('validation', 'Invalid Telegram chat ID');
+    if (input.text.length > 4096) throw new DomainError('validation', 'Telegram text exceeds the 4096 character limit');
+    if (!/^-?[1-9]\d*$/.test(input.randomId) || BigInt(input.randomId) < -(2n ** 63n) || BigInt(input.randomId) >= 2n ** 63n) throw new DomainError('validation', 'Invalid MTProto random ID');
+    const message = await this.requireLive().sendText(peerNumber(input.chatId), input.text, { randomId: Long.fromString(input.randomId), disableWebPreview: true, abortSignal: AbortSignal.timeout(15_000) });
+    return { messageId: message.id };
+  }
   async stop(): Promise<void> {
     if (this.stopped) return; this.stopped = true; this.cancelResume();
     this.stopController.abort(); await this.resumeTask;

@@ -34,6 +34,10 @@ for port/configuration overrides, board access and volume persistence.
 The MCP endpoint is `http://localhost:3000/mcp`. See
 [Hermes configuration and tool behavior](src/hermes/README.md).
 
+The [hourly reply agent](docs/REPLY_AGENT.md) reads Telegram groups, decides
+whether the operator owes a reply, and sends one draft digest per hour. It does
+not touch CRM approvals and never sends to the source group.
+
 The active application focuses on Telegram, CRM and approved Work actions.
 Meeting ingestion, meeting pages and meeting MCP tools are deferred.
 

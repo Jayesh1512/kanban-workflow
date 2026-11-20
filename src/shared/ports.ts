@@ -34,6 +34,19 @@ export interface RuntimeConfig {
   vikunja: { baseUrl: string; apiToken: string | null; username: string; password: string | null; projectTitle: string; publicUrl?:string; timeoutMs?: number };
   extraction: { provider: 'openai'; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number; maxOutputTokens: number };
   jev: { provider: 'vercel' | 'openai'; endpoint: string; model: string; apiKey: string | null; timeoutMs: number; maxAttempts: number };
+  /** Optional: defaults live in the reply module, so older configs stay valid. */
+  reply?: ReplyAgentConfig;
+}
+/** Hourly reply drafting. It reads Telegram directly and stores drafts; it does not touch CRM state. */
+export interface ReplyAgentConfig {
+  enabled: boolean;
+  intervalMs: number;
+  maxChats: number;
+  contextMessages: number;
+  windowMinutes: number;
+  ownerNames: string[];
+  /** 'self' = Saved Messages, 'off' = store only, or an explicit Telegram chat ID. */
+  digestChatId: string;
 }
 export type LoadRuntimeConfig = (env?: NodeJS.ProcessEnv) => Promise<RuntimeConfig>;
 export interface OperationsStatus {
@@ -97,6 +110,11 @@ export interface TelegramPort {
   configureControlChat(input: { operationKey: string } & ({ chatId: TelegramChatId } | { createPrivateSupergroup: true; title: string })): Promise<ControlSetup>;
   reconcileControlSetup(operationKey: string): Promise<ControlSetup>;
   sendControlMessage(input: { chatId: TelegramChatId; text: string; replyToMessageId?: TelegramMessageId; randomId: string }): Promise<{ messageId: TelegramMessageId }>;
+  /**
+   * Direct text delivery to one explicit chat, for the reply-agent digest
+   * (including Saved Messages). It is not for replies to a source conversation.
+   */
+  sendText?(input: { chatId: TelegramChatId; text: string; randomId: string }): Promise<{ messageId: TelegramMessageId }>;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
